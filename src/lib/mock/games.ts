@@ -1,0 +1,810 @@
+import type {
+  Game,
+  GameFeature,
+  OSPlatform,
+  Playtime,
+  PreOrderTier,
+  Price,
+  ReviewLabel,
+  ReviewSummary,
+} from "../types";
+import { steamCapsule, steamCover, steamHeader } from "./images";
+
+type Seed = {
+  id: string;
+  steamAppId: number | string;
+  name: string;
+  developer: string;
+  publisher: string;
+  releaseDate: string;
+  comingSoon?: boolean;
+  tags: string[];
+  genres: string[];
+  platforms: OSPlatform[];
+  baseCents: number;
+  finalCents?: number;
+  discountEndsAt?: string | null;
+  reviewLabel: ReviewLabel;
+  scorePct: number;
+  totalReviews: number;
+  isFeatured?: boolean;
+  salesRank: number;
+  shortDescription: string;
+  features: GameFeature[];
+  metaScore: number | null;
+  estimatedSizeBytes: number;
+  achievementCount: number;
+  currentPlayers: number;
+  peakPlayers24h: number;
+  peakPlayersAllTime: number;
+  drm?: string[];
+  languages?: string[];
+  /** HowLongToBeat-style playtime estimates in hours. */
+  playtime: Playtime;
+  /** 0–100 score from the first ~50 reviews; used by the Hidden Gems shelf. */
+  firstReviewersScore?: number;
+  /** Free downloadable demo available. */
+  hasDemo?: boolean;
+  /** Pre-order tiers (only meaningful when comingSoon=true). */
+  preOrderTiers?: PreOrderTier[];
+  /** Estimated pre-load size in bytes. */
+  preLoadSizeBytes?: number;
+  /** When pre-loading opens (ISO). */
+  preLoadStartsAt?: string;
+  /** Cinematic preview URL */
+  trailerUrl?: string;
+  /** Included in Dreamworks+ */
+  includedInSubscription?: boolean;
+  /** Playable via Cloud */
+  cloudPlayable?: boolean;
+};
+
+function daysBefore(iso: string, n: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+const GTA6_RELEASE = "2026-11-04T00:00:00Z";
+
+// Prices are in INR paise (₹1 = 100 paise) — formatPrice renders as ₹X,XXX.
+const GTA6_PREORDER_TIERS: PreOrderTier[] = [
+  {
+    name: "Standard Edition",
+    priceCents: 699900,
+    bonuses: [
+      {
+        name: "Early-access loading screen art",
+        description: "Exclusive Vice City loading screens applied across the game.",
+      },
+    ],
+  },
+  {
+    name: "Deluxe Edition",
+    priceCents: 899900,
+    bonuses: [
+      { name: "Standard bonuses", description: "Everything in the Standard Edition." },
+      {
+        name: "Vinewood Hills outfit pack",
+        description: "Three exclusive outfits inspired by Vinewood's golden era.",
+      },
+      {
+        name: "Vice City exotic vehicle",
+        description: "An exclusive sports car for cruising the neon strip.",
+      },
+    ],
+  },
+  {
+    name: "Ultimate Edition",
+    priceCents: 1099900,
+    bonuses: [
+      { name: "Deluxe bonuses", description: "Everything in the Deluxe Edition." },
+      {
+        name: "Heist preparation cash bonus",
+        description: "In-game cash bundle to kickstart your first heist.",
+      },
+      {
+        name: "Soundtrack download",
+        description: "Full digital soundtrack with bonus radio-station tracks.",
+      },
+    ],
+  },
+];
+
+function daysAhead(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString();
+}
+
+// Ten popular titles, with Steam appids used for cover / header / capsule art.
+const SEEDS: Seed[] = [
+  {
+    id: "black-myth-wukong",
+    steamAppId: 2358720,
+    name: "Black Myth: Wukong",
+    developer: "Game Science",
+    publisher: "Game Science",
+    releaseDate: "2024-08-20T00:00:00Z",
+    tags: ["action", "souls-like", "atmospheric", "third-person", "fantasy"],
+    genres: ["action", "rpg"],
+    platforms: ["windows"],
+    baseCents: 399900,
+    finalCents: 249900,
+    discountEndsAt: daysAhead(5),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 96,
+    totalReviews: 982410,
+    isFeatured: true,
+    salesRank: 1,
+    shortDescription:
+      "Born from the Chinese myth of the Monkey King, a single-player action-RPG of staff combat, transformations, and dazzlingly handcrafted boss fights.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 81,
+    estimatedSizeBytes: 130_000_000_000,
+    achievementCount: 81,
+    currentPlayers: 184000,
+    peakPlayers24h: 220300,
+    peakPlayersAllTime: 2415690,
+    playtime: { mainHours: 22, mainPlusSidesHours: 40, completionistHours: 75, source: "community" },
+    firstReviewersScore: 94,
+    hasDemo: true,
+    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  },
+  {
+    id: "red-dead-redemption-2",
+    steamAppId: 1174180,
+    name: "Red Dead Redemption 2",
+    developer: "Rockstar Games",
+    publisher: "Rockstar Games",
+    releaseDate: "2019-12-05T00:00:00Z",
+    tags: ["open-world", "story-rich", "atmospheric", "third-person", "great-soundtrack"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 289900,
+    finalCents: 115900,
+    discountEndsAt: daysAhead(3),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 92,
+    totalReviews: 481820,
+    isFeatured: true,
+    salesRank: 2,
+    shortDescription:
+      "America, 1899. The Van der Linde gang is on the run. Step into the boots of outlaw Arthur Morgan in Rockstar's sweeping open-world Western.",
+    features: ["single-player", "multiplayer", "online-pvp", "co-op", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 93,
+    estimatedSizeBytes: 150_000_000_000,
+    achievementCount: 51,
+    currentPlayers: 41200,
+    peakPlayers24h: 58400,
+    peakPlayersAllTime: 188600,
+    playtime: { mainHours: 50, mainPlusSidesHours: 82, completionistHours: 178, source: "community" },
+    firstReviewersScore: 91,
+    includedInSubscription: true,
+    cloudPlayable: true,
+  },
+  {
+    id: "gta-5",
+    steamAppId: 271590,
+    name: "Grand Theft Auto V",
+    developer: "Rockstar North",
+    publisher: "Rockstar Games",
+    releaseDate: "2015-04-14T00:00:00Z",
+    tags: ["open-world", "action", "multiplayer", "third-person", "story-rich"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 149900,
+    finalCents: 44900,
+    discountEndsAt: daysAhead(2),
+    reviewLabel: "Very Positive",
+    scorePct: 87,
+    totalReviews: 1820400,
+    isFeatured: true,
+    salesRank: 3,
+    shortDescription:
+      "Los Santos is a city that's seen better days. Switch between three criminals: a retired bank robber, a street hustler, and an unhinged enforcer.",
+    features: ["single-player", "multiplayer", "online-pvp", "co-op", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 96,
+    estimatedSizeBytes: 105_000_000_000,
+    achievementCount: 77,
+    currentPlayers: 132100,
+    peakPlayers24h: 175900,
+    peakPlayersAllTime: 364548,
+    playtime: { mainHours: 32, mainPlusSidesHours: 48, completionistHours: 84, source: "community" },
+    firstReviewersScore: 88,
+    includedInSubscription: true,
+    cloudPlayable: true,
+  },
+  {
+    id: "god-of-war-ragnarok",
+    steamAppId: 2322010,
+    name: "God of War Ragnarök",
+    developer: "Santa Monica Studio",
+    publisher: "PlayStation Publishing",
+    releaseDate: "2024-09-19T00:00:00Z",
+    tags: ["action", "story-rich", "atmospheric", "third-person", "great-soundtrack"],
+    genres: ["action", "adventure", "rpg"],
+    platforms: ["windows"],
+    baseCents: 499900,
+    finalCents: 299900,
+    discountEndsAt: daysAhead(7),
+    reviewLabel: "Very Positive",
+    scorePct: 89,
+    totalReviews: 142800,
+    isFeatured: true,
+    salesRank: 4,
+    shortDescription:
+      "Kratos and Atreus journey across the Nine Realms in search of answers as the prophesied end of all things draws near.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 90,
+    estimatedSizeBytes: 190_000_000_000,
+    achievementCount: 35,
+    currentPlayers: 21400,
+    peakPlayers24h: 31200,
+    peakPlayersAllTime: 65400,
+    playtime: { mainHours: 25, mainPlusSidesHours: 36, completionistHours: 56, source: "community" },
+    firstReviewersScore: 90,
+    trailerUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+  },
+  {
+    id: "ac-shadows",
+    steamAppId: 3159330,
+    name: "Assassin's Creed Shadows",
+    developer: "Ubisoft Quebec",
+    publisher: "Ubisoft",
+    releaseDate: "2025-03-20T00:00:00Z",
+    tags: ["open-world", "stealth", "action", "story-rich", "third-person"],
+    genres: ["action", "adventure", "rpg"],
+    platforms: ["windows"],
+    baseCents: 499900,
+    finalCents: 349900,
+    discountEndsAt: daysAhead(9),
+    reviewLabel: "Mostly Positive",
+    scorePct: 79,
+    totalReviews: 64200,
+    isFeatured: true,
+    salesRank: 5,
+    shortDescription:
+      "Feudal Japan, late 16th century. Master the way of the shinobi as Naoe, or the way of the samurai as Yasuke — two heroes, one story.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 81,
+    estimatedSizeBytes: 110_000_000_000,
+    achievementCount: 50,
+    currentPlayers: 18500,
+    peakPlayers24h: 27800,
+    peakPlayersAllTime: 64700,
+    drm: ["Ubisoft Connect"],
+    playtime: { mainHours: 35, mainPlusSidesHours: 60, completionistHours: 110, source: "community" },
+    firstReviewersScore: 78,
+    includedInSubscription: true,
+    cloudPlayable: false,
+  },
+  {
+    id: "witcher-3",
+    steamAppId: 292030,
+    name: "The Witcher 3: Wild Hunt",
+    developer: "CD PROJEKT RED",
+    publisher: "CD PROJEKT RED",
+    releaseDate: "2015-05-19T00:00:00Z",
+    tags: ["open-world", "rpg", "story-rich", "fantasy", "great-soundtrack"],
+    genres: ["rpg", "adventure"],
+    platforms: ["windows", "mac"],
+    baseCents: 99900,
+    finalCents: 19900,
+    discountEndsAt: daysAhead(4),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 97,
+    totalReviews: 826100,
+    salesRank: 6,
+    shortDescription:
+      "You are Geralt of Rivia, mercenary monster slayer. Track down the Child of Prophecy across a war-torn fantasy continent.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 93,
+    estimatedSizeBytes: 50_000_000_000,
+    achievementCount: 78,
+    currentPlayers: 38400,
+    peakPlayers24h: 52800,
+    peakPlayersAllTime: 103800,
+    playtime: { mainHours: 51, mainPlusSidesHours: 103, completionistHours: 173, source: "community" },
+    firstReviewersScore: 95,
+    hasDemo: true,
+    includedInSubscription: true,
+    cloudPlayable: false,
+  },
+  {
+    id: "cyberpunk-2077",
+    steamAppId: 1091500,
+    name: "Cyberpunk 2077",
+    developer: "CD PROJEKT RED",
+    publisher: "CD PROJEKT RED",
+    releaseDate: "2020-12-10T00:00:00Z",
+    tags: ["open-world", "rpg", "sci-fi", "story-rich", "atmospheric"],
+    genres: ["rpg", "action"],
+    platforms: ["windows"],
+    baseCents: 299900,
+    finalCents: 149900,
+    discountEndsAt: daysAhead(6),
+    reviewLabel: "Very Positive",
+    scorePct: 86,
+    totalReviews: 718200,
+    isFeatured: true,
+    salesRank: 7,
+    shortDescription:
+      "An open-world action-adventure RPG set in the megalopolis of Night City, where you play as V, a mercenary outlaw chasing a one-of-a-kind implant.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 86,
+    estimatedSizeBytes: 80_000_000_000,
+    achievementCount: 57,
+    currentPlayers: 62100,
+    peakPlayers24h: 84300,
+    peakPlayersAllTime: 1054388,
+    playtime: { mainHours: 24, mainPlusSidesHours: 62, completionistHours: 109, source: "community" },
+    firstReviewersScore: 76,
+    hasDemo: true,
+  },
+  {
+    id: "crimson-desert",
+    steamAppId: 3321460,
+    name: "Crimson Desert",
+    developer: "Pearl Abyss",
+    publisher: "Pearl Abyss",
+    releaseDate: "2026-02-12T00:00:00Z",
+    tags: ["open-world", "fantasy", "action", "rpg", "atmospheric"],
+    genres: ["rpg", "adventure", "action"],
+    platforms: ["windows"],
+    baseCents: 399900,
+    reviewLabel: "Positive",
+    scorePct: 84,
+    totalReviews: 9120,
+    isFeatured: true,
+    salesRank: 14,
+    shortDescription:
+      "An open-world action-adventure set in the unforgiving frontier of Pywel — survive, fight, and ride across a continent in turmoil.",
+    features: ["single-player", "multiplayer", "controller-full", "achievements", "cloud-saves"],
+    metaScore: null,
+    estimatedSizeBytes: 95_000_000_000,
+    achievementCount: 44,
+    currentPlayers: 12400,
+    peakPlayers24h: 18200,
+    peakPlayersAllTime: 28100,
+    playtime: { mainHours: 40, mainPlusSidesHours: 75, completionistHours: 140, source: "estimated" },
+    firstReviewersScore: 83,
+  },
+  {
+    id: "gta-6",
+    steamAppId: 3240220,
+    name: "Grand Theft Auto VI",
+    developer: "Rockstar Games",
+    publisher: "Rockstar Games",
+    releaseDate: GTA6_RELEASE,
+    comingSoon: true,
+    tags: ["open-world", "action", "story-rich", "multiplayer", "third-person"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 699900,
+    reviewLabel: "Positive",
+    scorePct: 0,
+    totalReviews: 0,
+    isFeatured: true,
+    salesRank: 35,
+    shortDescription:
+      "Vice City, the state of Leonida. Return to a sun-soaked, neon-soaked open world — Rockstar's most ambitious release yet.",
+    features: ["single-player", "multiplayer", "online-pvp", "controller-full", "achievements", "cloud-saves"],
+    metaScore: null,
+    estimatedSizeBytes: 180_000_000_000,
+    achievementCount: 60,
+    currentPlayers: 0,
+    peakPlayers24h: 0,
+    peakPlayersAllTime: 0,
+    playtime: { mainHours: 45, mainPlusSidesHours: 80, completionistHours: 160, source: "estimated" },
+    preOrderTiers: GTA6_PREORDER_TIERS,
+    preLoadSizeBytes: 180_000_000_000,
+    preLoadStartsAt: daysBefore(GTA6_RELEASE, 7),
+  },
+  {
+    id: "elden-ring",
+    steamAppId: 1245620,
+    name: "Elden Ring",
+    developer: "FromSoftware",
+    publisher: "Bandai Namco Entertainment",
+    releaseDate: "2022-02-25T00:00:00Z",
+    tags: ["open-world", "souls-like", "fantasy", "atmospheric", "exploration"],
+    genres: ["rpg", "action"],
+    platforms: ["windows"],
+    baseCents: 349900,
+    finalCents: 209900,
+    discountEndsAt: daysAhead(8),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 95,
+    totalReviews: 658900,
+    isFeatured: true,
+    salesRank: 8,
+    shortDescription:
+      "Rise, Tarnished. A vast realm of grace and grace-forsaken horror. Forge your own legend in the Lands Between.",
+    features: ["single-player", "multiplayer", "online-pvp", "co-op", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 96,
+    estimatedSizeBytes: 60_000_000_000,
+    achievementCount: 42,
+    currentPlayers: 112000,
+    peakPlayers24h: 154200,
+    peakPlayersAllTime: 953426,
+    playtime: { mainHours: 60, mainPlusSidesHours: 100, completionistHours: 135, source: "community" },
+    firstReviewersScore: 97,
+  },
+  // ── Catalog expansion (11–20) ──────────────────────────────────────────
+  {
+    id: "baldurs-gate-3",
+    steamAppId: 1086940,
+    name: "Baldur's Gate 3",
+    developer: "Larian Studios",
+    publisher: "Larian Studios",
+    releaseDate: "2023-08-03T00:00:00Z",
+    tags: ["rpg", "story-rich", "fantasy", "turn-based", "co-op"],
+    genres: ["rpg", "adventure"],
+    platforms: ["windows", "mac"],
+    baseCents: 299900,
+    finalCents: 224900,
+    discountEndsAt: daysAhead(6),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 96,
+    totalReviews: 745300,
+    isFeatured: true,
+    salesRank: 9,
+    shortDescription:
+      "Gather your party and return to the Forgotten Realms in a tale of fellowship and betrayal, sacrifice and survival — a D&D 5e-based RPG of unmatched scope.",
+    features: ["single-player", "multiplayer", "co-op", "online-pvp", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 96,
+    estimatedSizeBytes: 150_000_000_000,
+    achievementCount: 54,
+    currentPlayers: 92400,
+    peakPlayers24h: 128700,
+    peakPlayersAllTime: 875543,
+    playtime: { mainHours: 75, mainPlusSidesHours: 100, completionistHours: 150, source: "community" },
+    firstReviewersScore: 95,
+    hasDemo: false,
+  },
+  {
+    id: "hogwarts-legacy",
+    steamAppId: 990080,
+    name: "Hogwarts Legacy",
+    developer: "Avalanche Software",
+    publisher: "Warner Bros. Games",
+    releaseDate: "2023-02-10T00:00:00Z",
+    tags: ["open-world", "magic", "fantasy", "rpg", "story-rich"],
+    genres: ["action", "adventure", "rpg"],
+    platforms: ["windows"],
+    baseCents: 399900,
+    finalCents: 199900,
+    discountEndsAt: daysAhead(5),
+    reviewLabel: "Very Positive",
+    scorePct: 92,
+    totalReviews: 218400,
+    isFeatured: false,
+    salesRank: 10,
+    shortDescription:
+      "Live the unwritten — embark on a journey through Hogwarts and beyond as a fifth-year student wielding a unique magical ability.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 84,
+    estimatedSizeBytes: 90_000_000_000,
+    achievementCount: 45,
+    currentPlayers: 21800,
+    peakPlayers24h: 34100,
+    peakPlayersAllTime: 879188,
+    playtime: { mainHours: 30, mainPlusSidesHours: 60, completionistHours: 105, source: "community" },
+    firstReviewersScore: 90,
+    includedInSubscription: true,
+    cloudPlayable: true,
+  },
+  {
+    id: "counter-strike-2",
+    steamAppId: 730,
+    name: "Counter-Strike 2",
+    developer: "Valve",
+    publisher: "Valve",
+    releaseDate: "2023-09-27T00:00:00Z",
+    tags: ["fps", "multiplayer", "competitive", "shooter", "esports"],
+    genres: ["action", "free-to-play"],
+    platforms: ["windows", "linux"],
+    baseCents: 0,
+    reviewLabel: "Mixed",
+    scorePct: 67,
+    totalReviews: 8420100,
+    isFeatured: false,
+    salesRank: 11,
+    shortDescription:
+      "For over two decades, Counter-Strike has offered an elite competitive experience. Counter-Strike 2 is the next chapter — built on the Source 2 engine.",
+    features: ["multiplayer", "online-pvp", "controller-partial", "achievements", "trading-cards"],
+    metaScore: 81,
+    estimatedSizeBytes: 35_000_000_000,
+    achievementCount: 167,
+    currentPlayers: 1124000,
+    peakPlayers24h: 1488200,
+    peakPlayersAllTime: 1818773,
+    playtime: { mainHours: 0, mainPlusSidesHours: 0, completionistHours: 0, source: "estimated" },
+    firstReviewersScore: 65,
+  },
+  {
+    id: "helldivers-2",
+    steamAppId: 553850,
+    name: "Helldivers 2",
+    developer: "Arrowhead Game Studios",
+    publisher: "PlayStation Publishing",
+    releaseDate: "2024-02-08T00:00:00Z",
+    tags: ["co-op", "third-person", "shooter", "multiplayer", "sci-fi"],
+    genres: ["action", "shooter"],
+    platforms: ["windows"],
+    baseCents: 349900,
+    finalCents: 244900,
+    discountEndsAt: daysAhead(4),
+    reviewLabel: "Very Positive",
+    scorePct: 85,
+    totalReviews: 502300,
+    isFeatured: true,
+    salesRank: 12,
+    shortDescription:
+      "The galaxy's last hope rests in your hands. Join the Helldivers — a squad of elite soldiers spreading managed democracy across the cosmos.",
+    features: ["multiplayer", "co-op", "online-pvp", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 82,
+    estimatedSizeBytes: 80_000_000_000,
+    achievementCount: 39,
+    currentPlayers: 48200,
+    peakPlayers24h: 71400,
+    peakPlayersAllTime: 458909,
+    playtime: { mainHours: 35, mainPlusSidesHours: 70, completionistHours: 140, source: "community" },
+    firstReviewersScore: 88,
+  },
+  {
+    id: "palworld",
+    steamAppId: 1623730,
+    name: "Palworld",
+    developer: "Pocketpair",
+    publisher: "Pocketpair",
+    releaseDate: "2024-01-19T00:00:00Z",
+    tags: ["open-world", "survival", "multiplayer", "crafting", "monster-collector"],
+    genres: ["action", "adventure", "rpg"],
+    platforms: ["windows"],
+    baseCents: 122900,
+    finalCents: 86000,
+    discountEndsAt: daysAhead(7),
+    reviewLabel: "Very Positive",
+    scorePct: 89,
+    totalReviews: 281400,
+    isFeatured: false,
+    salesRank: 13,
+    shortDescription:
+      "Fight, farm, build and work alongside mysterious creatures called Pals in this all-new open-world multiplayer survival and crafting game.",
+    features: ["single-player", "multiplayer", "co-op", "online-pvp", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 78,
+    estimatedSizeBytes: 40_000_000_000,
+    achievementCount: 35,
+    currentPlayers: 64200,
+    peakPlayers24h: 92300,
+    peakPlayersAllTime: 2101867,
+    playtime: { mainHours: 25, mainPlusSidesHours: 60, completionistHours: 120, source: "community" },
+    firstReviewersScore: 92,
+  },
+  {
+    id: "marvel-rivals",
+    steamAppId: 2767030,
+    name: "Marvel Rivals",
+    developer: "NetEase Games",
+    publisher: "NetEase Games",
+    releaseDate: "2024-12-06T00:00:00Z",
+    tags: ["hero-shooter", "third-person", "multiplayer", "team-based", "free-to-play"],
+    genres: ["action", "free-to-play", "shooter"],
+    platforms: ["windows"],
+    baseCents: 0,
+    reviewLabel: "Very Positive",
+    scorePct: 87,
+    totalReviews: 642100,
+    isFeatured: true,
+    salesRank: 15,
+    shortDescription:
+      "A Super Hero Team-Based PVP Shooter! Assemble an all-star Marvel squad, devise countless strategies by combining over 30 superheroes and villains.",
+    features: ["multiplayer", "online-pvp", "co-op", "controller-full"],
+    metaScore: 81,
+    estimatedSizeBytes: 70_000_000_000,
+    achievementCount: 0,
+    currentPlayers: 312000,
+    peakPlayers24h: 418400,
+    peakPlayersAllTime: 644369,
+    playtime: { mainHours: 0, mainPlusSidesHours: 0, completionistHours: 0, source: "estimated" },
+    firstReviewersScore: 86,
+    includedInSubscription: true,
+    cloudPlayable: true,
+  },
+  {
+    id: "stardew-valley",
+    steamAppId: 413150,
+    name: "Stardew Valley",
+    developer: "ConcernedApe",
+    publisher: "ConcernedApe",
+    releaseDate: "2016-02-26T00:00:00Z",
+    tags: ["farming", "indie", "pixel-graphics", "relaxing", "co-op"],
+    genres: ["indie", "rpg", "simulation"],
+    platforms: ["windows", "mac", "linux"],
+    baseCents: 48900,
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 98,
+    totalReviews: 821400,
+    isFeatured: false,
+    salesRank: 16,
+    shortDescription:
+      "You've inherited your grandfather's old farm plot in Stardew Valley. Can you learn to live off the land and turn these overgrown fields into a thriving home?",
+    features: ["single-player", "multiplayer", "co-op", "controller-full", "achievements", "cloud-saves", "remote-play"],
+    metaScore: 89,
+    estimatedSizeBytes: 1_500_000_000,
+    achievementCount: 40,
+    currentPlayers: 38500,
+    peakPlayers24h: 58400,
+    peakPlayersAllTime: 236443,
+    playtime: { mainHours: 52, mainPlusSidesHours: 95, completionistHours: 158, source: "community" },
+    firstReviewersScore: 98,
+    hasDemo: false,
+  },
+  {
+    id: "sekiro",
+    steamAppId: 814380,
+    name: "Sekiro: Shadows Die Twice",
+    developer: "FromSoftware",
+    publisher: "Activision",
+    releaseDate: "2019-03-22T00:00:00Z",
+    tags: ["souls-like", "action", "difficult", "third-person", "atmospheric"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 299900,
+    finalCents: 149900,
+    discountEndsAt: daysAhead(5),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 94,
+    totalReviews: 192800,
+    isFeatured: false,
+    salesRank: 17,
+    shortDescription:
+      "Carve your own clever path to vengeance in the latest adventure from FromSoftware, the studio behind Bloodborne and Dark Souls.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 90,
+    estimatedSizeBytes: 25_000_000_000,
+    achievementCount: 34,
+    currentPlayers: 12800,
+    peakPlayers24h: 18900,
+    peakPlayersAllTime: 124930,
+    playtime: { mainHours: 30, mainPlusSidesHours: 41, completionistHours: 70, source: "community" },
+    firstReviewersScore: 92,
+    includedInSubscription: true,
+    cloudPlayable: false,
+  },
+  {
+    id: "resident-evil-4-remake",
+    steamAppId: 2050650,
+    name: "Resident Evil 4",
+    developer: "Capcom",
+    publisher: "Capcom",
+    releaseDate: "2023-03-24T00:00:00Z",
+    tags: ["horror", "third-person", "action", "survival-horror", "story-rich"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 349900,
+    finalCents: 174900,
+    discountEndsAt: daysAhead(6),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 96,
+    totalReviews: 198400,
+    isFeatured: true,
+    salesRank: 18,
+    shortDescription:
+      "Survival is just the beginning. Six years have passed since the biological disaster in Raccoon City. Special agent Leon S. Kennedy is sent to rescue the president's daughter.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 93,
+    estimatedSizeBytes: 67_000_000_000,
+    achievementCount: 48,
+    currentPlayers: 18200,
+    peakPlayers24h: 27600,
+    peakPlayersAllTime: 168192,
+    playtime: { mainHours: 17, mainPlusSidesHours: 25, completionistHours: 50, source: "community" },
+    firstReviewersScore: 95,
+  },
+  {
+    id: "spider-man-remastered",
+    steamAppId: 1817070,
+    name: "Marvel's Spider-Man Remastered",
+    developer: "Insomniac Games",
+    publisher: "PlayStation Publishing",
+    releaseDate: "2022-08-12T00:00:00Z",
+    tags: ["action", "third-person", "open-world", "story-rich", "superhero"],
+    genres: ["action", "adventure"],
+    platforms: ["windows"],
+    baseCents: 349900,
+    finalCents: 174900,
+    discountEndsAt: daysAhead(5),
+    reviewLabel: "Overwhelmingly Positive",
+    scorePct: 95,
+    totalReviews: 142500,
+    isFeatured: false,
+    salesRank: 19,
+    shortDescription:
+      "Be Greater. Be Yourself. Developed by Insomniac Games in collaboration with Marvel, and optimized for PC by Nixxes Software — swing through Manhattan.",
+    features: ["single-player", "controller-full", "achievements", "cloud-saves"],
+    metaScore: 89,
+    estimatedSizeBytes: 75_000_000_000,
+    achievementCount: 77,
+    currentPlayers: 8400,
+    peakPlayers24h: 12100,
+    peakPlayersAllTime: 66436,
+    playtime: { mainHours: 17, mainPlusSidesHours: 26, completionistHours: 39, source: "community" },
+    firstReviewersScore: 93,
+  },
+];
+
+function buildPrice(seed: Seed): Price {
+  const base = seed.baseCents;
+  const final = seed.finalCents ?? base;
+  const pct = final < base ? Math.round(((base - final) / base) * 100) : 0;
+  return {
+    // All `baseCents` / `finalCents` values are INR paise (₹1 = 100 paise).
+    // `formatPrice` defaults to INR formatting and renders as ₹X,XXX.
+    currency: "INR",
+    base,
+    final,
+    discountPct: pct,
+    discountEndsAt: seed.discountEndsAt ?? null,
+    isFree: base === 0,
+  };
+}
+
+function buildSummary(seed: Seed): ReviewSummary {
+  return {
+    label: seed.reviewLabel,
+    scorePct: seed.scorePct,
+    totalReviews: seed.totalReviews,
+    recentLabel: seed.reviewLabel,
+    recentScorePct: Math.min(100, seed.scorePct + Math.floor(Math.random() * 4) - 2),
+    recentTotal: Math.floor(seed.totalReviews * 0.08),
+  };
+}
+
+function buildGame(seed: Seed): Game {
+  const price = buildPrice(seed);
+  return {
+    id: seed.id,
+    slug: seed.id,
+    name: seed.name,
+    developer: seed.developer,
+    publisher: seed.publisher,
+    releaseDate: seed.releaseDate,
+    comingSoon: Boolean(seed.comingSoon),
+    coverUrl: steamCover(seed.steamAppId),
+    headerUrl: steamHeader(seed.steamAppId),
+    capsuleUrl: steamCapsule(seed.steamAppId),
+    tags: seed.tags,
+    genres: seed.genres,
+    platforms: seed.platforms,
+    price,
+    reviewSummary: buildSummary(seed),
+    isFeatured: Boolean(seed.isFeatured),
+    isOnSale: price.discountPct > 0,
+    salesRank: seed.salesRank,
+    firstReviewersScore: seed.firstReviewersScore,
+    hasDemo: seed.hasDemo,
+    preOrderTiers: seed.preOrderTiers,
+    preLoadSizeBytes: seed.preLoadSizeBytes,
+    preLoadStartsAt: seed.preLoadStartsAt,
+    trailerUrl: seed.trailerUrl,
+    includedInSubscription: seed.includedInSubscription,
+    cloudPlayable: seed.cloudPlayable,
+  };
+}
+
+export const GAMES: Game[] = SEEDS.map(buildGame);
+
+export const GAME_SEEDS = SEEDS;
+
+export function getSeedById(id: string): Seed | undefined {
+  return SEEDS.find((s) => s.id === id);
+}
+
+export function getGameById(id: string): Game | undefined {
+  return GAMES.find((g) => g.id === id);
+}
+
+export type { GameDetail } from "../types";

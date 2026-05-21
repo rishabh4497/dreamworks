@@ -1,0 +1,905 @@
+// ── Primitive helpers ────────────────────────────────────────────────────────
+export type ISODate = string;
+export type PriceCents = number;
+export type GameId = string;
+export type OSPlatform = "windows" | "mac" | "linux";
+
+export type Currency = "USD" | "EUR" | "GBP" | "JPY" | "BRL" | "INR" | "CAD" | "AUD";
+
+// ── Shared command/result contracts ─────────────────────────────────────────
+export interface CommandError {
+  code: string;
+  message: string;
+  recoverable: boolean;
+}
+
+export type CommandResult<T> =
+  | { ok: true; data: T; error?: never }
+  | { ok: false; data?: never; error: CommandError };
+
+// ── Taxonomy ────────────────────────────────────────────────────────────────
+export interface Category {
+  slug: string;
+  name: string;
+  icon: string;
+  gameCount: number;
+}
+
+export interface Tag {
+  slug: string;
+  name: string;
+  voteCount: number;
+}
+
+// ── Pricing ─────────────────────────────────────────────────────────────────
+export interface Price {
+  currency: Currency;
+  base: PriceCents;
+  final: PriceCents;
+  discountPct: number;
+  discountEndsAt: ISODate | null;
+  isFree: boolean;
+}
+
+export interface RegionalPrice {
+  region: string;
+  currency: Currency;
+  price: PriceCents;
+  usdEquivalentCents: PriceCents;
+}
+
+// ── Reviews ─────────────────────────────────────────────────────────────────
+export type ReviewLabel =
+  | "Overwhelmingly Positive"
+  | "Very Positive"
+  | "Positive"
+  | "Mostly Positive"
+  | "Mixed"
+  | "Mostly Negative"
+  | "Negative"
+  | "Very Negative"
+  | "Overwhelmingly Negative";
+
+export interface ReviewSummary {
+  label: ReviewLabel;
+  scorePct: number;
+  totalReviews: number;
+  recentLabel: ReviewLabel;
+  recentScorePct: number;
+  recentTotal: number;
+}
+
+/**
+ * Five-axis facet ratings, each 0–10. Optional per review — reviewers can
+ * still post a low-friction thumbs-up/down via the `recommended` boolean
+ * without scoring facets.
+ */
+export interface ReviewFacets {
+  gameplay: number;
+  story: number;
+  polish: number;
+  value: number;
+  accessibility: number;
+}
+
+export interface Review {
+  id: string;
+  gameId: GameId;
+  authorName: string;
+  authorAvatarUrl: string;
+  authorHoursOnRecord: number;
+  recommended: boolean;
+  postedAt: ISODate;
+  body: string;
+  helpfulCount: number;
+  funnyCount: number;
+  facets?: ReviewFacets;
+  integrity?: ReviewIntegrity;
+}
+
+export interface ReviewIntegrity {
+  ownershipVerified: boolean;
+  playMinutesAtReview: number;
+  editedAt?: ISODate;
+  moderationState: "visible" | "pending" | "hidden";
+  trustSignals: Array<"verified-owner" | "played-on-platform" | "high-effort" | "reported">;
+}
+
+/** Aggregated mean facet ratings across all reviews for a game. */
+export interface FacetAverages {
+  gameplay: number;
+  story: number;
+  polish: number;
+  value: number;
+  accessibility: number;
+  /** How many reviews contributed facet scores. */
+  ratedCount: number;
+}
+
+// ── Pre-orders ──────────────────────────────────────────────────────────────
+export interface PreOrderBonus {
+  name: string;
+  description: string;
+}
+
+export interface PreOrderTier {
+  /** "Standard Edition", "Deluxe Edition", "Ultimate Edition", etc. */
+  name: string;
+  priceCents: PriceCents;
+  bonuses: PreOrderBonus[];
+}
+
+// ── Game (slim store-card payload) ──────────────────────────────────────────
+export interface Game {
+  id: GameId;
+  slug: string;
+  name: string;
+  developer: string;
+  publisher: string;
+  releaseDate: ISODate;
+  comingSoon: boolean;
+  coverUrl: string;
+  headerUrl: string;
+  capsuleUrl: string;
+  tags: string[];
+  genres: string[];
+  platforms: OSPlatform[];
+  price: Price;
+  reviewSummary: ReviewSummary;
+  isFeatured: boolean;
+  isOnSale: boolean;
+  salesRank: number;
+  /**
+   * Quality signal from the first ~50 reviews. Used to surface promising
+   * indies before the algorithm catches up (Hidden Gems shelf). 0–100.
+   */
+  firstReviewersScore?: number;
+  /** Free downloadable demo available for this title. */
+  hasDemo?: boolean;
+  /** Only meaningful when comingSoon=true — available pre-order editions. */
+  preOrderTiers?: PreOrderTier[];
+  /** Estimated pre-load size in bytes (for "Pre-load X GB starting on Y" copy). */
+  preLoadSizeBytes?: number;
+  /** When pre-loading opens (ISO). Undefined = pre-load not available. */
+  preLoadStartsAt?: ISODate;
+  /** Hover-to-play preview video url */
+  trailerUrl?: string;
+  /** Whether this game is included in the Dreamworks+ subscription */
+  includedInSubscription?: boolean;
+  /** Whether this game can be streamed via cloud gaming */
+  cloudPlayable?: boolean;
+}
+
+// ── Playtime estimates (HowLongToBeat-style) ────────────────────────────────
+export interface Playtime {
+  mainHours: number;
+  mainPlusSidesHours: number;
+  completionistHours: number;
+  source: "publisher" | "community" | "estimated";
+}
+
+// ── Recommendation reasons (transparency layer) ─────────────────────────────
+export type RecommendationKind =
+  | "featured"
+  | "on-sale"
+  | "new-release"
+  | "top-seller"
+  | "tag-match"
+  | "recently-viewed-similar"
+  | "hidden-gem"
+  | "free-promo"
+  | "coming-soon";
+
+export interface RecommendationReason {
+  kind: RecommendationKind;
+  /** Human-readable, e.g. "3 of your recently-viewed games are tagged souls-like" */
+  label: string;
+  /** Optional supporting evidence (matched tags, percentile, etc.) */
+  detail?: string;
+}
+
+/** A game paired with the reason it appears in a shelf. */
+export interface ShelfGame {
+  game: Game;
+  reason: RecommendationReason;
+}
+
+// ── Full game record ────────────────────────────────────────────────────────
+export interface SystemRequirementsBlock {
+  os: string;
+  cpu: string;
+  memory: string;
+  gpu: string;
+  storage: string;
+  notes?: string;
+}
+
+export type GameFeature =
+  | "single-player"
+  | "multiplayer"
+  | "co-op"
+  | "online-pvp"
+  | "controller-partial"
+  | "controller-full"
+  | "achievements"
+  | "cloud-saves"
+  | "workshop"
+  | "vr-supported"
+  | "trading-cards"
+  | "remote-play";
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string;
+  globalUnlockPct: number;
+  hidden: boolean;
+}
+
+export interface Depot {
+  id: string;
+  name: string;
+  platform: OSPlatform | "common";
+  sizeBytes: number;
+  lastUpdated: ISODate;
+  buildId: string;
+}
+
+export interface PatchNote {
+  version: string;
+  date: ISODate;
+  title: string;
+  bullets: string[];
+}
+
+export interface PriceHistoryPoint {
+  date: ISODate;
+  cents: PriceCents;
+  discountPct: number;
+}
+
+export interface HistoricalLows {
+  allTimeLow: PriceCents;
+  lastYearLow: PriceCents;
+  lastMonthLow: PriceCents;
+  currentPrice: PriceCents;
+}
+
+export interface PlayerCountPoint {
+  date: ISODate;
+  peak: number;
+  avg: number;
+}
+
+export interface Screenshot {
+  url: string;
+  thumbUrl: string;
+}
+
+export interface Trailer {
+  url: string;
+  posterUrl: string;
+  provider: "youtube" | "vimeo" | "self";
+  id: string;
+}
+
+export interface GameDetail extends Game {
+  shortDescription: string;
+  longDescription: string;
+  screenshots: Screenshot[];
+  trailers: Trailer[];
+  systemRequirements: {
+    windows?: SystemRequirementsBlock;
+    mac?: SystemRequirementsBlock;
+    linux?: SystemRequirementsBlock;
+  };
+  languages: string[];
+  features: GameFeature[];
+  ageRating: { board: "ESRB" | "PEGI"; rating: string } | null;
+  drm: string[];
+  metaScore: number | null;
+  estimatedSizeBytes: number;
+  pricesByRegion: RegionalPrice[];
+  achievementCount: number;
+  achievements: Achievement[];
+  depots: Depot[];
+  patchNotes: PatchNote[];
+  relatedGameIds: GameId[];
+  storeTags: Tag[];
+  priceHistory: PriceHistoryPoint[];
+  playerCountHistory: PlayerCountPoint[];
+  currentPlayers: number;
+  peakPlayers24h: number;
+  peakPlayersAllTime: number;
+  /** HowLongToBeat-style time estimates. */
+  playtime: Playtime;
+  /** Dreamworks AI-generated 3-bullet summary, regenerated periodically. */
+  aiOverview?: AIOverview;
+}
+
+export interface AIOverview {
+  pros: string[];
+  cons: string[];
+  basedOnReviewCount: number;
+  updatedAt: ISODate;
+}
+
+// ── User & ownership ───────────────────────────────────────────────────────
+import type { AvatarOptions } from "./avatar";
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  /** Legacy URL-based avatar — kept for any code path that still reads it. */
+  avatarUrl: string;
+  /**
+   * Customizable Notion-style avatar (dicebear `notionists`). When set, UI
+   * surfaces should prefer rendering this via `<UserAvatar>` and fall back
+   * to `avatarUrl` only when missing.
+   */
+  avatarOptions?: AvatarOptions;
+  level: number;
+  bio: string;
+  country: string;
+  memberSince: ISODate;
+  showcaseGameIds: GameId[];
+  isSubscribed?: boolean;
+}
+
+/**
+ * Where a library entry originated. "dreamworks" is a real Dreamworks purchase;
+ * "manual" is a user-typed add; the rest are launcher imports from the local
+ * filesystem scanner.
+ */
+export type LauncherSource =
+  | "dreamworks"
+  | "manual"
+  | "steam"
+  | "epic"
+  | "gog"
+  | "ubisoft"
+  | "ea-app"
+  | "xbox-pc"
+  | "rockstar"
+  | "battlenet"
+  | "amazon";
+
+export type LauncherConnectionStatus =
+  | "connected"
+  | "needs-auth"
+  | "scan-only"
+  | "unsupported"
+  | "error";
+
+export interface LauncherAccount {
+  id: string;
+  source: LauncherSource;
+  displayName: string;
+  status: LauncherConnectionStatus;
+  connectedAt: ISODate | null;
+  lastSyncedAt: ISODate | null;
+  importedGameCount: number;
+  errorMessage?: string;
+  privacyMode: "local-scan" | "oauth" | "manual";
+}
+
+export type EntitlementKind = "purchase" | "subscription" | "external" | "manual" | "trial" | "gift";
+export type EntitlementStatus = "active" | "refunded" | "revoked" | "expired" | "pending";
+
+export interface Entitlement {
+  id: string;
+  userId: string;
+  gameId: GameId;
+  kind: EntitlementKind;
+  status: EntitlementStatus;
+  sourceLauncher: LauncherSource;
+  grantedAt: ISODate;
+  expiresAt: ISODate | null;
+  orderId?: string;
+  externalId?: string;
+  canInstall: boolean;
+  canLaunch: boolean;
+  canLaunchOffline: boolean;
+  refundWindow?: RefundWindow | null;
+}
+
+export type CloudSaveStatus =
+  | "unsupported"
+  | "synced"
+  | "syncing"
+  | "conflict"
+  | "offline"
+  | "error";
+
+export type CloudSaveResolution = "local" | "remote";
+
+export type DrmType = "none" | "dreamworks" | "steam" | "epic" | "third-party" | "unknown";
+
+export interface InstallManifest {
+  gameId: GameId;
+  sourceLauncher: LauncherSource;
+  externalId?: string;
+  installPath: string;
+  launchCommand?: string;
+  executablePath?: string;
+  version?: string;
+  buildId?: string;
+  sizeBytes: number;
+  installedAt: ISODate;
+  lastVerifiedAt: ISODate | null;
+  updatePolicy: "auto" | "manual" | "scheduled";
+  canLaunchOffline: boolean;
+  drmType: DrmType;
+}
+
+export interface LibrarySourceCopy {
+  sourceLauncher: LauncherSource;
+  externalId?: string;
+  installPath?: string;
+  launchCommand?: string;
+  installed: boolean;
+  lastSeenAt: ISODate;
+  canLaunchOffline: boolean;
+  drmType: DrmType;
+}
+
+export interface CloudSaveSlot {
+  id: string;
+  gameId: GameId;
+  userId: string;
+  deviceName: string;
+  status: CloudSaveStatus;
+  localUpdatedAt: ISODate | null;
+  remoteUpdatedAt: ISODate | null;
+  sizeBytes: number;
+  conflictReason?: string;
+}
+
+export interface LibraryEntry {
+  gameId: GameId;
+  ownedSince: ISODate;
+  installed: boolean;
+  sizeBytes: number;
+  playMinutes: number;
+  lastPlayed: ISODate | null;
+  collectionIds: string[];
+  achievementsUnlocked: number;
+  completionPct: number;
+  /** Refund window computed at purchase time. Null = no longer eligible. */
+  refundWindow?: RefundWindow | null;
+  /** Order id this entry came from, if known. */
+  orderId?: string;
+  /** Where this entry came from (purchase, manual add, scanner import). */
+  sourceLauncher?: LauncherSource;
+  /** Stable id from the source launcher/store, e.g. Steam appid. */
+  externalId?: string;
+  /** Current install location, when known. */
+  installPath?: string;
+  /** Command or URI used to launch this copy. */
+  launchCommand?: string;
+  /** Installed build/version reported by the source launcher. */
+  installedVersion?: string;
+  /** Last time the install was verified by Dreamworks or a source scanner. */
+  lastVerifiedAt?: ISODate | null;
+  /** Local/cloud-save state shown in the library. */
+  cloudSaveStatus?: CloudSaveStatus;
+  /** DRM/runtime expected before launching. */
+  drmType?: DrmType;
+  /** Whether the entry can be launched without network access. */
+  canLaunchOffline?: boolean;
+  /** Additional stores/launchers where this same game was detected. */
+  sources?: LibrarySourceCopy[];
+}
+
+/**
+ * Per-game refund window. Generous & playtime-aware: the cap scales with the
+ * game's main-story length so 3-hour narrative games aren't refundable after
+ * a full playthrough, while live-service / sprawling games keep at least the
+ * Steam-equivalent 2 hours.
+ *
+ *   eligibleMinutes = max(120, min(0.5 * mainHours * 60, mainHours * 60 - 30))
+ *   eligibleUntil   = purchasedAt + 14 days
+ *
+ * `revoked` flips true if the player exceeded `eligibleMinutes` or the date
+ * window passed.
+ */
+export interface RefundWindow {
+  eligibleUntil: ISODate;
+  eligibleMinutes: number;
+  revoked: boolean;
+}
+
+export interface Order {
+  id: string;
+  placedAt: ISODate;
+  gameIds: GameId[];
+  subtotalCents: PriceCents;
+  taxCents: PriceCents;
+  totalCents: PriceCents;
+  refunded: boolean;
+  status?: "pending" | "paid" | "failed" | "refunded";
+  currency?: Currency;
+  userId?: string;
+  country?: string;
+  paymentProvider?: "mock" | "stripe" | "razorpay" | "paypal";
+  receiptNumber?: string;
+  lineItems?: OrderLineItem[];
+  metadata?: {
+    giftCount?: number;
+    pendingGiftCount?: number;
+    familyApprovalCount?: number;
+    familyApprovalPendingCount?: number;
+    familyApprovalDeniedCount?: number;
+    notes?: string[];
+  };
+}
+
+export interface OrderLineItem {
+  id: string;
+  gameId: GameId;
+  name: string;
+  quantity: number;
+  unitCents: PriceCents;
+  finalCents: PriceCents;
+  entitlementKind: EntitlementKind;
+  asGift: boolean;
+  giftRecipient?: GiftRecipient;
+  scheduledDeliveryAt?: ISODate;
+  familyApproval?: FamilyApprovalMetadata;
+}
+
+export interface GiftRecipient {
+  name: string;
+  email?: string;
+  friendId?: string;
+}
+
+export interface FamilyApprovalMetadata {
+  required: boolean;
+  status: "not_required" | "pending" | "approved" | "denied";
+  requestedBy?: string;
+  guardianName?: string;
+  decidedAt?: ISODate;
+  note?: string;
+}
+
+export interface RefundRequest {
+  id: string;
+  orderId: string;
+  gameId: GameId;
+  userId: string;
+  requestedAt: ISODate;
+  status: "pending" | "approved" | "denied" | "cancelled";
+  reason: string;
+  policySnapshot: string;
+  decidedAt?: ISODate;
+  decisionNote?: string;
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  gameIds: GameId[];
+}
+
+export interface WishlistEntry {
+  gameId: GameId;
+  addedAt: ISODate;
+  priority: number;
+  notifyOnSale: boolean;
+  /** Alert the user only when the final price drops to/below this (cents). */
+  priceCeilingCents?: number;
+  /** Alert only when the price meets/beats its all-time low. */
+  notifyOnlyAtATL?: boolean;
+  /** Last time we surfaced an alert for this entry — prevents re-firing. */
+  lastAlertedAt?: ISODate;
+}
+
+export interface WorkshopItem {
+  id: string;
+  gameId: GameId;
+  title: string;
+  authorId: string;
+  authorName: string;
+  version: string;
+  sizeBytes: number;
+  rating: number;
+  subscribers: number;
+  tags: string[];
+  status: "available" | "subscribed" | "downloading" | "installed" | "disabled";
+  updatedAt: ISODate;
+  installPath?: string;
+}
+
+export interface ModerationRecord {
+  id: string;
+  targetType: "review" | "post" | "reply" | "thread" | "workshop-item" | "profile";
+  targetId: string;
+  reporterUserId: string;
+  reason: string;
+  status: "open" | "triaged" | "actioned" | "dismissed";
+  createdAt: ISODate;
+  decidedAt?: ISODate;
+  moderatorId?: string;
+  action?: "none" | "hide" | "delete" | "warn" | "ban";
+}
+
+export interface CartItem {
+  gameId: GameId;
+  addedAt: ISODate;
+  asGift: boolean;
+  giftRecipient?: GiftRecipient;
+  scheduledDeliveryAt?: ISODate;
+  familyApproval?: FamilyApprovalMetadata;
+}
+
+// ── In-app notifications ────────────────────────────────────────────────────
+export type NotificationKind =
+  | "wishlist-alert"
+  | "sale-ending"
+  | "friend-activity"
+  | "achievement-unlock"
+  | "library-import"
+  | "system";
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body?: string;
+  /** Route to navigate to when clicked. */
+  href?: string;
+  /** Optional game for cover thumbnail. */
+  gameId?: GameId;
+  createdAt: ISODate;
+  read: boolean;
+}
+
+// ── Forums ──────────────────────────────────────────────────────────────────
+export interface ForumThread {
+  id: string;
+  gameId: GameId;
+  authorUid: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  title: string;
+  body: string;
+  createdAt: ISODate;
+  lastActivityAt: ISODate;
+  replyCount: number;
+  sticky: boolean;
+  locked: boolean;
+  helpfulCount: number;
+}
+
+export interface ForumReply {
+  id: string;
+  threadId: string;
+  authorUid: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  body: string;
+  createdAt: ISODate;
+  helpfulCount: number;
+}
+
+// ── News ────────────────────────────────────────────────────────────────────
+export interface NewsArticle {
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  authorName: string;
+  publishedAt: ISODate;
+  heroUrl: string;
+  tags: string[];
+  relatedGameIds: GameId[];
+}
+
+// ── Friends ─────────────────────────────────────────────────────────────────
+export type FriendStatus = "online" | "offline" | "in-game" | "away";
+
+export interface Friend {
+  uid: string;
+  displayName: string;
+  avatarUrl: string;
+  status: FriendStatus;
+  currentGameId: GameId | null;
+  lastSeen: ISODate;
+}
+
+export type FriendActivityKind =
+  | "achievement-unlocked"
+  | "added-to-library"
+  | "review-posted"
+  | "now-playing";
+
+export interface FriendActivity {
+  uid: string;
+  kind: FriendActivityKind;
+  gameId: GameId;
+  payload: string;
+  at: ISODate;
+}
+
+// ── DB charts ───────────────────────────────────────────────────────────────
+export type ChartType =
+  | "top-played"
+  | "top-wishlisted"
+  | "trending"
+  | "recently-updated"
+  | "free";
+
+export interface ChartEntry {
+  rank: number;
+  gameId: GameId;
+  metric: number;
+  deltaFromYesterday: number;
+}
+
+export interface SalesEntry {
+  gameId: GameId;
+  discountPct: number;
+  endsAt: ISODate;
+  finalCents: PriceCents;
+  baseCents: PriceCents;
+}
+
+// ── Account analytics ──────────────────────────────────────────────────────
+export interface LibraryValueBreakdown {
+  totalSpentCents: PriceCents;
+  currentRetailCents: PriceCents;
+  gamesOwned: number;
+  unplayedCount: number;
+  unplayedValueCents: PriceCents;
+}
+
+export interface HeatmapCell {
+  date: ISODate;
+  minutesPlayed: number;
+}
+
+export interface CompletionStats {
+  achievementsUnlocked: number;
+  achievementsTotal: number;
+  perfectGames: number;
+  averageCompletionPct: number;
+}
+
+// ── Feature coverage roadmap ───────────────────────────────────────────────
+export type FeatureArea =
+  | "native"
+  | "library"
+  | "commerce"
+  | "subscription"
+  | "community"
+  | "trust"
+  | "polish"
+  | "developer";
+
+export type FeatureStatus = "done" | "partial" | "planned" | "blocked";
+export type FeaturePriority = "P0" | "P1" | "P2";
+
+export interface FeatureRoadmapItem {
+  id: string;
+  title: string;
+  area: FeatureArea;
+  status: FeatureStatus;
+  priority: FeaturePriority;
+  userValue: string;
+  currentState: string;
+  nextStep: string;
+  acceptance: string;
+}
+
+// ── Downloads (mock UI state) ───────────────────────────────────────────────
+export type DownloadStatus =
+  | "queued"
+  | "downloading"
+  | "verifying"
+  | "extracting"
+  | "complete"
+  | "error"
+  | "cancelled"
+  | "paused";
+
+export interface DownloadTask {
+  taskId: string;
+  gameId: GameId;
+  status: DownloadStatus;
+  progress: number;
+  totalBytes: number;
+  downloadedBytes: number;
+  sourceLauncher?: LauncherSource;
+  installPath?: string;
+  speedBytesPerSec?: number;
+  queuedAt?: ISODate;
+  updatedAt?: ISODate;
+  errorMessage?: string;
+  canPause?: boolean;
+  canResume?: boolean;
+}
+
+// ── Auth state (mirrors dreams-launcher) ───────────────────────────────────
+export type AuthStateResponse =
+  | { type: "Anonymous" }
+  | { type: "Authenticating" }
+  | { type: "Authenticated"; user: { uid: string; email: string; displayName: string } }
+  | { type: "Error"; message: string };
+
+// ── Client settings configuration ──────────────────────────────────────────
+export type StartupLocation = "store" | "library" | "feed" | "db";
+export type FpsCounterLocation = "off" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type DownloadLimitOption = "unlimited" | "10" | "25" | "50" | "100";
+
+export interface ClientSettings {
+  startupLocation: StartupLocation;
+  compactMode: boolean;
+  offlineModeEnabled: boolean;
+  offlineCacheStatus: "ready" | "syncing" | "needs-attention";
+  offlineCacheUpdatedAt: ISODate | null;
+  closeToTray: boolean;
+  hardwareAcceleration: boolean;
+  inGameOverlay: boolean;
+  fpsCounter: FpsCounterLocation;
+  fpsHighContrast: boolean;
+  screenshotKey: string;
+  screenshotSound: boolean;
+  downloadLimit: DownloadLimitOption;
+  downloadRegion: string;
+  installPath: string;
+  allowDownloadsDuringGameplay: boolean;
+  emailOnSale: boolean;
+  browserNotify: boolean;
+  playNotificationSound: boolean;
+  friendOnlineNotify: boolean;
+  friendStartGameNotify: boolean;
+  chatProfanityFilter: boolean;
+  playChatSound: boolean;
+  cloudSavesEnabled: boolean;
+  librarySharingEnabled: boolean;
+  crashReportsEnabled: boolean;
+  usageDiagnosticsEnabled: boolean;
+  scanHistoryRetentionDays: 0 | 30 | 90 | 365;
+  privacyDataExportStatus: "idle" | "preparing" | "ready";
+  privacyDeleteRequestStatus: "idle" | "scheduled";
+  handheldMode: boolean;
+  largerFocusTargets: boolean;
+  controllerHints: boolean;
+  language: string;
+}
+
+// ── Social Feed ─────────────────────────────────────────────────────────────
+export interface SocialReply {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatarUrl: string;
+  authorAvatarOptions?: AvatarOptions;
+  content: string;
+  createdAt: ISODate;
+  likes: number;
+  likedByMe?: boolean;
+}
+
+export interface SocialPost {
+  id: string;
+  authorUid: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatarUrl: string;
+  authorAvatarOptions?: AvatarOptions;
+  content: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  gameId?: GameId;
+  createdAt: ISODate;
+  likes: number;
+  likedByMe?: boolean;
+  reposts: number;
+  repostedByMe?: boolean;
+  replies: SocialReply[];
+}

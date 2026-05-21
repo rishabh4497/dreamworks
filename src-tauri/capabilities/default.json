@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions for Dreamworks",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "notification:default",
+    "os:allow-platform",
+    "os:allow-arch",
+    "fs:allow-read-text-file",
+    "fs:allow-read-dir",
+    "fs:allow-exists",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/.steam/**" },
+        { "path": "$HOME/.local/share/Steam/**" },
+        { "path": "$HOME/Library/Application Support/Steam/**" },
+        { "path": "C:/Program Files (x86)/Steam/**" },
+        { "path": "C:/Program Files/Steam/**" },
+        { "path": "C:/ProgramData/Epic/EpicGamesLauncher/Data/Manifests/**" },
+        { "path": "/Users/Shared/Epic/EpicGamesLauncher/Data/Manifests/**" }
+      ]
+    }
+  ]
+}
