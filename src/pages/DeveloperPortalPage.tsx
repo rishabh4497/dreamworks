@@ -34,7 +34,7 @@ import {
 import { usePublisherProfile, useSavePublisherProfile } from "@/hooks/use-publisher";
 import { useQueryClient } from "@tanstack/react-query";
 import { gameKeys } from "@/hooks/use-games";
-import { useDeveloperDrafts } from "@/hooks/use-developer-drafts";
+import { useDeveloperDrafts, draftKeys } from "@/hooks/use-developer-drafts";
 import { cn, slugify } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -140,8 +140,9 @@ export function DeveloperPortalPage() {
     }
   }, [draftsList, draft]);
 
-  const { data: fetchedProfile } = usePublisherProfile(draft?.developerName);
-  const saveProfileMutation = useSavePublisherProfile(draft?.developerName);
+  const targetDeveloperName = draft?.developerName || draftsList?.[0]?.developerName;
+  const { data: fetchedProfile } = usePublisherProfile(targetDeveloperName);
+  const saveProfileMutation = useSavePublisherProfile(targetDeveloperName);
   // queryClient already declared
 
   const [profileName, setProfileName] = useState("");
@@ -149,25 +150,27 @@ export function DeveloperPortalPage() {
   const [profileLogoUrl, setProfileLogoUrl] = useState("");
   const [profileBannerUrl, setProfileBannerUrl] = useState("");
   const [profileTagline, setProfileTagline] = useState("");
-  const [hasInitializedProfile, setHasInitializedProfile] = useState(false);
+  const [syncedTarget, setSyncedTarget] = useState<string | null>(null);
 
   useEffect(() => {
-    if (fetchedProfile && !hasInitializedProfile) {
-      setProfileName(fetchedProfile.name || draft?.developerName || "");
-      setProfileBrandColor(fetchedProfile.brandColor || "#66c0f4");
-      setProfileLogoUrl(fetchedProfile.logoUrl || "");
-      setProfileBannerUrl(fetchedProfile.bannerUrl || "");
-      setProfileTagline(fetchedProfile.tagline || "");
-      setHasInitializedProfile(true);
-    } else if (draft?.developerName && !hasInitializedProfile && fetchedProfile === null) {
-      setProfileName(draft.developerName);
-      setProfileBrandColor("#66c0f4");
-      setProfileLogoUrl("");
-      setProfileBannerUrl("");
-      setProfileTagline("Discover the catalog this publisher brings to players worldwide.");
-      setHasInitializedProfile(true);
+    if (targetDeveloperName && targetDeveloperName !== syncedTarget) {
+      if (fetchedProfile) {
+        setProfileName(fetchedProfile.name || targetDeveloperName || "");
+        setProfileBrandColor(fetchedProfile.brandColor || "#66c0f4");
+        setProfileLogoUrl(fetchedProfile.logoUrl || "");
+        setProfileBannerUrl(fetchedProfile.bannerUrl || "");
+        setProfileTagline(fetchedProfile.tagline || "");
+        setSyncedTarget(targetDeveloperName);
+      } else if (fetchedProfile === null) {
+        setProfileName(targetDeveloperName);
+        setProfileBrandColor("#66c0f4");
+        setProfileLogoUrl("");
+        setProfileBannerUrl("");
+        setProfileTagline("Discover the catalog this publisher brings to players worldwide.");
+        setSyncedTarget(targetDeveloperName);
+      }
     }
-  }, [fetchedProfile, draft?.developerName, hasInitializedProfile]);
+  }, [fetchedProfile, targetDeveloperName, syncedTarget]);
 
   const checklistTotal = draft ? Object.keys(draft.checklist).length : 0;
   const checklistDone = draft
@@ -233,6 +236,7 @@ export function DeveloperPortalPage() {
       const saved = await saveDeveloperReleaseDraft(toInput());
       setDraft(saved);
       setSaveState("saved");
+      queryClient.invalidateQueries({ queryKey: draftKeys.list() });
       toast.success("Draft saved successfully.");
     } catch (err: any) {
       console.error("Failed to save draft", err);
@@ -248,6 +252,7 @@ export function DeveloperPortalPage() {
       const submitted = await submitDeveloperReleaseDraft(toInput());
       await publishGameFromDraft(submitted);
       queryClient.invalidateQueries({ queryKey: gameKeys.all });
+      queryClient.invalidateQueries({ queryKey: draftKeys.list() });
       setDraft(submitted);
       setSaveState("submitted");
       toast.success(`Successfully published ${submitted.gameTitle} to the store!`);
