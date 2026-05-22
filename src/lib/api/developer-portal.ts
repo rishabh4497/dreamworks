@@ -24,6 +24,7 @@ export interface DeveloperReleaseDraft {
   developerUserId?: string;
   gameTitle: string;
   developerName: string;
+  publisherName: string;
   shortDescription: string;
   genre: string;
   contentRating: string;
@@ -65,6 +66,7 @@ const DEFAULT_DRAFT: DeveloperReleaseDraft = {
   id: "release-draft-primary",
   gameTitle: "Moonlit Express",
   developerName: "Signal Bloom Studio",
+  publisherName: "Signal Bloom Studio",
   shortDescription: "A cozy rail-builder about restoring night routes between floating cities.",
   genre: "Simulation",
   contentRating: "Everyone 10+",
@@ -129,13 +131,14 @@ export async function listDeveloperReleaseDrafts(): Promise<DeveloperReleaseDraf
   return drafts;
 }
 
-export function createEmptyDraft(publisherName?: string): DeveloperReleaseDraft {
+export function createEmptyDraft(developerName?: string, publisherName?: string): DeveloperReleaseDraft {
   return {
     ...DEFAULT_DRAFT,
     id: "release-draft-" + crypto.randomUUID(),
     developerUserId: getUserId(),
     gameTitle: "Untitled Game",
-    developerName: publisherName || "Unknown Studio",
+    developerName: developerName || "Unknown Studio",
+    publisherName: publisherName || "Unknown Publisher",
     updatedAt: now(),
   };
 }
@@ -225,7 +228,7 @@ export function draftToGameDetail(draft: DeveloperReleaseDraft): GameDetail {
     slug,
     name: draft.gameTitle,
     developer: draft.developerName,
-    publisher: draft.developerName,
+    publisher: draft.publisherName || draft.developerName,
     releaseDate: draft.releaseDate || new Date().toISOString().split("T")[0],
     comingSoon: new Date(draft.releaseDate) > new Date(),
     coverUrl: draft.coverUrl || gameCoverUrl(slug),
