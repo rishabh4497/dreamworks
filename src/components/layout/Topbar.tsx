@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useRef, useState } from "react";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { isDesktop } from "@/lib/platform";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -85,7 +86,7 @@ export function Topbar() {
             {settings.offlineModeEnabled ? "Offline" : "Online"}
           </span>
         </button>
-        {settings.handheldMode && (
+        {settings.handheldMode && isDesktop() && (
           <button
             type="button"
             title="Handheld mode active"

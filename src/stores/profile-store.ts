@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { isDesktop } from "@/lib/platform";
+import { type, version, arch } from "@tauri-apps/plugin-os";
 
 export interface SystemRig {
   os: string;
@@ -35,20 +37,34 @@ const detectSystemRig = (): SystemRig => {
   let display = "Unknown Display";
 
   if (typeof window !== "undefined") {
-    const ua = navigator.userAgent;
-    if (ua.includes("Win")) os = "Windows 11 64-bit";
-    else if (ua.includes("Mac")) os = "macOS";
-    else if (ua.includes("Linux")) os = "Linux";
-
-    const cores = navigator.hardwareConcurrency;
-    if (cores) cpu = `Processor (${cores}-Core)`;
-
-    const memory = (navigator as any).deviceMemory;
-    if (memory) ram = `${memory} GB RAM`;
-
-    display = `${window.screen.width} x ${window.screen.height}`;
-
     try {
+      if (isDesktop()) {
+        if ((window as any).__TAURI_OS_PLUGIN_INTERNALS__) {
+          const osType = type();
+          const osVer = version();
+          const osArch = arch() === "aarch64" ? "Apple Silicon" : arch();
+          
+          if (osType === "macos") os = `macOS ${osVer} (${osArch})`;
+          else if (osType === "windows") os = `Windows ${osVer} (${osArch})`;
+          else if (osType === "linux") os = `Linux ${osVer} (${osArch})`;
+          else os = `${osType} ${osVer}`;
+        } else {
+          os = "Desktop (OS Plugin Pending)";
+        }
+      } else {
+        if (navigator.userAgent.includes("Win")) os = "Windows (Web)";
+        else if (navigator.userAgent.includes("Mac")) os = "macOS (Web)";
+        else if (navigator.userAgent.includes("Linux")) os = "Linux (Web)";
+      }
+
+      const cpuCores = navigator.hardwareConcurrency || 8;
+      cpu = `Processor (${cpuCores}-Core)`;
+      
+      const memory = (navigator as any).deviceMemory || 16;
+      ram = `${memory} GB RAM`;
+
+      display = `${window.screen.width} x ${window.screen.height}`;
+
       const canvas = document.createElement("canvas");
       const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
       if (gl) {
@@ -60,7 +76,9 @@ const detectSystemRig = (): SystemRig => {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to detect system rig:", e);
+    }
   }
 
   return {
@@ -87,6 +105,15 @@ export const useProfileStore = create<ProfileStore>()(
     }),
     {
       name: "dreamworks-profile-storage",
+      partialize: (state) => ({
+        activeThemeId: state.activeThemeId,
+        customFps: state.customFps,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...(persistedState || {}),
+        systemRig: currentState.systemRig,
+      }),
     }
   )
 );

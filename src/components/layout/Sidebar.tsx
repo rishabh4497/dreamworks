@@ -111,9 +111,11 @@ export function Sidebar() {
         <p className={GROUP_LABEL}>Developer</p>
         <NavGroup items={devNav} currentPath={location.pathname} />
 
-        <div className="mt-4 pt-3">
-          <NavGroup items={[{ to: ROUTES.settings, label: "Settings", icon: Settings }]} currentPath={location.pathname} />
-        </div>
+        {isDesktop && (
+          <div className="mt-4 pt-3">
+            <NavGroup items={[{ to: ROUTES.settings, label: "Settings", icon: Settings }]} currentPath={location.pathname} />
+          </div>
+        )}
       </nav>
 
       <div className="px-3 pb-3 pt-3">

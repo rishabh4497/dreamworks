@@ -37,8 +37,13 @@ export function SystemInfoPanel() {
   // Merge with custom overrides
   const fpsRecommendations = useMemo(() => {
     return baseFpsRecommendations.map(base => {
-      if (customFps[base.gameId]) {
-        return customFps[base.gameId];
+      const custom = customFps[base.gameId];
+      if (custom) {
+        return {
+          ...base,
+          fps: custom.fps,
+          quality: custom.quality
+        };
       }
       return base;
     });
