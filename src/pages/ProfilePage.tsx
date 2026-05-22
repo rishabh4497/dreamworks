@@ -16,6 +16,7 @@ import {
   formatPrice,
   relativeDate,
 } from "@/lib/utils";
+import { isDesktop } from "@/lib/platform";
 import { DEFAULT_AVATAR_OPTIONS } from "@/lib/avatar";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { AvatarCustomizer } from "@/components/avatar/AvatarCustomizer";
@@ -166,12 +167,14 @@ export function ProfilePage() {
       </section>
 
       {/* ── System Info Panel ────────────────────────────────────────────── */}
-      <section className="mb-8">
-        <SystemInfoPanel />
-        <div className="mt-6">
-          <DynamicProfileTheme />
-        </div>
-      </section>
+      {isDesktop() && (
+        <section className="mb-8">
+          <SystemInfoPanel />
+          <div className="mt-6">
+            <DynamicProfileTheme />
+          </div>
+        </section>
+      )}
 
       {/* ── Showcase ─────────────────────────────────────────────────────── */}
       {showcase.length > 0 && (
