@@ -1,4 +1,4 @@
-import { BrainCircuit, MessageCircle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export function SentimentAnalysis() {

@@ -7,7 +7,6 @@ import {
   Flag,
   History,
   MessageSquareWarning,
-  ShieldAlert,
   ShieldCheck,
   UserRoundX,
 } from "lucide-react";
@@ -102,20 +101,7 @@ export function ModerationQueuePage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted/50">
-            <ShieldAlert className="h-3 w-3" />
-            Dreamworks DB
-          </p>
-          <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
-            Moderation Queue
-          </h1>
-          <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-muted/65">
-            Review reported reviews, posts, workshop items, and profiles with ownership and trust
-            signals before taking action.
-          </p>
-        </div>
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-end mb-2">
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}

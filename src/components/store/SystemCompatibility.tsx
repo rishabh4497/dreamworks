@@ -1,7 +1,7 @@
 import { Cpu, Monitor, ShieldAlert, Sparkles, CheckCircle2 } from "lucide-react";
-import { type Game } from "@/lib/types";
+import { type GameDetail } from "@/lib/types";
 
-export function SystemCompatibility({ game }: { game: Game }) {
+export function SystemCompatibility({ game }: { game: GameDetail }) {
   // Mocking the user's system specs (this would come from a system info store in a real app)
   const systemInfo = {
     os: "Windows 11 Pro 64-bit",
@@ -31,7 +31,7 @@ export function SystemCompatibility({ game }: { game: Game }) {
             <span className="text-[10px] text-positive font-bold">Exceeds</span>
           </div>
           <p className="text-[12px] font-bold text-foreground truncate">{systemInfo.cpu}</p>
-          <p className="text-[10px] text-muted mt-1 truncate line-through opacity-70">Req: {game.systemRequirements?.recommended?.cpu || "Core i7"}</p>
+          <p className="text-[10px] text-muted mt-1 truncate line-through opacity-70">Req: {game.systemRequirements?.windows?.cpu || game.systemRequirements?.mac?.cpu || game.systemRequirements?.linux?.cpu || "Core i7"}</p>
         </div>
         
         <div className="bg-input rounded-lg border border-separator p-3">
@@ -40,7 +40,7 @@ export function SystemCompatibility({ game }: { game: Game }) {
             <span className="text-[10px] text-positive font-bold">Exceeds</span>
           </div>
           <p className="text-[12px] font-bold text-foreground truncate">{systemInfo.gpu}</p>
-          <p className="text-[10px] text-muted mt-1 truncate line-through opacity-70">Req: {game.systemRequirements?.recommended?.gpu || "RTX 2070"}</p>
+          <p className="text-[10px] text-muted mt-1 truncate line-through opacity-70">Req: {game.systemRequirements?.windows?.gpu || game.systemRequirements?.mac?.gpu || game.systemRequirements?.linux?.gpu || "RTX 2070"}</p>
         </div>
       </div>
       

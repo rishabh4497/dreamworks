@@ -28,7 +28,11 @@ export function SpeedrunLeaderboards() {
               <img src={run.avatar} alt="Avatar" className="h-8 w-8 rounded-full border border-separator" />
               <div className="flex items-center gap-2">
                 <span className="text-[14px] font-bold text-foreground">{run.player}</span>
-                {run.verified && <Medal className="h-3.5 w-3.5 text-yellow" title="Verified by Dreamworks Anti-Cheat" />}
+                {run.verified && (
+                  <span title="Verified by Dreamworks Anti-Cheat">
+                    <Medal className="h-3.5 w-3.5 text-yellow" />
+                  </span>
+                )}
               </div>
             </div>
             

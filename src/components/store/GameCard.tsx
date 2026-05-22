@@ -59,9 +59,9 @@ export function GameCard({ game, width = 240, reason }: GameCardProps) {
     navigate(ROUTES.gameDetail(game.id));
   };
 
-  const onWishlist = (e: React.MouseEvent) => {
+  const onWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const added = toggle(game.id);
+    const added = await toggle(game.id);
     toast.success(added ? `Added “${game.name}” to wishlist` : `Removed from wishlist`);
   };
 

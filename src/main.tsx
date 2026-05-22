@@ -6,10 +6,13 @@ import App from "./App";
 import "./styles/globals.css";
 import { createQueryClient } from "@/lib/query-client";
 import { useThemeStore } from "@/stores/theme-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { isDesktop, openExternal } from "@/lib/platform";
 
-// Side-effect: ensure theme store initializes & applies data-theme before paint
+// Side-effect: ensure theme store & auth store initialize
 useThemeStore.getState();
+useAuthStore.getState().initialize();
+
 
 // On desktop, route external links through the OS browser rather than letting
 // the Tauri webview open them inside the app window.

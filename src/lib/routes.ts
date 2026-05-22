@@ -18,7 +18,6 @@ export const ROUTES = {
   dbSales: "/db/sales",
   dbCalendar: "/db/calendar",
   dbAccount: "/db/account",
-  dbModeration: "/db/moderation",
 
   feed: "/feed",
   news: "/feed?tab=news",

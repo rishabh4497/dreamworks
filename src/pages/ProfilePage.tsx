@@ -21,7 +21,6 @@ import { DEFAULT_AVATAR_OPTIONS } from "@/lib/avatar";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { AvatarCustomizer } from "@/components/avatar/AvatarCustomizer";
 import { Button } from "@/components/ui/button";
-import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { DreamworksWrapped } from "@/components/profile/DreamworksWrapped";
 import { QuestsPanel } from "@/components/profile/QuestsPanel";
 import { PlaytimeHeatmap } from "@/components/profile/PlaytimeHeatmap";

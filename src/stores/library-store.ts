@@ -1,9 +1,21 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { DrmType, GameId, LauncherSource, LibraryEntry, LibrarySourceCopy } from "@/lib/types";
-import { MOCK_LIBRARY, buildGameDetail } from "@/lib/mock";
+import { buildGameDetail } from "@/lib/mock";
 import { computeRefundWindow, isRefundEligible } from "@/lib/refund";
 import { defaultCloudSaveStatus } from "@/lib/native-launcher";
+import { useAuthStore } from "@/stores/auth-store";
+import { getDb, COLLECTIONS } from "@/lib/firebase";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  writeBatch
+} from "firebase/firestore";
 
 interface AddExternalOptions {
   installed?: boolean;
@@ -17,32 +29,18 @@ interface AddExternalOptions {
 
 interface LibraryStore {
   entries: LibraryEntry[];
-  addFromPurchase: (ids: GameId[], orderId?: string) => void;
+  addFromPurchase: (ids: GameId[], orderId?: string) => Promise<void>;
   addExternal: (
     gameId: GameId,
     sourceLauncher: LauncherSource,
     opts?: AddExternalOptions,
-  ) => void;
-  toggleInstalled: (id: GameId) => void;
-  moveInstallPath: (id: GameId, installPath: string) => void;
-  requestRefund: (id: GameId) => boolean;
+  ) => Promise<void>;
+  toggleInstalled: (id: GameId) => Promise<void>;
+  moveInstallPath: (id: GameId, installPath: string) => Promise<void>;
+  requestRefund: (id: GameId) => Promise<boolean>;
   has: (id: GameId) => boolean;
   reset: () => void;
 }
-
-const seeded = MOCK_LIBRARY.map((entry) => {
-  const detail = buildGameDetail(entry.gameId);
-  const mainHours = detail?.playtime.mainHours ?? 0;
-  const sourceLauncher = entry.sourceLauncher ?? "dreamworks";
-  return {
-    ...entry,
-    sourceLauncher,
-    cloudSaveStatus: entry.cloudSaveStatus ?? defaultCloudSaveStatus(sourceLauncher),
-    drmType: entry.drmType ?? ("dreamworks" as DrmType),
-    canLaunchOffline: entry.canLaunchOffline ?? true,
-    refundWindow: computeRefundWindow(entry.ownedSince, mainHours, entry.playMinutes),
-  };
-});
 
 function drmForSource(sourceLauncher: LauncherSource): DrmType {
   if (sourceLauncher === "dreamworks" || sourceLauncher === "manual") return "dreamworks";
@@ -67,117 +65,164 @@ function sourceCopy(
   };
 }
 
-export const useLibraryStore = create<LibraryStore>()(
-  persist(
-    (set, get) => ({
-      entries: seeded,
-      addFromPurchase: (ids, orderId) =>
-        set((s) => {
-          const known = new Set(s.entries.map((e) => e.gameId));
-          const now = new Date().toISOString();
-          const additions: LibraryEntry[] = ids
-            .filter((id) => !known.has(id))
-            .map((id) => {
-              const detail = buildGameDetail(id);
-              const mainHours = detail?.playtime.mainHours ?? 0;
-              return {
-                gameId: id,
-                ownedSince: now,
-                installed: false,
-                sizeBytes: 0,
-                playMinutes: 0,
-                lastPlayed: null,
-                collectionIds: [],
-                achievementsUnlocked: 0,
-                completionPct: 0,
-                refundWindow: computeRefundWindow(now, mainHours, 0),
-                orderId,
-                sourceLauncher: "dreamworks",
-                cloudSaveStatus: "synced",
-                drmType: "dreamworks",
-                canLaunchOffline: true,
-              };
-            });
-          return { entries: [...s.entries, ...additions] };
-        }),
-      addExternal: (id, sourceLauncher, opts) =>
-        set((s) => {
-          const existing = s.entries.find((e) => e.gameId === id);
-          const copy = sourceCopy(sourceLauncher, opts);
-          if (existing) {
-            return {
-              entries: s.entries.map((entry) =>
-                entry.gameId === id
-                  ? {
-                      ...entry,
-                      sources: [
-                        ...(entry.sources ?? []).filter(
-                          (source) =>
-                            !(
-                              source.sourceLauncher === sourceLauncher &&
-                              source.externalId === opts?.externalId
-                            ),
-                        ),
-                        copy,
-                      ],
-                    }
-                  : entry,
-              ),
-            };
-          }
-          const now = new Date().toISOString();
-          const drmType = drmForSource(sourceLauncher);
-          const entry: LibraryEntry = {
-            gameId: id,
-            ownedSince: now,
-            installed: opts?.installed ?? true,
-            sizeBytes: opts?.sizeBytes ?? 0,
-            playMinutes: 0,
-            lastPlayed: null,
-            collectionIds: [],
-            achievementsUnlocked: 0,
-            completionPct: 0,
-            // External titles can't be refunded through Dreamworks.
-            refundWindow: null,
-            sourceLauncher,
-            externalId: opts?.externalId,
-            installPath: opts?.installPath,
-            launchCommand: opts?.launchCommand,
-            installedVersion: opts?.installedVersion,
-            lastVerifiedAt: null,
-            cloudSaveStatus: defaultCloudSaveStatus(sourceLauncher),
-            drmType,
-            canLaunchOffline: opts?.canLaunchOffline ?? drmType === "dreamworks",
-            sources: [copy],
-          };
-          return { entries: [...s.entries, entry] };
-        }),
-      toggleInstalled: (id) =>
-        set((s) => ({
-          entries: s.entries.map((e) =>
-            e.gameId === id ? { ...e, installed: !e.installed } : e,
-          ),
-        })),
-      moveInstallPath: (id, installPath) =>
-        set((s) => ({
-          entries: s.entries.map((entry) =>
-            entry.gameId === id ? { ...entry, installed: true, installPath } : entry,
-          ),
-        })),
-      requestRefund: (id) => {
-        const entry = get().entries.find((e) => e.gameId === id);
-        if (!entry) return false;
-        if (!isRefundEligible(entry.refundWindow, entry.playMinutes)) return false;
-        set((s) => ({
-          entries: s.entries
-            .map((e) => (e.gameId === id ? { ...e, installed: false } : e))
-            .filter((e) => e.gameId !== id),
-        }));
-        return true;
-      },
-      has: (id) => get().entries.some((e) => e.gameId === id),
-      reset: () => set({ entries: seeded }),
-    }),
-    { name: "dreamworks-library" },
-  ),
-);
+export const useLibraryStore = create<LibraryStore>((set, get) => ({
+  entries: [],
+  addFromPurchase: async (ids, orderId) => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile) return;
+    const now = new Date().toISOString();
+    const batch = writeBatch(getDb());
+    for (const id of ids) {
+      const detail = buildGameDetail(id);
+      const mainHours = detail?.playtime.mainHours ?? 0;
+      const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
+      batch.set(docRef, {
+        userId: profile.uid,
+        gameId: id,
+        ownedSince: now,
+        installed: false,
+        sizeBytes: 0,
+        playMinutes: 0,
+        lastPlayed: null,
+        collectionIds: [],
+        achievementsUnlocked: 0,
+        completionPct: 0,
+        refundWindow: computeRefundWindow(now, mainHours, 0),
+        orderId,
+        sourceLauncher: "dreamworks",
+        cloudSaveStatus: "synced",
+        drmType: "dreamworks",
+        canLaunchOffline: true,
+      });
+    }
+    await batch.commit();
+  },
+  addExternal: async (id, sourceLauncher, opts) => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile) return;
+    const copy = sourceCopy(sourceLauncher, opts);
+    const existing = get().entries.find((e) => e.gameId === id);
+    const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
+
+    if (existing) {
+      const updatedSources = [
+        ...(existing.sources ?? []).filter(
+          (source) =>
+            !(
+              source.sourceLauncher === sourceLauncher &&
+              source.externalId === opts?.externalId
+            ),
+        ),
+        copy,
+      ];
+      await updateDoc(docRef, { sources: updatedSources });
+    } else {
+      const now = new Date().toISOString();
+      const drmType = drmForSource(sourceLauncher);
+      await setDoc(docRef, {
+        userId: profile.uid,
+        gameId: id,
+        ownedSince: now,
+        installed: opts?.installed ?? true,
+        sizeBytes: opts?.sizeBytes ?? 0,
+        playMinutes: 0,
+        lastPlayed: null,
+        collectionIds: [],
+        achievementsUnlocked: 0,
+        completionPct: 0,
+        refundWindow: null,
+        sourceLauncher,
+        externalId: opts?.externalId,
+        installPath: opts?.installPath,
+        launchCommand: opts?.launchCommand,
+        installedVersion: opts?.installedVersion,
+        lastVerifiedAt: null,
+        cloudSaveStatus: defaultCloudSaveStatus(sourceLauncher),
+        drmType,
+        canLaunchOffline: opts?.canLaunchOffline ?? drmType === "dreamworks",
+        sources: [copy],
+      });
+    }
+  },
+  toggleInstalled: async (id) => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile) return;
+    const entry = get().entries.find((e) => e.gameId === id);
+    if (!entry) return;
+    const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
+    await updateDoc(docRef, { installed: !entry.installed });
+  },
+  moveInstallPath: async (id, installPath) => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile) return;
+    const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
+    await updateDoc(docRef, { installed: true, installPath });
+  },
+  requestRefund: async (id) => {
+    const profile = useAuthStore.getState().profile;
+    if (!profile) return false;
+    const entry = get().entries.find((e) => e.gameId === id);
+    if (!entry) return false;
+    if (!isRefundEligible(entry.refundWindow, entry.playMinutes)) return false;
+    const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
+    await deleteDoc(docRef);
+    return true;
+  },
+  has: (id) => get().entries.some((e) => e.gameId === id),
+  reset: () => {
+    // No-op or clear firestore if needed, but standard reset is just empty local entries
+    set({ entries: [] });
+  },
+}));
+
+let lastUid: string | undefined = undefined;
+let unsubscribeLibrary: (() => void) | null = null;
+
+useAuthStore.subscribe((state) => {
+  const uid = state.profile?.uid;
+  if (uid === lastUid) return;
+  lastUid = uid;
+
+  if (unsubscribeLibrary) {
+    unsubscribeLibrary();
+    unsubscribeLibrary = null;
+  }
+
+  if (!uid) {
+    useLibraryStore.setState({ entries: [] });
+    return;
+  }
+
+  const q = query(collection(getDb(), COLLECTIONS.library), where("userId", "==", uid));
+  unsubscribeLibrary = onSnapshot(q, (snap) => {
+    const entries: LibraryEntry[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      entries.push({
+        gameId: data.gameId,
+        ownedSince: data.ownedSince,
+        installed: !!data.installed,
+        sizeBytes: data.sizeBytes || 0,
+        playMinutes: data.playMinutes || 0,
+        lastPlayed: data.lastPlayed || null,
+        collectionIds: data.collectionIds || [],
+        achievementsUnlocked: data.achievementsUnlocked || 0,
+        completionPct: data.completionPct || 0,
+        refundWindow: data.refundWindow || null,
+        orderId: data.orderId,
+        sourceLauncher: data.sourceLauncher || "dreamworks",
+        externalId: data.externalId,
+        installPath: data.installPath,
+        launchCommand: data.launchCommand,
+        installedVersion: data.installedVersion,
+        lastVerifiedAt: data.lastVerifiedAt || null,
+        cloudSaveStatus: data.cloudSaveStatus || "synced",
+        drmType: data.drmType || "dreamworks",
+        canLaunchOffline: data.canLaunchOffline !== false,
+        sources: data.sources || [],
+      });
+    });
+    useLibraryStore.setState({ entries });
+  });
+});
+

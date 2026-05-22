@@ -39,3 +39,20 @@ export const db = new Proxy({} as Firestore, {
     return getDb()[prop as keyof Firestore];
   },
 });
+
+export const COLLECTIONS = {
+  users: "users",
+  games: "dw_games",
+  library: "dw_library",
+  wishlist: "dw_wishlist",
+  collections: "dw_collections",
+  forumThreads: "dw_forum_threads",
+  forumReplies: "dw_forum_replies",
+  orders: "dw_orders",
+  reviews: "dw_reviews",
+  feed: "dw_feed",
+  notifications: "dw_notifications",
+  developerDrafts: "dw_developer_drafts",
+  publisherProfiles: "dw_publishers",
+} as const;
+

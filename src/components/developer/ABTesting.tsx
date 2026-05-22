@@ -1,4 +1,4 @@
-import { SplitSquareHorizontal, CheckCircle2, TrendingUp, Users } from "lucide-react";
+import { SplitSquareHorizontal, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 

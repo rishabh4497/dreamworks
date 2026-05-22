@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { Pause, Play, X, ChevronUp, ChevronDown, Download, AlertCircle } from "lucide-react";
+import { Pause, Play, X } from "lucide-react";
 import { useDownloadStore } from "@/stores/download-store";
 import { cn, formatBytes } from "@/lib/utils";
 import { WaitingMiniGames } from "@/components/downloads/WaitingMiniGames";

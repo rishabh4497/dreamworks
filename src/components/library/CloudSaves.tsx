@@ -12,7 +12,7 @@ const MOCK_SAVES = [
   { id: "s3", date: "Oct 12 at 2:00 AM", size: "10.1 MB", desc: "Autosave - Early Game" },
 ];
 
-export function CloudSaves({ gameId }: CloudSavesProps) {
+export function CloudSaves({ gameId: _gameId }: CloudSavesProps) {
   const [synced, setSynced] = useState(true);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
 

@@ -54,7 +54,7 @@ export function NewThreadModal({ open, onClose, gameId }: NewThreadModalProps) {
     onClose();
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const tErr = validateTitle(title);
     const bErr = validateBody(body);
@@ -62,11 +62,16 @@ export function NewThreadModal({ open, onClose, gameId }: NewThreadModalProps) {
     setBodyError(bErr);
     if (tErr || bErr) return;
 
-    const thread = createThread(gameId, title.trim(), body.trim());
-    toast.success("Thread posted");
-    reset();
-    onClose();
-    navigate(ROUTES.forumThread(gameId, thread.id));
+    try {
+      const thread = await createThread(gameId, title.trim(), body.trim());
+      toast.success("Thread posted");
+      reset();
+      onClose();
+      navigate(ROUTES.forumThread(gameId, thread.id));
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to post thread");
+    }
   }
 
   return (

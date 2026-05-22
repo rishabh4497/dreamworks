@@ -4,6 +4,7 @@ import { useGames } from "@/hooks/use-games";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/lib/routes";
+import { type GameDetail } from "@/lib/types";
 
 export function PlayNextQueue() {
   const entries = useLibraryStore((s) => s.entries);
@@ -14,8 +15,8 @@ export function PlayNextQueue() {
   // Simple heuristic: Unplayed or barely played games, sorted by high meta score
   const backlog = entries
     .filter(e => e.playMinutes < 60)
-    .map(e => games.find(g => g.id === e.gameId))
-    .filter((g): g is NonNullable<typeof g> => Boolean(g))
+    .map(e => games.find(g => g.id === e.gameId) as GameDetail | undefined)
+    .filter((g): g is GameDetail => Boolean(g))
     .sort((a, b) => (b.metaScore ?? 0) - (a.metaScore ?? 0))
     .slice(0, 3);
 
@@ -30,7 +31,7 @@ export function PlayNextQueue() {
       </div>
       
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {backlog.map((game, i) => (
+        {backlog.map((game) => (
           <div key={game.id} className="group relative overflow-hidden rounded-xl border border-separator bg-card transition-all hover:border-acid/30 hover:shadow-lg hover:shadow-acid/5">
             <img src={game.capsuleUrl} alt="" className="aspect-[460/215] w-full object-cover transition-transform duration-500 group-hover:scale-105 group-hover:opacity-60" />
             

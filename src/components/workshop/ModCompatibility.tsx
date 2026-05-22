@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, ShieldAlert, ShieldCheck, Cpu } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ModCompatibilityProps {

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Activity, BarChart3, Calendar, ListTodo, Tag, TrendingUp } from "lucide-react";
+import { Activity, BarChart3, Calendar, Tag, TrendingUp } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { 
   DeadGamePredictor, TwitchImpactOverlay, DiscountEfficiencyMatrix,

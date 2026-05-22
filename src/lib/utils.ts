@@ -89,3 +89,28 @@ export function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+export function parseScreenshots(raw: string | undefined | null): string[] {
+  if (!raw) return [];
+  if (raw.includes("|")) {
+    return raw.split("|").map(u => u.trim()).filter(Boolean);
+  }
+  
+  const parts = raw.split(",");
+  const urls: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    let part = parts[i].trim();
+    if (part.startsWith("data:image/") && part.includes(";base64")) {
+      if (i + 1 < parts.length) {
+        part = part + "," + parts[i + 1].trim();
+        i++;
+      }
+    }
+    if (part) urls.push(part);
+  }
+  return urls;
+}
+
+export function joinScreenshots(urls: string[]): string {
+  return urls.join(" | ");
+}

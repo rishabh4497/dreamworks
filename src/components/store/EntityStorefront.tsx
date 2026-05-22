@@ -15,6 +15,7 @@ import { EntityNewsRail } from "@/components/store/EntityNewsRail";
 import { toast } from "@/stores/toast-store";
 import { useAccentStore } from "@/stores/accent-store";
 import { studioBrand } from "@/lib/studio-logos";
+import { usePublisherProfile } from "@/hooks/use-publisher";
 import { cn, slugify } from "@/lib/utils";
 
 export type EntityKind = "Developer" | "Publisher";
@@ -87,22 +88,24 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
     return { topGenres: top(genres, 4), topTags: top(tags, 6) };
   }, [games]);
 
+  const { data: dbProfile } = usePublisherProfile(name);
+
   const isDeveloper = kind === "Developer";
   const Icon = isDeveloper ? Building2 : Building;
   const brand = studioBrand(name);
   // PlayStation blue fallback — neutral enough for any unknown studio.
-  const wash = brand?.brandColor ?? "#66c0f4";
+  const wash = dbProfile?.brandColor || brand?.brandColor || "#66c0f4";
   const initials = initialsOf(name);
 
   // Drive the app-wide Spotify accent from the studio brand color.
   const setAccent = useAccentStore((s) => s.setAccent);
   useEffect(() => {
-    setAccent(brand?.brandColor ?? null);
+    setAccent(dbProfile?.brandColor || brand?.brandColor || null);
     return () => setAccent(null);
-  }, [brand?.brandColor, setAccent]);
-  const tagline = isDeveloper
+  }, [dbProfile?.brandColor, brand?.brandColor, setAccent]);
+  const tagline = dbProfile?.tagline || (isDeveloper
     ? "Welcome to the studio — every game crafted here, all in one place."
-    : "Discover the catalog this publisher brings to players worldwide.";
+    : "Discover the catalog this publisher brings to players worldwide.");
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -116,7 +119,21 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
       {/* ── Cinematic hero ───────────────────────────────────────────────── */}
       <section className="relative mb-8 overflow-hidden rounded-2xl border border-separator">
         <div className="relative h-56 sm:h-72">
-          {featured ? (
+          {dbProfile?.bannerUrl ? (
+            <>
+              <img
+                src={dbProfile.bannerUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 h-full w-full object-cover opacity-90"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: brandWashBackground(wash) }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-background/20" />
+            </>
+          ) : featured ? (
             <>
               <img
                 src={featured.headerUrl}
@@ -142,7 +159,7 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
 
         <div className="relative -mt-24 flex flex-col gap-4 px-6 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-end gap-4 sm:gap-5">
-            <StudioLogo name={name} initials={initials} />
+            <StudioLogo name={name} initials={initials} dbLogoUrl={dbProfile?.logoUrl} />
             <div className="min-w-0 pb-1">
               <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-acid">
                 <Icon className="h-3.5 w-3.5" />
@@ -398,10 +415,17 @@ function FeaturedHero({ game }: { game: Game }) {
 }
 
 // ── Studio logo ────────────────────────────────────────────────────────────
-function StudioLogo({ name, initials }: { name: string; initials: string }) {
+interface StudioLogoProps {
+  name: string;
+  initials: string;
+  dbLogoUrl?: string;
+}
+
+function StudioLogo({ name, initials, dbLogoUrl }: StudioLogoProps) {
   const brand = studioBrand(name);
   const [failed, setFailed] = useState(false);
-  const showLogo = !!brand && !failed;
+  const logoUrl = dbLogoUrl || brand?.logoUrl;
+  const showLogo = !!logoUrl && !failed;
 
   return (
     <div
@@ -412,7 +436,7 @@ function StudioLogo({ name, initials }: { name: string; initials: string }) {
     >
       {showLogo ? (
         <img
-          src={brand.logoUrl}
+          src={logoUrl}
           alt={`${name} logo`}
           className="h-full w-full object-contain"
           loading="lazy"

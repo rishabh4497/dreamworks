@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { BarChart3, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Send, Sparkles, Tag } from "lucide-react";
 import { useGameDetail } from "@/hooks/use-games";
@@ -36,7 +36,7 @@ import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
 import { studioBrand } from "@/lib/studio-logos";
-import type { FacetAverages, Review } from "@/lib/types";
+import type { FacetAverages, Review, GameDetail } from "@/lib/types";
 import { cn, compactNumber, formatBytes, formatDate, formatHours, slugify } from "@/lib/utils";
 
 function computeFacetAverages(reviews: Review[]): FacetAverages {
@@ -70,10 +70,16 @@ function computeFacetAverages(reviews: Review[]): FacetAverages {
 export function GameDetailPage() {
   const { gameId = "" } = useParams();
   const navigate = useNavigate();
-  const { data: detail, isLoading } = useGameDetail(gameId);
-  const { data: priceHistory } = usePriceHistory(gameId);
-  const { data: lows } = useHistoricalLows(gameId);
-  const reviews = useGameReviews(gameId);
+  const location = useLocation();
+  const previewData = location.state?.previewData as GameDetail | undefined;
+  
+  const { data: fetchedDetail, isLoading: isFetching } = useGameDetail(previewData ? undefined : gameId);
+  const detail = previewData || fetchedDetail;
+  const isLoading = !previewData && isFetching;
+
+  const { data: priceHistory } = usePriceHistory(previewData ? undefined : gameId);
+  const { data: lows } = useHistoricalLows(previewData ? undefined : gameId);
+  const reviews = useGameReviews(previewData ? undefined : gameId);
   const pushRecent = useRecentlyViewedStore((s) => s.push);
   const owns = useLibraryStore((s) => s.has(gameId));
   const userReview = useUserReviewsStore((s) => s.byGame[gameId]);

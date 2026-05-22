@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { BookOpen, Clock, Users } from "lucide-react";
-import { motion } from "motion/react";
 import { useGames } from "@/hooks/use-games";
 import { Button } from "@/components/ui/button";
 

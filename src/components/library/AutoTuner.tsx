@@ -7,7 +7,7 @@ interface AutoTunerProps {
   gameId: string;
 }
 
-export function AutoTuner({ gameId }: AutoTunerProps) {
+export function AutoTuner({ gameId: _gameId }: AutoTunerProps) {
   const [status, setStatus] = useState<"idle" | "scanning" | "tuned">("idle");
 
   const startTuning = () => {

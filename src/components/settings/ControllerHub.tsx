@@ -1,4 +1,4 @@
-import { Gamepad2, Download, Share2, Star } from "lucide-react";
+import { Gamepad2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ControllerHub() {

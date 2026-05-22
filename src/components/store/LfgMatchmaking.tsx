@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, UserPlus, Shield, Mic, Search } from "lucide-react";
+import { Users, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,7 +13,7 @@ const MOCK_GROUPS = [
   { id: 3, host: "Max", playstyle: "Achievement Hunter", needMic: true, spots: 3, max: 4, avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Max" },
 ];
 
-export function LfgMatchmaking({ gameId }: LfgMatchmakingProps) {
+export function LfgMatchmaking({ gameId: _gameId }: LfgMatchmakingProps) {
   const [searching, setSearching] = useState(false);
 
   return (

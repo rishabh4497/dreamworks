@@ -1,4 +1,4 @@
-import { MessageSquare, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 export function ReviewExtractor() {
   return (
     <div className="rounded-xl border border-separator bg-card p-6">

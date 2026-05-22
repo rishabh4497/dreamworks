@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Gift, Users, CreditCard, Plus, Check } from "lucide-react";
+import { Gift, Users, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 

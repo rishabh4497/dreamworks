@@ -7,10 +7,18 @@ import type {
   PriceCents,
   UserProfile,
 } from "../types";
-import { wait } from "./_delay";
+import { getDb, COLLECTIONS } from "../firebase";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import { createEntitlementsForOrder, upsertEntitlements } from "./entitlements";
 
-const STORAGE_KEY = "dreamworks-orders";
 const TAX_RATE = 0.08;
 
 export interface PlaceMockOrderInput {
@@ -24,23 +32,6 @@ export interface PlaceMockOrderInput {
 export interface PlaceMockOrderResult {
   order: Order;
   entitlementIds: string[];
-}
-
-function readStored(): Order[] {
-  if (typeof localStorage === "undefined") return [];
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Order[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeStored(orders: Order[]) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
 }
 
 function receiptNumber(orderId: string) {
@@ -134,17 +125,27 @@ export function calculateOrderTotals(lineItems: OrderLineItem[]): {
 }
 
 export async function listOrders(userId: string): Promise<Order[]> {
-  await wait();
-  return readStored().filter((order) => !order.userId || order.userId === userId);
+  const q = query(
+    collection(getDb(), COLLECTIONS.orders),
+    where("userId", "==", userId)
+  );
+  const snap = await getDocs(q);
+  const orders: Order[] = [];
+  snap.forEach((d) => {
+    orders.push(d.data() as Order);
+  });
+  // Sort orders by placedAt descending
+  return orders.sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
 }
 
 export async function getOrder(orderId: string): Promise<Order | null> {
-  await wait();
-  return readStored().find((order) => order.id === orderId) ?? null;
+  const docRef = doc(getDb(), COLLECTIONS.orders, orderId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return null;
+  return snap.data() as Order;
 }
 
 export async function placeMockOrder(input: PlaceMockOrderInput): Promise<PlaceMockOrderResult> {
-  await wait(250);
   const lineItems = buildLineItems(input);
   const totals = calculateOrderTotals(lineItems);
   const now = new Date().toISOString();
@@ -168,8 +169,8 @@ export async function placeMockOrder(input: PlaceMockOrderInput): Promise<PlaceM
     metadata: buildOrderMetadata(lineItems),
   };
 
-  const existing = readStored();
-  writeStored([order, ...existing]);
+  const docRef = doc(getDb(), COLLECTIONS.orders, orderId);
+  await setDoc(docRef, order);
 
   const purchasedGames = input.games.filter((game) =>
     lineItems.some((line) => line.gameId === game.id && grantsBuyerAccess(line)),

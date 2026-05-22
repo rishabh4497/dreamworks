@@ -8,15 +8,13 @@ import type {
 import { GAMES, buildGameDetail } from "../mock";
 import { GAME_SEEDS } from "../mock/games";
 import { slugify } from "../utils";
-import { wait } from "./_delay";
+import { getDb, COLLECTIONS } from "../firebase";
+import { collection, getDocs, writeBatch, doc, getDoc } from "firebase/firestore";
 
 /**
  * Catalog entry used by the launcher scanner — pairs the in-app `GameId` with
  * each external launcher's primary identifier so we can resolve a detected
  * game to our catalog without leaking the mock-data layout to consumers.
- *
- * Today we only persist a `steamAppId`; we'll add more as the v2/v3 scanner
- * modules ship.
  */
 export interface ScannerCatalogEntry {
   id: GameId;
@@ -32,53 +30,96 @@ export function getScannerCatalog(): ScannerCatalogEntry[] {
   }));
 }
 
+let seedingPromise: Promise<void> | null = null;
+
+export async function ensureGamesSeeded(): Promise<void> {
+  if (seedingPromise) return seedingPromise;
+
+  seedingPromise = (async () => {
+    const colRef = collection(getDb(), COLLECTIONS.games);
+    const snap = await getDocs(colRef);
+    if (!snap.empty) {
+      return;
+    }
+
+    console.log("dw_games collection is empty, auto-seeding games from mock data...");
+    const batch = writeBatch(getDb());
+    
+    for (const g of GAMES) {
+      const detail = buildGameDetail(g.id);
+      if (!detail) continue;
+      const docRef = doc(getDb(), COLLECTIONS.games, g.id);
+      batch.set(docRef, detail);
+    }
+    await batch.commit();
+    console.log("Successfully seeded dw_games!");
+  })();
+
+  return seedingPromise;
+}
+
+async function fetchAllFromDb(): Promise<GameDetail[]> {
+  await ensureGamesSeeded();
+  const snap = await getDocs(collection(getDb(), COLLECTIONS.games));
+  const results: GameDetail[] = [];
+  snap.forEach((doc) => {
+    results.push(doc.data() as GameDetail);
+  });
+  return results;
+}
+
 export async function listGames(): Promise<Game[]> {
-  await wait();
-  return GAMES;
+  return await fetchAllFromDb();
 }
 
 export async function getGame(id: GameId): Promise<Game | undefined> {
-  await wait();
-  return GAMES.find((g) => g.id === id);
+  await ensureGamesSeeded();
+  const docRef = doc(getDb(), COLLECTIONS.games, id);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return undefined;
+  return snap.data() as Game;
 }
 
 export async function getGameDetail(id: GameId): Promise<GameDetail | undefined> {
-  await wait(180);
-  return buildGameDetail(id);
+  await ensureGamesSeeded();
+  const docRef = doc(getDb(), COLLECTIONS.games, id);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return undefined;
+  return snap.data() as GameDetail;
 }
 
 export async function listFeatured(): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => g.isFeatured);
+  const games = await fetchAllFromDb();
+  return games.filter((g) => g.isFeatured);
 }
 
 export async function listTopSellers(limit = 12): Promise<Game[]> {
-  await wait();
-  return [...GAMES].sort((a, b) => a.salesRank - b.salesRank).slice(0, limit);
+  const games = await fetchAllFromDb();
+  return [...games].sort((a, b) => a.salesRank - b.salesRank).slice(0, limit);
 }
 
 export async function listNewReleases(days = 90): Promise<Game[]> {
-  await wait();
+  const games = await fetchAllFromDb();
   const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  return GAMES.filter((g) => !g.comingSoon && new Date(g.releaseDate).getTime() >= cutoff);
+  return games.filter((g) => !g.comingSoon && new Date(g.releaseDate).getTime() >= cutoff);
 }
 
 export async function listSpecials(): Promise<Game[]> {
-  await wait();
-  return [...GAMES].filter((g) => g.isOnSale).sort((a, b) => b.price.discountPct - a.price.discountPct);
+  const games = await fetchAllFromDb();
+  return [...games].filter((g) => g.isOnSale).sort((a, b) => b.price.discountPct - a.price.discountPct);
 }
 
 export async function listComingSoon(): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => g.comingSoon);
+  const games = await fetchAllFromDb();
+  return games.filter((g) => g.comingSoon);
 }
 
 export async function listRecommended(tagSlugs: string[], limit = 12): Promise<Game[]> {
-  await wait();
+  const games = await fetchAllFromDb();
   if (tagSlugs.length === 0) {
-    return [...GAMES].sort(() => Math.random() - 0.5).slice(0, limit);
+    return [...games].sort(() => Math.random() - 0.5).slice(0, limit);
   }
-  return [...GAMES]
+  return [...games]
     .map((g) => ({
       g,
       score: g.tags.filter((t) => tagSlugs.includes(t)).length,
@@ -88,14 +129,9 @@ export async function listRecommended(tagSlugs: string[], limit = 12): Promise<G
     .map((x) => x.g);
 }
 
-/**
- * Hidden Gems — promising titles flagged by their first ~50 reviewers but not
- * yet swamped by review volume. firstReviewersScore ≥ 80 and totalReviews
- * < 100k. Sorted by quality signal (desc).
- */
 export async function listHiddenGems(limit = 12): Promise<Game[]> {
-  await wait();
-  return [...GAMES]
+  const games = await fetchAllFromDb();
+  return [...games]
     .filter(
       (g) =>
         typeof g.firstReviewersScore === "number" &&
@@ -106,31 +142,12 @@ export async function listHiddenGems(limit = 12): Promise<Game[]> {
     .slice(0, limit);
 }
 
-/**
- * Games offering a free downloadable demo. Sorted by sales rank so the
- * highest-profile demos surface first.
- */
 export async function listGamesWithDemos(limit = 12): Promise<Game[]> {
-  await wait();
-  return [...GAMES]
+  const games = await fetchAllFromDb();
+  return [...games]
     .filter((g) => g.hasDemo)
     .sort((a, b) => a.salesRank - b.salesRank)
     .slice(0, limit);
-}
-
-// ── Home-page shelf composition (one-shot) ──────────────────────────────────
-
-export interface HomeShelf {
-  id:
-    | "specials"
-    | "new-trending"
-    | "top-sellers"
-    | "hidden-gems"
-    | "demos"
-    | "recommended";
-  title: string;
-  subtitle: string;
-  entries: ShelfGame[];
 }
 
 function reasonForSpecial(game: Game): RecommendationReason {
@@ -197,7 +214,6 @@ function reasonForRecommended(
       detail: "Browse a few games to personalize this shelf",
     };
   }
-  // Mirror the intersection logic used in listRecommended.
   const matched = game.tags.filter((t) => tagPool.includes(t));
   if (matched.length === 0) {
     return {
@@ -208,7 +224,6 @@ function reasonForRecommended(
   }
   const tag = matched[0];
   const sharedCount = tagPool.filter((t) => t === tag).length || 1;
-  // Use a friendly phrasing: count of recently-viewed pool entries that contribute that tag.
   const noun = sharedCount === 1 ? "one of your recently-viewed games" : `${sharedCount} of your recently-viewed games`;
   return {
     kind: "recently-viewed-similar",
@@ -222,11 +237,19 @@ function reasonForRecommended(
   };
 }
 
-/**
- * Composes the entire home-page shelf list in one shot. Each shelf entry is
- * paired with a per-game RecommendationReason so the UI can surface "why am I
- * seeing this?" transparency without re-deriving the logic.
- */
+export interface HomeShelf {
+  id:
+    | "specials"
+    | "new-trending"
+    | "top-sellers"
+    | "hidden-gems"
+    | "demos"
+    | "recommended";
+  title: string;
+  subtitle: string;
+  entries: ShelfGame[];
+}
+
 export async function listShelvesForHome(
   recentlyViewedTagPool: string[],
 ): Promise<{ shelves: HomeShelf[] }> {
@@ -311,9 +334,9 @@ export interface SearchFilters {
 }
 
 export async function searchGames(filters: SearchFilters): Promise<Game[]> {
-  await wait();
+  const games = await fetchAllFromDb();
   const q = filters.q?.toLowerCase().trim() ?? "";
-  return GAMES.filter((g) => {
+  return games.filter((g) => {
     if (q && !(g.name.toLowerCase().includes(q) || g.tags.some((t) => t.includes(q)))) return false;
     if (filters.genres?.length && !g.genres.some((x) => filters.genres!.includes(x))) return false;
     if (filters.tags?.length && !g.tags.some((x) => filters.tags!.includes(x))) return false;
@@ -328,21 +351,22 @@ export async function searchGames(filters: SearchFilters): Promise<Game[]> {
 }
 
 export async function listGamesByCategory(slug: string): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => g.genres.includes(slug));
+  const games = await fetchAllFromDb();
+  return games.filter((g) => g.genres.includes(slug));
 }
 
 export async function listGamesByTag(slug: string): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => g.tags.includes(slug));
+  const games = await fetchAllFromDb();
+  return games.filter((g) => g.tags.includes(slug));
 }
 
 export async function listGamesByDeveloper(slug: string): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => slugify(g.developer) === slug);
+  const games = await fetchAllFromDb();
+  return games.filter((g) => slugify(g.developer) === slug);
 }
 
 export async function listGamesByPublisher(slug: string): Promise<Game[]> {
-  await wait();
-  return GAMES.filter((g) => slugify(g.publisher) === slug);
+  const games = await fetchAllFromDb();
+  return games.filter((g) => slugify(g.publisher) === slug);
 }
+

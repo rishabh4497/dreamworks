@@ -11,22 +11,36 @@ import {
   Tags,
   BarChart3,
   Megaphone,
-  Globe2
+  Globe2,
+  Building,
+  Image as ImageIcon,
+  Plus,
+  Eye,
+  ShieldAlert
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/stores/toast-store";
 import {
   formatPrice,
-  getPrimaryReleaseDraft,
   saveDeveloperReleaseDraft,
   submitDeveloperReleaseDraft,
+  publishGameFromDraft,
   type DeveloperReleaseDraft,
   type DeveloperReleaseDraftInput,
   type ReleaseWindow,
+  createEmptyDraft,
+  draftToGameDetail,
 } from "@/lib/api/developer-portal";
-import { cn } from "@/lib/utils";
+import { usePublisherProfile, useSavePublisherProfile } from "@/hooks/use-publisher";
+import { useQueryClient } from "@tanstack/react-query";
+import { gameKeys } from "@/hooks/use-games";
+import { useDeveloperDrafts } from "@/hooks/use-developer-drafts";
+import { cn, slugify } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ImageDropzone, ScreenshotsZone } from "@/components/common/ImageDropzone";
 
 import { DropOffHeatmaps } from "@/components/developer/DropOffHeatmaps";
 import { ABTesting } from "@/components/developer/ABTesting";
@@ -81,6 +95,7 @@ import {
   PreLoadAnalyzer,
 } from "@/components/features/DevFeatures";
 import { AiNpcVoiceMimic } from "@/components/features/AiFeatures";
+import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
 
 const RELEASE_WINDOWS: { value: ReleaseWindow; label: string }[] = [
   { value: "morning", label: "Morning" },
@@ -97,29 +112,62 @@ const CHECKLIST_LABELS: Record<keyof DeveloperReleaseDraft["checklist"], string>
   cloudSaves: "Cloud save schema checked",
 };
 
-type TabId = "release" | "analytics" | "marketing" | "ops";
+type TabId = "release" | "profile" | "analytics" | "marketing" | "ops" | "moderation";
 
 const TABS = [
-  { id: "release", label: "Release Draft", icon: Package },
+  { id: "release", label: "Products", icon: Package },
+  { id: "profile", label: "Studio Profile", icon: Building },
   { id: "analytics", label: "Analytics & Data", icon: BarChart3 },
   { id: "marketing", label: "Marketing", icon: Megaphone },
   { id: "ops", label: "Live Ops & Community", icon: Globe2 },
+  { id: "moderation", label: "Content Moderation", icon: ShieldAlert },
 ] as const;
 
 export function DeveloperPortalPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("release");
   const [draft, setDraft] = useState<DeveloperReleaseDraft | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "submitted">("idle");
 
+  const { data: draftsList, isLoading: draftsLoading } = useDeveloperDrafts();
+  const [viewMode, setViewMode] = useState<"list" | "edit">("list");
+  const queryClient = useQueryClient();
+
+  // If a draft is already selected and in the list, keep it in sync or fallback to it
   useEffect(() => {
-    let mounted = true;
-    getPrimaryReleaseDraft().then((next) => {
-      if (mounted) setDraft(next);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    if (draftsList && draftsList.length > 0 && !draft) {
+      // We don't auto-select a draft anymore, they stay in "list" mode
+    }
+  }, [draftsList, draft]);
+
+  const { data: fetchedProfile } = usePublisherProfile(draft?.developerName);
+  const saveProfileMutation = useSavePublisherProfile(draft?.developerName);
+  // queryClient already declared
+
+  const [profileName, setProfileName] = useState("");
+  const [profileBrandColor, setProfileBrandColor] = useState("");
+  const [profileLogoUrl, setProfileLogoUrl] = useState("");
+  const [profileBannerUrl, setProfileBannerUrl] = useState("");
+  const [profileTagline, setProfileTagline] = useState("");
+  const [hasInitializedProfile, setHasInitializedProfile] = useState(false);
+
+  useEffect(() => {
+    if (fetchedProfile && !hasInitializedProfile) {
+      setProfileName(fetchedProfile.name || draft?.developerName || "");
+      setProfileBrandColor(fetchedProfile.brandColor || "#66c0f4");
+      setProfileLogoUrl(fetchedProfile.logoUrl || "");
+      setProfileBannerUrl(fetchedProfile.bannerUrl || "");
+      setProfileTagline(fetchedProfile.tagline || "");
+      setHasInitializedProfile(true);
+    } else if (draft?.developerName && !hasInitializedProfile && fetchedProfile === null) {
+      setProfileName(draft.developerName);
+      setProfileBrandColor("#66c0f4");
+      setProfileLogoUrl("");
+      setProfileBannerUrl("");
+      setProfileTagline("Discover the catalog this publisher brings to players worldwide.");
+      setHasInitializedProfile(true);
+    }
+  }, [fetchedProfile, draft?.developerName, hasInitializedProfile]);
 
   const checklistTotal = draft ? Object.keys(draft.checklist).length : 0;
   const checklistDone = draft
@@ -131,10 +179,23 @@ export function DeveloperPortalPage() {
     return formatPrice(discounted);
   }, [draft]);
 
-  if (!draft) {
+  const handleNewProduct = () => {
+    const newDraft = createEmptyDraft(fetchedProfile?.name || draft?.developerName);
+    setDraft(newDraft);
+    setViewMode("edit");
+    setSaveState("idle");
+  };
+
+  const handleEditDraft = (d: DeveloperReleaseDraft) => {
+    setDraft(d);
+    setViewMode("edit");
+    setSaveState("idle");
+  };
+
+  if (activeTab === "release" && viewMode === "list" && draftsLoading) {
     return (
       <Card className="p-6 text-[13px] text-muted/65">
-        Loading developer portal...
+        Loading products...
       </Card>
     );
   }
@@ -161,22 +222,48 @@ export function DeveloperPortalPage() {
   };
 
   const toInput = (): DeveloperReleaseDraftInput => ({
-    ...draft,
-    stage: draft.stage,
-  });
+    ...draft!,
+    stage: draft!.stage,
+  } as unknown as DeveloperReleaseDraftInput);
 
   const saveDraft = async () => {
+    if (!draft) return;
     setSaveState("saving");
-    const saved = await saveDeveloperReleaseDraft(toInput());
-    setDraft(saved);
-    setSaveState("saved");
+    try {
+      const saved = await saveDeveloperReleaseDraft(toInput());
+      setDraft(saved);
+      setSaveState("saved");
+      toast.success("Draft saved successfully.");
+    } catch (err: any) {
+      console.error("Failed to save draft", err);
+      toast.error(err?.message || "Failed to save draft.");
+      setSaveState("idle");
+    }
   };
 
   const submitForReview = async () => {
+    if (!draft) return;
     setSaveState("saving");
-    const submitted = await submitDeveloperReleaseDraft(toInput());
-    setDraft(submitted);
-    setSaveState("submitted");
+    try {
+      const submitted = await submitDeveloperReleaseDraft(toInput());
+      await publishGameFromDraft(submitted);
+      queryClient.invalidateQueries({ queryKey: gameKeys.all });
+      setDraft(submitted);
+      setSaveState("submitted");
+      toast.success(`Successfully published ${submitted.gameTitle} to the store!`);
+      const slug = slugify(submitted.gameTitle);
+      navigate(`/store/game/${slug}`);
+    } catch (err: any) {
+      console.error("Failed to publish game", err);
+      toast.error(err?.message || "Failed to publish game. Please try again.");
+      setSaveState("idle");
+    }
+  };
+
+  const previewDraft = () => {
+    if (!draft) return;
+    const previewData = draftToGameDetail(draft);
+    navigate(`/store/game/${previewData.id}`, { state: { previewData } });
   };
 
   return (
@@ -197,20 +284,33 @@ export function DeveloperPortalPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {activeTab === "release" && (
+          {activeTab === "release" && viewMode === "edit" && draft && (
             <>
+              <Button variant="ghost" onClick={() => setViewMode("list")}>
+                Back to Products
+              </Button>
               <Badge variant={draft.stage === "submitted" ? "free" : "soon"}>
                 {draft.stage === "submitted" ? "Submitted" : "Draft"}
               </Badge>
               <Button variant="secondary" onClick={saveDraft} disabled={saveState === "saving"}>
                 <Save className="h-4 w-4" />
-                {saveState === "saving" ? "Saving" : "Save Draft"}
+                {saveState === "saving" ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button variant="secondary" onClick={previewDraft} disabled={saveState === "saving"}>
+                <Eye className="h-4 w-4" />
+                Preview Page
               </Button>
               <Button onClick={submitForReview} disabled={saveState === "saving"}>
                 <Send className="h-4 w-4" />
-                Submit
+                {saveState === "saving" ? "Publishing..." : "Publish to Store"}
               </Button>
             </>
+          )}
+          {activeTab === "release" && viewMode === "list" && (
+            <Button onClick={handleNewProduct}>
+              <Plus className="h-4 w-4" />
+              New Product
+            </Button>
           )}
         </div>
       </header>
@@ -233,7 +333,57 @@ export function DeveloperPortalPage() {
         ))}
       </div>
 
-      {activeTab === "release" && (
+      {activeTab === "release" && viewMode === "list" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {draftsList && draftsList.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {draftsList.map((d) => (
+                <div
+                  key={d.id}
+                  onClick={() => handleEditDraft(d)}
+                  className="group cursor-pointer rounded-2xl border border-separator bg-card overflow-hidden transition-all hover:border-acid/40 hover:shadow-[0_0_15px_rgba(204,255,0,0.1)]"
+                >
+                  <div className="aspect-[460/215] w-full bg-card-active/50 overflow-hidden relative">
+                    {d.headerUrl || d.coverUrl ? (
+                      <img src={d.headerUrl || d.coverUrl} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Package className="h-8 w-8 text-muted/30" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2">
+                      <Badge variant={d.stage === "submitted" ? "free" : "soon"}>
+                        {d.stage === "submitted" ? "Published" : "Draft"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-1">
+                    <h3 className="text-[15px] font-semibold text-foreground truncate">{d.gameTitle || "Untitled Product"}</h3>
+                    <p className="text-[12px] text-muted/70 truncate">{d.genre || "Uncategorized"}</p>
+                    <p className="text-[10px] text-muted/50 mt-2">Last updated: {new Date(d.updatedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4 border-dashed bg-transparent">
+              <div className="h-12 w-12 rounded-full bg-acid/10 flex items-center justify-center text-acid mb-2">
+                <Package className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-[16px] font-semibold text-foreground">No products yet</h3>
+                <p className="text-[13px] text-muted/65 mt-1 max-w-sm">Create your first product draft to start setting up store metadata, pricing, and launch assets.</p>
+              </div>
+              <Button onClick={handleNewProduct} className="mt-2">
+                <Plus className="h-4 w-4" />
+                Create Product
+              </Button>
+            </Card>
+          )}
+        </motion.div>
+      )}
+
+      {activeTab === "release" && viewMode === "edit" && draft && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <section className="grid gap-3 md:grid-cols-3">
             <Metric icon={CalendarClock} label="Release" value={`${draft.releaseDate} / ${draft.releaseWindow}`} />
@@ -269,6 +419,40 @@ export function DeveloperPortalPage() {
                       value={draft.shortDescription}
                       onChange={(event) => updateDraft("shortDescription", event.target.value)}
                       className="min-h-20 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
+                    />
+                  </Field>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <SectionTitle icon={ImageIcon} title="Media Assets" />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <ImageDropzone
+                    label="Cover Image"
+                    value={draft.coverUrl || ""}
+                    onChange={(value) => updateDraft("coverUrl", value)}
+                  />
+                  <ImageDropzone
+                    label="Capsule Image"
+                    value={draft.capsuleUrl || ""}
+                    onChange={(value) => updateDraft("capsuleUrl", value)}
+                  />
+                  <ImageDropzone
+                    label="Header Image"
+                    value={draft.headerUrl || ""}
+                    onChange={(value) => updateDraft("headerUrl", value)}
+                    className="md:col-span-2"
+                  />
+                  <ScreenshotsZone
+                    value={draft.screenshotsRaw || ""}
+                    onChange={(value) => updateDraft("screenshotsRaw", value)}
+                    className="md:col-span-2"
+                  />
+                  <Field label="Video Trailer URL" className="md:col-span-2">
+                    <Input
+                      value={draft.trailerUrl || ""}
+                      onChange={(event) => updateDraft("trailerUrl", event.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                     />
                   </Field>
                 </div>
@@ -405,6 +589,139 @@ export function DeveloperPortalPage() {
         </motion.div>
       )}
 
+      {activeTab === "profile" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <Card className="p-6 max-w-2xl mx-auto">
+            <SectionTitle icon={Building} title="Manage Studio & Publisher Page" />
+            <p className="mt-2 text-[13px] text-muted/65 leading-relaxed">
+              Customize the public branding, color schemes, and identity displayed on your studio's developer and publisher store pages.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <Field label="Studio / Publisher Name">
+                <Input
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="e.g. Signal Bloom Studio"
+                />
+              </Field>
+
+              <Field label="Brand Theme Color (Hex)">
+                <div className="flex gap-3 items-center">
+                  <input
+                    type="color"
+                    value={profileBrandColor}
+                    onChange={(e) => setProfileBrandColor(e.target.value)}
+                    className="h-9 w-9 cursor-pointer rounded border border-separator bg-transparent"
+                  />
+                  <Input
+                    value={profileBrandColor}
+                    onChange={(e) => setProfileBrandColor(e.target.value)}
+                    placeholder="#66c0f4"
+                    className="w-36 font-mono"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-muted/50">Used to generate the Spotify-style wash gradient on your store pages.</p>
+              </Field>
+
+              <ImageDropzone
+                label="Studio Logo"
+                value={profileLogoUrl}
+                onChange={(value) => setProfileLogoUrl(value)}
+              />
+
+              <ImageDropzone
+                label="Publisher Banner"
+                value={profileBannerUrl}
+                onChange={(value) => setProfileBannerUrl(value)}
+              />
+
+              <Field label="Tagline / Description">
+                <textarea
+                  value={profileTagline}
+                  onChange={(e) => setProfileTagline(e.target.value)}
+                  placeholder="Describe your studio's catalog..."
+                  className="min-h-24 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
+                />
+              </Field>
+
+              {/* Preview Box */}
+              <div className="mt-6 rounded-2xl border border-separator bg-card overflow-hidden">
+                <div className="p-3 border-b border-separator bg-card-active/30">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted/50">Live Storefront Preview</p>
+                </div>
+                <div className="relative p-6 h-40 flex items-end gap-4 overflow-hidden bg-background">
+                  {/* Banner Image */}
+                  {profileBannerUrl && (
+                    <img
+                      src={profileBannerUrl}
+                      alt="banner"
+                      className="absolute inset-0 h-full w-full object-cover opacity-90"
+                    />
+                  )}
+                  {/* Color wash */}
+                  <div
+                    className="absolute inset-0 opacity-40 transition-all duration-300"
+                    style={{
+                      background: `linear-gradient(180deg, ${profileBrandColor}55 0%, ${profileBrandColor}20 35%, transparent 70%), linear-gradient(180deg, transparent 50%, var(--color-background) 100%)`
+                    }}
+                  />
+                  
+                  {/* Logo or initials */}
+                  <div className="relative z-10 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-separator bg-white shadow-lg">
+                    {profileLogoUrl ? (
+                      <img src={profileLogoUrl} alt="logo" className="h-full w-full object-contain p-2" />
+                    ) : (
+                      <span className="text-[20px] font-bold text-black">
+                        {(profileName || draft?.developerName || "ST").split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Title & Tagline */}
+                  <div className="relative z-10 min-w-0 pb-1">
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-acid flex items-center gap-1">
+                      <Building className="h-2.5 w-2.5" /> STUDIO / PUBLISHER
+                    </p>
+                    <h4 className="text-[18px] font-bold leading-tight text-foreground truncate">{profileName || draft?.developerName || "Your Studio Name"}</h4>
+                    <p className="text-[11px] text-muted/70 truncate max-w-md">{profileTagline || "Your tagline will appear here."}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={async () => {
+                    try {
+                      await saveProfileMutation.mutateAsync({
+                        id: slugify(profileName || draft?.developerName || ""),
+                        name: profileName || draft?.developerName || "",
+                        brandColor: profileBrandColor,
+                        logoUrl: profileLogoUrl,
+                        bannerUrl: profileBannerUrl,
+                        tagline: profileTagline,
+                      });
+                      if (draft && draft.developerName !== profileName) {
+                        updateDraft("developerName", profileName);
+                        await saveDeveloperReleaseDraft({ ...toInput(), developerName: profileName });
+                      }
+                      toast.success("Studio profile saved successfully!");
+                    } catch (err: any) {
+                      console.error("Failed to save profile", err);
+                      toast.error("Failed to save studio profile.");
+                    }
+                  }}
+                  disabled={saveProfileMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {saveProfileMutation.isPending ? "Saving..." : "Save Profile"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+
       {activeTab === "analytics" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6 md:grid-cols-2">
           <div className="space-y-6">
@@ -480,6 +797,12 @@ export function DeveloperPortalPage() {
             <RegionalPricingAI />
             <ModdingSandbox />
           </div>
+        </motion.div>
+      )}
+
+      {activeTab === "moderation" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <ModerationQueuePage />
         </motion.div>
       )}
     </motion.div>

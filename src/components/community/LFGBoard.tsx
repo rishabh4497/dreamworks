@@ -1,4 +1,4 @@
-import { Users, Search, PlusCircle, Shield } from "lucide-react";
+import { Users, Search, PlusCircle } from "lucide-react";
 
 export function LFGBoard() {
   const posts = [

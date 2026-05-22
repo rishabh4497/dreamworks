@@ -8,7 +8,6 @@ import {
   Home,
   Library,
   LogOut,
-  ListTodo,
   Search,
   Settings,
   ShoppingCart,
@@ -19,7 +18,6 @@ import {
   Download,
   Package,
   Play,
-  ShieldAlert,
   Sparkles,
 } from "lucide-react";
 const logoSrc = "/internal-logo.png";
@@ -66,7 +64,6 @@ export function Sidebar() {
 
   const devNav: NavItem[] = [
     { to: ROUTES.developerPortal, label: "Developer Portal", icon: Package },
-    { to: ROUTES.dbModeration, label: "Moderation", icon: ShieldAlert },
   ];
 
   // Steam parity: the full Library experience is desktop-only. Web users still

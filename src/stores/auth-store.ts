@@ -1,128 +1,297 @@
 import { create } from "zustand";
 import type { AuthStateResponse, UserProfile } from "@/lib/types";
 import { DEFAULT_AVATAR_OPTIONS, type AvatarOptions } from "@/lib/avatar";
+import { getFirebaseAuth, getDb, COLLECTIONS } from "@/lib/firebase";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signInWithCredential,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  type User
+} from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  serverTimestamp
+} from "firebase/firestore";
+import { isDesktop, openExternal } from "@/lib/platform";
 
 interface AuthStore {
   authState: AuthStateResponse;
   profile: UserProfile | null;
-  startSignIn: () => Promise<void>;
+  signInWithEmail: (email: string, pw: string) => Promise<void>;
+  signUpWithEmail: (email: string, pw: string, displayName: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => void;
-  updateAvatar: (options: AvatarOptions) => void;
-  updateProfile: (profile: Partial<UserProfile>) => void;
+  updateAvatar: (options: AvatarOptions) => Promise<void>;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
 }
 
-const STORAGE_KEY = "dreamworks-auth";
-const AVATAR_STORAGE_KEY = "dreamworks-avatar";
+let isInitialized = false;
+let unsubscribeSnapshot: (() => void) | null = null;
 
-function readPersisted(): AuthStateResponse {
-  if (typeof localStorage === "undefined") return { type: "Anonymous" };
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return { type: "Anonymous" };
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.type === "Authenticated") return parsed;
-  } catch {
-    /* ignore */
+async function handleUserAuth(user: User | null) {
+  if (unsubscribeSnapshot) {
+    unsubscribeSnapshot();
+    unsubscribeSnapshot = null;
   }
-  return { type: "Anonymous" };
-}
 
-function persist(state: AuthStateResponse) {
-  if (typeof localStorage === "undefined") return;
-  if (state.type === "Authenticated") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } else {
-    localStorage.removeItem(STORAGE_KEY);
+  if (!user) {
+    useAuthStore.setState({
+      authState: { type: "Anonymous" },
+      profile: null
+    });
+    return;
   }
-}
 
-function readPersistedAvatar(): AvatarOptions | null {
-  if (typeof localStorage === "undefined") return null;
-  const raw = localStorage.getItem(AVATAR_STORAGE_KEY);
-  if (!raw) return null;
+  useAuthStore.setState({ authState: { type: "Authenticating" } });
+
+  const userRef = doc(getDb(), COLLECTIONS.users, user.uid);
   try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.seed === "string" && typeof parsed.backgroundColor === "string") {
-      return parsed as AvatarOptions;
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      const initialDoc = {
+        uid: user.uid,
+        email: user.email || "",
+        displayName: user.displayName || user.email?.split("@")[0] || "User",
+        photoURL: user.photoURL || "",
+        approved: false,
+        inviteCode: null,
+        role: "user",
+        permissions: [],
+        createdAt: serverTimestamp(),
+        // launcher specific
+        level: 1,
+        bio: "",
+        country: "India",
+        memberSince: new Date().toISOString(),
+        showcaseGameIds: [],
+        isSubscribed: false,
+        avatarOptions: DEFAULT_AVATAR_OPTIONS,
+      };
+      await setDoc(userRef, initialDoc);
     }
-  } catch {
-    /* ignore */
+
+    unsubscribeSnapshot = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const profile: UserProfile = {
+          uid: data.uid || user.uid,
+          email: data.email || user.email || "",
+          displayName: data.displayName || user.displayName || "User",
+          avatarUrl: data.photoURL || `https://picsum.photos/seed/${user.uid}/96/96`,
+          avatarOptions: data.avatarOptions || DEFAULT_AVATAR_OPTIONS,
+          level: typeof data.level === "number" ? data.level : 1,
+          bio: data.bio || "",
+          country: data.country || "India",
+          memberSince: data.memberSince || new Date().toISOString(),
+          showcaseGameIds: data.showcaseGameIds || [],
+          isSubscribed: !!data.isSubscribed,
+        };
+
+        useAuthStore.setState({
+          authState: {
+            type: "Authenticated",
+            user: {
+              uid: profile.uid,
+              email: profile.email,
+              displayName: profile.displayName,
+            }
+          },
+          profile,
+        });
+      }
+    }, (err) => {
+      console.error("User snapshot subscription error:", err);
+      useAuthStore.setState({
+        authState: { type: "Error", message: err.message },
+        profile: null
+      });
+    });
+  } catch (error: any) {
+    console.error("Error loading or creating user profile:", error);
+    useAuthStore.setState({
+      authState: { type: "Error", message: error?.message || "Failed to load profile" },
+      profile: null
+    });
   }
-  return null;
 }
-
-function persistAvatar(options: AvatarOptions) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(options));
-}
-
-const SUBSCRIBED_STORAGE_KEY = "dreamworks-subscribed";
-
-function readPersistedSubscribed(): boolean {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem(SUBSCRIBED_STORAGE_KEY) === "true";
-}
-
-function persistSubscribed(subscribed: boolean) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(SUBSCRIBED_STORAGE_KEY, subscribed ? "true" : "false");
-}
-
-const MOCK_USER = {
-  uid: "rishav-001",
-  email: "you@dreams.tech",
-  displayName: "rishav",
-};
-
-function buildMockProfile(overrideAvatar?: AvatarOptions | null): UserProfile {
-  return {
-    uid: MOCK_USER.uid,
-    email: MOCK_USER.email,
-    displayName: MOCK_USER.displayName,
-    avatarUrl: `https://picsum.photos/seed/${MOCK_USER.uid}/96/96`,
-    avatarOptions: overrideAvatar ?? DEFAULT_AVATAR_OPTIONS,
-    level: 24,
-    bio: "Player of slow things, builder of short games.",
-    country: "India",
-    memberSince: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365 * 4).toISOString(),
-    showcaseGameIds: ["elden-ring", "witcher-3", "cyberpunk-2077"],
-    isSubscribed: readPersistedSubscribed(),
-  };
-}
-
-const persistedAuth = readPersisted();
-const persistedAvatar = readPersistedAvatar();
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
-  authState: persistedAuth,
-  profile: persistedAuth.type === "Authenticated" ? buildMockProfile(persistedAvatar) : null,
+  authState: { type: "Anonymous" },
+  profile: null,
   initialize: () => {
-    /* future: subscribe to Firebase Auth here */
+    if (isInitialized) return;
+    isInitialized = true;
+    onAuthStateChanged(getFirebaseAuth(), (user) => {
+      void handleUserAuth(user);
+    });
   },
-  startSignIn: async () => {
+  signInWithEmail: async (email, pw) => {
     set({ authState: { type: "Authenticating" } });
-    await new Promise((r) => setTimeout(r, 450));
-    const next: AuthStateResponse = { type: "Authenticated", user: MOCK_USER };
-    persist(next);
-    set({ authState: next, profile: buildMockProfile(readPersistedAvatar()) });
+    try {
+      await signInWithEmailAndPassword(getFirebaseAuth(), email, pw);
+    } catch (err: any) {
+      console.error("Email sign in error", err);
+      set({ authState: { type: "Error", message: err.message || "Sign in failed" } });
+      throw err;
+    }
+  },
+  signUpWithEmail: async (email, pw, displayName) => {
+    set({ authState: { type: "Authenticating" } });
+    try {
+      const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, pw);
+      const userRef = doc(getDb(), COLLECTIONS.users, credential.user.uid);
+      const initialDoc = {
+        uid: credential.user.uid,
+        email: email,
+        displayName: displayName || email.split("@")[0],
+        photoURL: "",
+        approved: false,
+        inviteCode: null,
+        role: "user",
+        permissions: [],
+        createdAt: serverTimestamp(),
+        // launcher specific
+        level: 1,
+        bio: "",
+        country: "India",
+        memberSince: new Date().toISOString(),
+        showcaseGameIds: [],
+        isSubscribed: false,
+        avatarOptions: DEFAULT_AVATAR_OPTIONS,
+      };
+      await setDoc(userRef, initialDoc);
+    } catch (err: any) {
+      console.error("Email sign up error", err);
+      set({ authState: { type: "Error", message: err.message || "Sign up failed" } });
+      throw err;
+    }
+  },
+  signInWithGoogle: async () => {
+    set({ authState: { type: "Authenticating" } });
+    if (isDesktop()) {
+      return new Promise<void>((resolve, reject) => {
+        const sessionId = "tauri_" + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const docRef = doc(getDb(), "dw_auth_sessions", sessionId);
+
+        let resolved = false;
+
+        const unsubscribe = onSnapshot(
+          docRef,
+          async (snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.data();
+              if (data && data.idToken) {
+                resolved = true;
+                unsubscribe();
+                clearTimeout(timeoutId);
+
+                try {
+                  const credential = GoogleAuthProvider.credential(data.idToken, data.accessToken || null);
+                  await signInWithCredential(getFirebaseAuth(), credential);
+                  // Clean up document
+                  await deleteDoc(docRef);
+                  resolve();
+                } catch (err: any) {
+                  console.error("Desktop Auth exchange error:", err);
+                  set({ authState: { type: "Error", message: err.message || "Failed exchange" } });
+                  // Clean up document anyway
+                  void deleteDoc(docRef).catch(() => {});
+                  reject(err);
+                }
+              }
+            }
+          },
+          (err) => {
+            if (!resolved) {
+              resolved = true;
+              unsubscribe();
+              clearTimeout(timeoutId);
+              set({ authState: { type: "Error", message: err.message } });
+              reject(err);
+            }
+          }
+        );
+
+        // Timeout after 2 minutes
+        const timeoutId = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            unsubscribe();
+            set({ authState: { type: "Error", message: "Google Authentication timed out. Please try again." } });
+            void deleteDoc(docRef).catch(() => {});
+            reject(new Error("Authentication timed out."));
+          }
+        }, 120000);
+
+        // Open external system browser to authorize
+        const authHelperUrl = `http://localhost:5173/auth-helper?sessionId=${sessionId}`;
+        openExternal(authHelperUrl).catch((err) => {
+          if (!resolved) {
+            resolved = true;
+            unsubscribe();
+            clearTimeout(timeoutId);
+            set({ authState: { type: "Error", message: "Failed to open browser: " + err.message } });
+            reject(err);
+          }
+        });
+      });
+    } else {
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(getFirebaseAuth(), provider);
+      } catch (err: any) {
+        console.error("Google sign in error", err);
+        set({ authState: { type: "Error", message: err.message || "Sign in failed" } });
+        throw err;
+      }
+    }
   },
   signOut: async () => {
-    persist({ type: "Anonymous" });
+    if (unsubscribeSnapshot) {
+      unsubscribeSnapshot();
+      unsubscribeSnapshot = null;
+    }
+    await firebaseSignOut(getFirebaseAuth());
     set({ authState: { type: "Anonymous" }, profile: null });
   },
-  updateAvatar: (options) => {
-    persistAvatar(options);
-    const current = get().profile;
-    if (!current) return;
-    set({ profile: { ...current, avatarOptions: options } });
-  },
-  updateProfile: (updates) => {
-    const current = get().profile;
-    if (!current) return;
-    if (updates.isSubscribed !== undefined) {
-      persistSubscribed(updates.isSubscribed);
+  updateAvatar: async (options) => {
+    const profile = get().profile;
+    if (!profile) return;
+    const userRef = doc(getDb(), COLLECTIONS.users, profile.uid);
+    try {
+      await updateDoc(userRef, { avatarOptions: options });
+    } catch (err) {
+      console.error("Failed to update avatar in Firestore", err);
     }
-    set({ profile: { ...current, ...updates } });
+  },
+  updateProfile: async (updates) => {
+    const profile = get().profile;
+    if (!profile) return;
+    const userRef = doc(getDb(), COLLECTIONS.users, profile.uid);
+    try {
+      const mappedUpdates: Record<string, any> = {};
+      if (updates.displayName !== undefined) mappedUpdates.displayName = updates.displayName;
+      if (updates.level !== undefined) mappedUpdates.level = updates.level;
+      if (updates.bio !== undefined) mappedUpdates.bio = updates.bio;
+      if (updates.country !== undefined) mappedUpdates.country = updates.country;
+      if (updates.showcaseGameIds !== undefined) mappedUpdates.showcaseGameIds = updates.showcaseGameIds;
+      if (updates.isSubscribed !== undefined) mappedUpdates.isSubscribed = updates.isSubscribed;
+      if (updates.avatarUrl !== undefined) mappedUpdates.photoURL = updates.avatarUrl;
+
+      await updateDoc(userRef, mappedUpdates);
+    } catch (err) {
+      console.error("Failed to update profile in Firestore", err);
+    }
   },
 }));
+

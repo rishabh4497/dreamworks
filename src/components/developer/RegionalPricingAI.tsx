@@ -1,4 +1,4 @@
-import { Globe2, TrendingDown, ArrowRight } from "lucide-react";
+import { Globe2, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 

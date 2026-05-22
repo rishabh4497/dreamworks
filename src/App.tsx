@@ -2,9 +2,9 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { type ReactNode } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StuckHelperOverlay } from "@/components/social/StuckHelperOverlay";
-import { OverlayBrowser } from "@/components/social/OverlayBrowser";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { LoginPage } from "@/pages/LoginPage";
+import { AuthHelperPage } from "@/pages/AuthHelperPage";
 import { StoreHomePage } from "@/pages/StoreHomePage";
 import { CategoryPage } from "@/pages/CategoryPage";
 import { SearchPage } from "@/pages/SearchPage";
@@ -37,7 +37,6 @@ import { TopChartsPage } from "@/pages/db/TopChartsPage";
 import { SalesTrackerPage } from "@/pages/db/SalesTrackerPage";
 import { CalendarPage } from "@/pages/db/CalendarPage";
 import { AccountAnalyticsPage } from "@/pages/db/AccountAnalyticsPage";
-import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
 
@@ -59,6 +58,7 @@ export default function App() {
     <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth-helper" element={<AuthHelperPage />} />
         <Route
           path="/"
           element={
@@ -89,7 +89,6 @@ export default function App() {
           <Route path="db/sales" element={<SalesTrackerPage />} />
           <Route path="db/calendar" element={<CalendarPage />} />
           <Route path="db/account" element={<AccountAnalyticsPage />} />
-          <Route path="db/moderation" element={<ModerationQueuePage />} />
 
           <Route path="feed" element={<FeedPage />} />
           <Route path="feed/news/:slug" element={<NewsArticlePage />} />

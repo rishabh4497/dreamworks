@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Cloud, Monitor, ChevronRight, Gamepad2, Gift, Flame } from "lucide-react";
+import { Sparkles, ChevronRight, Gamepad2, Gift, Flame } from "lucide-react";
 import { useGames } from "@/hooks/use-games";
 import { useAuthStore } from "@/stores/auth-store";
 import { ROUTES } from "@/lib/routes";
+import { type GameDetail } from "@/lib/types";
 import { useCartStore } from "@/stores/cart-store";
 import { GameCard } from "@/components/store/GameCard";
 
@@ -23,7 +24,7 @@ export function DreamworksPlusPage() {
     navigate(ROUTES.checkout);
   };
 
-  const includedGames = (games ?? []).filter((g) => g.includedInSubscription);
+  const includedGames = (games as GameDetail[] ?? []).filter((g) => g.includedInSubscription);
   const displayedGames = includedGames.filter((g) => {
     if (filter === "cloud") return g.cloudPlayable;
     if (filter === "local") return !g.cloudPlayable;

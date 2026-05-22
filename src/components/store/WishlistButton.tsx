@@ -8,8 +8,8 @@ export function WishlistButton({ gameId, label }: { gameId: GameId; label?: stri
   const has = useWishlistStore((s) => s.has(gameId));
   const toggle = useWishlistStore((s) => s.toggle);
 
-  const onClick = () => {
-    const added = toggle(gameId);
+  const onClick = async () => {
+    const added = await toggle(gameId);
     toast.success(added ? "Added to wishlist" : "Removed from wishlist");
   };
 
