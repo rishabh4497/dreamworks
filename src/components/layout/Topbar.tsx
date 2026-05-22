@@ -31,6 +31,7 @@ export function Topbar() {
     navigate(`${ROUTES.storeSearch}?${params.toString()}`);
   };
 
+  const isSearchPage = location.pathname === ROUTES.storeSearch;
   const canBack = location.key !== "default";
 
   return (
@@ -51,17 +52,19 @@ export function Topbar() {
         </button>
       </div>
 
-      <form onSubmit={onSearch} className="w-[420px] max-w-full justify-self-center">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted/40" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search games, tags, developers…"
-            className="pl-9 h-9 bg-transparent"
-          />
-        </div>
-      </form>
+      {isSearchPage ? <div /> : (
+        <form onSubmit={onSearch} className="w-[420px] max-w-full justify-self-center">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted/40" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search games, tags, developers…"
+              className="pl-9 h-9 bg-transparent"
+            />
+          </div>
+        </form>
+      )}
 
       <div className="flex items-center gap-1.5 justify-self-end">
         <button

@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from "motion/react";
-import { Pause, Play, X } from "lucide-react";
+import { Pause, Play, X, ChevronUp, ChevronDown, Download, AlertCircle } from "lucide-react";
 import { useDownloadStore } from "@/stores/download-store";
 import { cn, formatBytes } from "@/lib/utils";
+import { WaitingMiniGames } from "@/components/downloads/WaitingMiniGames";
 
 const STATUS_LABELS: Record<string, string> = {
   queued: "Queued",
@@ -23,6 +24,7 @@ export function DownloadsQueue() {
   const hasFinished = tasks.some((t) =>
     ["complete", "cancelled", "error"].includes(t.status),
   );
+  const activeTask = tasks.find((t) => ["downloading", "queued", "paused"].includes(t.status));
 
   return (
     <AnimatePresence>
@@ -118,6 +120,11 @@ export function DownloadsQueue() {
                 );
               })}
             </div>
+            {activeTask && (
+              <div className="mt-4">
+                <WaitingMiniGames />
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -9,6 +9,9 @@ import {
   Save,
   Send,
   Tags,
+  BarChart3,
+  Megaphone,
+  Globe2
 } from "lucide-react";
 import {
   formatPrice,
@@ -19,10 +22,52 @@ import {
   type DeveloperReleaseDraftInput,
   type ReleaseWindow,
 } from "@/lib/api/developer-portal";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+import { DropOffHeatmaps } from "@/components/developer/DropOffHeatmaps";
+import { ABTesting } from "@/components/developer/ABTesting";
+import { SentimentAnalysis } from "@/components/developer/SentimentAnalysis";
+import { PlaytestDeploy } from "@/components/developer/PlaytestDeploy";
+import { RegionalPricingAI } from "@/components/developer/RegionalPricingAI";
+import { BountyBoard } from "@/components/developer/BountyBoard";
+import { RefundPredictor } from "@/components/developer/RefundPredictor";
+import { PromoEngine } from "@/components/developer/PromoEngine";
+import { InGameNews } from "@/components/developer/InGameNews";
+import { ModdingSandbox } from "@/components/developer/ModdingSandbox";
+import { AILocalization } from "@/components/developer/AILocalization";
+import { KeyRevocation } from "@/components/developer/KeyRevocation";
+import { HypeFunnel } from "@/components/developer/HypeFunnel";
+import { CrossPromoBuilder } from "@/components/developer/CrossPromoBuilder";
+import { WebWidgets } from "@/components/developer/WebWidgets";
+import { CrashVisualizer } from "@/components/developer/CrashVisualizer";
+import { DeveloperAMAs } from "@/components/developer/DeveloperAMAs";
+import { CloudSaveMigration } from "@/components/developer/CloudSaveMigration";
+import { MTXSimulator } from "@/components/developer/MTXSimulator";
+import { DRMToggles } from "@/components/developer/DRMToggles";
+import { DynamicBackgrounds } from "@/components/developer/DynamicBackgrounds";
+import { InfluencerDiscovery } from "@/components/developer/InfluencerDiscovery";
+import { BundlePricing } from "@/components/developer/BundlePricing";
+import { ReviewExtractor } from "@/components/developer/ReviewExtractor";
+import { CapsuleABTesting } from "@/components/developer/CapsuleABTesting";
+import { AntiCheatML } from "@/components/developer/AntiCheatML";
+import { SubtitleSync } from "@/components/developer/SubtitleSync";
+import { ServerAutoScaler } from "@/components/developer/ServerAutoScaler";
+import { TelemetryHeatmaps } from "@/components/developer/TelemetryHeatmaps";
+import { PortEstimator } from "@/components/developer/PortEstimator";
+import { LocalizationHeatmaps } from "@/components/developer/LocalizationHeatmaps";
+import { PressKitGenerator } from "@/components/developer/PressKitGenerator";
+import { RefundSurveyAnalytics } from "@/components/developer/RefundSurveyAnalytics";
+import { InteractiveWidgets } from "@/components/developer/InteractiveWidgets";
+import { PriceHarmonization } from "@/components/developer/PriceHarmonization";
+import { PreLoadOptimizer } from "@/components/developer/PreLoadOptimizer";
+import { AIBugTriage } from "@/components/developer/AIBugTriage";
+import { CrossSaveAPI } from "@/components/developer/CrossSaveAPI";
+import { SilentHotfixDeployer } from "@/components/developer/SilentHotfixDeployer";
+import { MatchmakingSandbox } from "@/components/developer/MatchmakingSandbox";
 
 const RELEASE_WINDOWS: { value: ReleaseWindow; label: string }[] = [
   { value: "morning", label: "Morning" },
@@ -39,7 +84,17 @@ const CHECKLIST_LABELS: Record<keyof DeveloperReleaseDraft["checklist"], string>
   cloudSaves: "Cloud save schema checked",
 };
 
+type TabId = "release" | "analytics" | "marketing" | "ops";
+
+const TABS = [
+  { id: "release", label: "Release Draft", icon: Package },
+  { id: "analytics", label: "Analytics & Data", icon: BarChart3 },
+  { id: "marketing", label: "Marketing", icon: Megaphone },
+  { id: "ops", label: "Live Ops & Community", icon: Globe2 },
+] as const;
+
 export function DeveloperPortalPage() {
+  const [activeTab, setActiveTab] = useState<TabId>("release");
   const [draft, setDraft] = useState<DeveloperReleaseDraft | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "submitted">("idle");
 
@@ -120,195 +175,281 @@ export function DeveloperPortalPage() {
             Developer Portal
           </p>
           <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
-            Stage a Release
+            {activeTab === "release" ? "Stage a Release" : "Partner Tools & Analytics"}
           </h1>
           <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-muted/65">
-            Prepare store metadata, build notes, pricing, release timing, and launch assets before
-            submitting the package for review.
+            {activeTab === "release" 
+              ? "Prepare store metadata, build notes, pricing, release timing, and launch assets before submitting the package for review."
+              : "Leverage AI-driven analytics, storefront testing, and live ops tooling to maximize your game's reach and retention."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={draft.stage === "submitted" ? "free" : "soon"}>
-            {draft.stage === "submitted" ? "Submitted" : "Draft"}
-          </Badge>
-          <Button variant="secondary" onClick={saveDraft} disabled={saveState === "saving"}>
-            <Save className="h-4 w-4" />
-            {saveState === "saving" ? "Saving" : "Save Draft"}
-          </Button>
-          <Button onClick={submitForReview} disabled={saveState === "saving"}>
-            <Send className="h-4 w-4" />
-            Submit
-          </Button>
+          {activeTab === "release" && (
+            <>
+              <Badge variant={draft.stage === "submitted" ? "free" : "soon"}>
+                {draft.stage === "submitted" ? "Submitted" : "Draft"}
+              </Badge>
+              <Button variant="secondary" onClick={saveDraft} disabled={saveState === "saving"}>
+                <Save className="h-4 w-4" />
+                {saveState === "saving" ? "Saving" : "Save Draft"}
+              </Button>
+              <Button onClick={submitForReview} disabled={saveState === "saving"}>
+                <Send className="h-4 w-4" />
+                Submit
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <Metric icon={CalendarClock} label="Release" value={`${draft.releaseDate} / ${draft.releaseWindow}`} />
-        <Metric icon={Tags} label="Launch Price" value={launchPrice} />
-        <Metric icon={CheckCircle2} label="Checklist" value={`${checklistDone}/${checklistTotal} ready`} />
-      </section>
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-separator mb-6">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as TabId)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold rounded-t-lg transition-colors border-b-2",
+              activeTab === tab.id
+                ? "border-acid text-acid bg-card"
+                : "border-transparent text-muted/70 hover:text-foreground hover:bg-card-hover"
+            )}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          <Card className="p-4">
-            <SectionTitle icon={FileText} title="Store Metadata" />
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <Field label="Game title">
-                <Input value={draft.gameTitle} onChange={(event) => updateDraft("gameTitle", event.target.value)} />
-              </Field>
-              <Field label="Developer">
-                <Input
-                  value={draft.developerName}
-                  onChange={(event) => updateDraft("developerName", event.target.value)}
-                />
-              </Field>
-              <Field label="Genre">
-                <Input value={draft.genre} onChange={(event) => updateDraft("genre", event.target.value)} />
-              </Field>
-              <Field label="Content rating">
-                <Input
-                  value={draft.contentRating}
-                  onChange={(event) => updateDraft("contentRating", event.target.value)}
-                />
-              </Field>
-              <Field label="Short description" className="md:col-span-2">
-                <textarea
-                  value={draft.shortDescription}
-                  onChange={(event) => updateDraft("shortDescription", event.target.value)}
-                  className="min-h-20 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
-                />
-              </Field>
+      {activeTab === "release" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <section className="grid gap-3 md:grid-cols-3">
+            <Metric icon={CalendarClock} label="Release" value={`${draft.releaseDate} / ${draft.releaseWindow}`} />
+            <Metric icon={Tags} label="Launch Price" value={launchPrice} />
+            <Metric icon={CheckCircle2} label="Checklist" value={`${checklistDone}/${checklistTotal} ready`} />
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-4">
+              <Card className="p-4">
+                <SectionTitle icon={FileText} title="Store Metadata" />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <Field label="Game title">
+                    <Input value={draft.gameTitle} onChange={(event) => updateDraft("gameTitle", event.target.value)} />
+                  </Field>
+                  <Field label="Developer">
+                    <Input
+                      value={draft.developerName}
+                      onChange={(event) => updateDraft("developerName", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Genre">
+                    <Input value={draft.genre} onChange={(event) => updateDraft("genre", event.target.value)} />
+                  </Field>
+                  <Field label="Content rating">
+                    <Input
+                      value={draft.contentRating}
+                      onChange={(event) => updateDraft("contentRating", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Short description" className="md:col-span-2">
+                    <textarea
+                      value={draft.shortDescription}
+                      onChange={(event) => updateDraft("shortDescription", event.target.value)}
+                      className="min-h-20 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
+                    />
+                  </Field>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <SectionTitle icon={Package} title="Build Upload Placeholder" />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <Field label="Build label">
+                    <Input value={draft.buildLabel} onChange={(event) => updateDraft("buildLabel", event.target.value)} />
+                  </Field>
+                  <div className="rounded-xl border border-dashed border-separator bg-card-active/35 p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted/50">Upload Slot</p>
+                    <p className="mt-2 text-[13px] text-foreground">Depot package placeholder</p>
+                    <p className="mt-1 text-[11px] text-muted/60">Final binary upload will attach here.</p>
+                  </div>
+                  <Field label="Build notes" className="md:col-span-2">
+                    <textarea
+                      value={draft.buildNotes}
+                      onChange={(event) => updateDraft("buildNotes", event.target.value)}
+                      className="min-h-20 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
+                    />
+                  </Field>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <SectionTitle icon={CalendarClock} title="Release Window and Price Controls" />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <Field label="Release date">
+                    <Input
+                      type="date"
+                      value={draft.releaseDate}
+                      onChange={(event) => updateDraft("releaseDate", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Release window">
+                    <select
+                      value={draft.releaseWindow}
+                      onChange={(event) => updateDraft("releaseWindow", event.target.value as ReleaseWindow)}
+                      className="h-10 w-full rounded-xl border border-separator bg-input px-3.5 text-[13px] text-foreground focus:outline-none"
+                    >
+                      {RELEASE_WINDOWS.map((window) => (
+                        <option key={window.value} value={window.value}>
+                          {window.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Base price, cents">
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={draft.basePriceCents}
+                      onChange={(event) => updateDraft("basePriceCents", Number(event.target.value))}
+                    />
+                  </Field>
+                  <Field label="Launch discount %">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={90}
+                      value={draft.launchDiscountPct}
+                      onChange={(event) => updateDraft("launchDiscountPct", Number(event.target.value))}
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 rounded-xl bg-card-active/45 p-3 text-[13px] text-foreground md:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={draft.regionalPricing}
+                      onChange={(event) => updateDraft("regionalPricing", event.target.checked)}
+                      className="h-4 w-4 accent-acid"
+                    />
+                    Regional pricing follows recommended purchasing-power bands
+                  </label>
+                </div>
+              </Card>
             </div>
-          </Card>
 
-          <Card className="p-4">
-            <SectionTitle icon={Package} title="Build Upload Placeholder" />
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <Field label="Build label">
-                <Input value={draft.buildLabel} onChange={(event) => updateDraft("buildLabel", event.target.value)} />
-              </Field>
-              <div className="rounded-xl border border-dashed border-separator bg-card-active/35 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted/50">Upload Slot</p>
-                <p className="mt-2 text-[13px] text-foreground">Depot package placeholder</p>
-                <p className="mt-1 text-[11px] text-muted/60">Final binary upload will attach here.</p>
-              </div>
-              <Field label="Build notes" className="md:col-span-2">
-                <textarea
-                  value={draft.buildNotes}
-                  onChange={(event) => updateDraft("buildNotes", event.target.value)}
-                  className="min-h-20 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
-                />
-              </Field>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <SectionTitle icon={CalendarClock} title="Release Window and Price Controls" />
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <Field label="Release date">
-                <Input
-                  type="date"
-                  value={draft.releaseDate}
-                  onChange={(event) => updateDraft("releaseDate", event.target.value)}
-                />
-              </Field>
-              <Field label="Release window">
-                <select
-                  value={draft.releaseWindow}
-                  onChange={(event) => updateDraft("releaseWindow", event.target.value as ReleaseWindow)}
-                  className="h-10 w-full rounded-xl border border-separator bg-input px-3.5 text-[13px] text-foreground focus:outline-none"
-                >
-                  {RELEASE_WINDOWS.map((window) => (
-                    <option key={window.value} value={window.value}>
-                      {window.label}
-                    </option>
+            <aside className="space-y-4">
+              <Card className="p-4">
+                <SectionTitle icon={BadgeCheck} title="Release Checklist" />
+                <div className="mt-4 space-y-2">
+                  {(Object.keys(CHECKLIST_LABELS) as Array<keyof DeveloperReleaseDraft["checklist"]>).map((key) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 rounded-lg bg-card-active/45 p-2.5 text-[12px] text-foreground/80"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.checklist[key]}
+                        onChange={(event) => updateChecklist(key, event.target.checked)}
+                        className="h-4 w-4 accent-acid"
+                      />
+                      {CHECKLIST_LABELS[key]}
+                    </label>
                   ))}
-                </select>
-              </Field>
-              <Field label="Base price, cents">
-                <Input
-                  type="number"
-                  min={0}
-                  step={100}
-                  value={draft.basePriceCents}
-                  onChange={(event) => updateDraft("basePriceCents", Number(event.target.value))}
-                />
-              </Field>
-              <Field label="Launch discount %">
-                <Input
-                  type="number"
-                  min={0}
-                  max={90}
-                  value={draft.launchDiscountPct}
-                  onChange={(event) => updateDraft("launchDiscountPct", Number(event.target.value))}
-                />
-              </Field>
-              <label className="flex items-center gap-2 rounded-xl bg-card-active/45 p-3 text-[13px] text-foreground md:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={draft.regionalPricing}
-                  onChange={(event) => updateDraft("regionalPricing", event.target.checked)}
-                  className="h-4 w-4 accent-acid"
-                />
-                Regional pricing follows recommended purchasing-power bands
-              </label>
-            </div>
-          </Card>
-        </div>
+                </div>
+              </Card>
 
-        <aside className="space-y-4">
-          <Card className="p-4">
-            <SectionTitle icon={BadgeCheck} title="Release Checklist" />
-            <div className="mt-4 space-y-2">
-              {(Object.keys(CHECKLIST_LABELS) as Array<keyof DeveloperReleaseDraft["checklist"]>).map((key) => (
-                <label
-                  key={key}
-                  className="flex items-center gap-2 rounded-lg bg-card-active/45 p-2.5 text-[12px] text-foreground/80"
-                >
-                  <input
-                    type="checkbox"
-                    checked={draft.checklist[key]}
-                    onChange={(event) => updateChecklist(key, event.target.checked)}
-                    className="h-4 w-4 accent-acid"
-                  />
-                  {CHECKLIST_LABELS[key]}
-                </label>
-              ))}
-            </div>
-          </Card>
+              <Card className="p-4">
+                <SectionTitle icon={FileText} title="Store Preview Copy" />
+                <div className="mt-4 space-y-3">
+                  <Field label="Headline">
+                    <Input
+                      value={draft.previewHeadline}
+                      onChange={(event) => updateDraft("previewHeadline", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Body">
+                    <textarea
+                      value={draft.previewBody}
+                      onChange={(event) => updateDraft("previewBody", event.target.value)}
+                      className="min-h-28 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
+                    />
+                  </Field>
+                  <div className="rounded-xl bg-card-active/45 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-muted/50">Preview</p>
+                    <h2 className="mt-2 text-[17px] font-semibold text-foreground">{draft.previewHeadline}</h2>
+                    <p className="mt-1 text-[12px] leading-relaxed text-muted/70">{draft.previewBody}</p>
+                    <p className="mt-3 text-[12px] font-semibold text-price">{launchPrice}</p>
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-4">
-            <SectionTitle icon={FileText} title="Store Preview Copy" />
-            <div className="mt-4 space-y-3">
-              <Field label="Headline">
-                <Input
-                  value={draft.previewHeadline}
-                  onChange={(event) => updateDraft("previewHeadline", event.target.value)}
-                />
-              </Field>
-              <Field label="Body">
-                <textarea
-                  value={draft.previewBody}
-                  onChange={(event) => updateDraft("previewBody", event.target.value)}
-                  className="min-h-28 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
-                />
-              </Field>
-              <div className="rounded-xl bg-card-active/45 p-3">
-                <p className="text-[10px] uppercase tracking-widest text-muted/50">Preview</p>
-                <h2 className="mt-2 text-[17px] font-semibold text-foreground">{draft.previewHeadline}</h2>
-                <p className="mt-1 text-[12px] leading-relaxed text-muted/70">{draft.previewBody}</p>
-                <p className="mt-3 text-[12px] font-semibold text-price">{launchPrice}</p>
-              </div>
-            </div>
-          </Card>
+              <p className="text-[11px] text-muted/55">
+                {saveState === "saved" && "Draft saved locally."}
+                {saveState === "submitted" && `Submitted for review at ${draft.submittedAt ?? draft.updatedAt}.`}
+                {saveState === "idle" && `Last updated ${draft.updatedAt}.`}
+              </p>
+            </aside>
+          </section>
+        </motion.div>
+      )}
 
-          <p className="text-[11px] text-muted/55">
-            {saveState === "saved" && "Draft saved locally."}
-            {saveState === "submitted" && `Submitted for review at ${draft.submittedAt ?? draft.updatedAt}.`}
-            {saveState === "idle" && `Last updated ${draft.updatedAt}.`}
-          </p>
-        </aside>
-      </section>
+      {activeTab === "analytics" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
+          <LocalizationHeatmaps />
+          <RefundSurveyAnalytics />
+          <ReviewExtractor />
+          <TelemetryHeatmaps />
+          <HypeFunnel />
+          <CrashVisualizer />
+          <RefundPredictor />
+          <SentimentAnalysis />
+          <DropOffHeatmaps />
+        </motion.div>
+      )}
+
+      {activeTab === "marketing" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
+          <PressKitGenerator />
+          <InteractiveWidgets />
+          <DynamicBackgrounds />
+          <InfluencerDiscovery />
+          <BundlePricing />
+          <CapsuleABTesting />
+          <CrossPromoBuilder />
+          <WebWidgets />
+          <MTXSimulator />
+          <ABTesting />
+          <PromoEngine />
+          <BountyBoard />
+        </motion.div>
+      )}
+
+      {activeTab === "ops" && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-6">
+            <SilentHotfixDeployer />
+            <CrossSaveAPI />
+            <PreLoadOptimizer />
+            <AIBugTriage />
+            <AntiCheatML />
+            <SubtitleSync />
+            <ServerAutoScaler />
+            <AILocalization />
+            <DeveloperAMAs />
+            <CloudSaveMigration />
+            <PlaytestDeploy />
+            <InGameNews />
+          </div>
+          <div className="space-y-6">
+            <PriceHarmonization />
+            <MatchmakingSandbox />
+            <PortEstimator />
+            <KeyRevocation />
+            <DRMToggles />
+            <RegionalPricingAI />
+            <ModdingSandbox />
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

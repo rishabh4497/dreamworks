@@ -20,8 +20,11 @@ import { ImageLightbox } from "@/components/store/ImageLightbox";
 import { ReviewComposer } from "@/components/store/ReviewComposer";
 import { PlaytimeBadge } from "@/components/store/PlaytimeBadge";
 import { CompatibilityPanel } from "@/components/store/CompatibilityPanel";
+import { SystemCompatibility } from "@/components/store/SystemCompatibility";
 import { FacetRadar } from "@/components/store/FacetRadar";
 import { FacetBars } from "@/components/store/FacetBars";
+import { LfgMatchmaking } from "@/components/store/LfgMatchmaking";
+import { DealForecaster } from "@/components/store/DealForecaster";
 import { PriceHistoryChart } from "@/components/db/PriceHistoryChart";
 import { HistoricalLowsTable } from "@/components/db/HistoricalLowsTable";
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
@@ -224,6 +227,9 @@ export function GameDetailPage() {
               <BarChart3 className="h-3.5 w-3.5" /> View on Dreamworks DB
             </button>
           </header>
+          <div className="mb-4">
+            <DealForecaster gameId={detail.id} />
+          </div>
           {priceHistory && <PriceHistoryChart data={priceHistory} />}
           {lows && (
             <div className="mt-4">
@@ -265,6 +271,7 @@ export function GameDetailPage() {
               ) : null,
             )}
           </div>
+          <SystemCompatibility game={detail} />
         </section>
 
         {/* Review breakdown (facet radar) */}
@@ -422,6 +429,7 @@ export function GameDetailPage() {
         </button>
 
         <FriendsWhoOwn gameId={detail.id} />
+        <LfgMatchmaking gameId={detail.id} />
       </aside>
       </div>
 

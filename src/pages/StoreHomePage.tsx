@@ -8,6 +8,12 @@ import { FriendsActivityRail } from "@/components/home/FriendsActivityRail";
 import { EditorialSpotlight } from "@/components/home/EditorialSpotlight";
 import { WeeklyFreeGame } from "@/components/home/WeeklyFreeGame";
 import { MoodExplorer } from "@/components/home/MoodExplorer";
+import { BookClubs } from "@/components/community/BookClubs";
+import { SpeedrunLeaderboards } from "@/components/community/SpeedrunLeaderboards";
+import { LFGBoard } from "@/components/community/LFGBoard";
+import { MiniTournaments } from "@/components/community/MiniTournaments";
+import { GiftCardCreator } from "@/components/store/GiftCardCreator";
+import { CuratorShelves } from "@/components/store/CuratorShelves";
 import {
   useGames,
   useHomeShelves,
@@ -88,6 +94,19 @@ export function StoreHomePage() {
             />
           </>
         )}
+
+      <section className="pt-8">
+        <h2 className="mb-4 text-[14px] font-semibold text-foreground">Community Hub</h2>
+        <div className="grid gap-6">
+          <MiniTournaments />
+          <BookClubs />
+          <SpeedrunLeaderboards />
+          <LFGBoard />
+        </div>
+      </section>
+
+      <GiftCardCreator />
+      <CuratorShelves />
     </motion.div>
   );
 }

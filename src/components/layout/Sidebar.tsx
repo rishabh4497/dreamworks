@@ -62,7 +62,11 @@ export function Sidebar() {
     { to: ROUTES.plus, label: "Dreamworks+", icon: Sparkles },
     { to: ROUTES.feed, label: "Feed", icon: Globe },
     { to: ROUTES.workshop, label: "Workshop", icon: Puzzle },
-    { to: ROUTES.developerPortal, label: "Developer", icon: Package },
+  ];
+
+  const devNav: NavItem[] = [
+    { to: ROUTES.developerPortal, label: "Developer Portal", icon: Package },
+    { to: ROUTES.dbModeration, label: "Moderation", icon: ShieldAlert },
   ];
 
   // Steam parity: the full Library experience is desktop-only. Web users still
@@ -83,8 +87,6 @@ export function Sidebar() {
     { to: ROUTES.dbSales, label: "Sales Tracker", icon: Tag },
     { to: ROUTES.dbCalendar, label: "Calendar", icon: Calendar },
     { to: ROUTES.dbAccount, label: "My Analytics", icon: Activity },
-    { to: ROUTES.dbModeration, label: "Moderation", icon: ShieldAlert },
-    { to: ROUTES.dbRoadmap, label: "Roadmap", icon: ListTodo },
   ];
 
   return (
@@ -103,8 +105,11 @@ export function Sidebar() {
         <p className={GROUP_LABEL}>You</p>
         <NavGroup items={youNav} currentPath={location.pathname} />
 
-        <p className={GROUP_LABEL}>Dreamworks DB</p>
+        <p className={GROUP_LABEL}>Analytics</p>
         <NavGroup items={dbNav} currentPath={location.pathname} matchPrefix="/db" />
+
+        <p className={GROUP_LABEL}>Developer</p>
+        <NavGroup items={devNav} currentPath={location.pathname} />
 
         <div className="mt-4 pt-3">
           <NavGroup items={[{ to: ROUTES.settings, label: "Settings", icon: Settings }]} currentPath={location.pathname} />

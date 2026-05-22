@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Link } from "react-router-dom";
-import { Pencil } from "lucide-react";
+import { Pencil, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useGames } from "@/hooks/use-games";
@@ -20,7 +20,16 @@ import { DEFAULT_AVATAR_OPTIONS } from "@/lib/avatar";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { AvatarCustomizer } from "@/components/avatar/AvatarCustomizer";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { DreamworksWrapped } from "@/components/profile/DreamworksWrapped";
+import { QuestsPanel } from "@/components/profile/QuestsPanel";
+import { PlaytimeHeatmap } from "@/components/profile/PlaytimeHeatmap";
+import { AvatarWardrobe } from "@/components/profile/AvatarWardrobe";
+import { SystemInfoPanel } from "@/components/profile/SystemInfoPanel";
 import { SpendHoursDashboard } from "@/components/profile/SpendHoursDashboard";
+import { FamilyTimeProfiles } from "@/components/profile/FamilyTimeProfiles";
+import { PostMatchCoach } from "@/components/profile/PostMatchCoach";
+import { DynamicProfileTheme } from "@/components/profile/DynamicProfileTheme";
 import { RecommendationsSection } from "@/components/profile/RecommendationsSection";
 import { toast } from "@/stores/toast-store";
 import type { Friend, Game, LibraryEntry } from "@/lib/types";
@@ -33,6 +42,7 @@ export function ProfilePage() {
   const { data: stats } = useCompletionStats();
   const { data: friends } = useFriends();
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [wrappedOpen, setWrappedOpen] = useState(false);
 
   if (!profile) return null;
 
@@ -86,7 +96,29 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {/* ── Spend & Hours dashboard ──────────────────────────────────────── */}
+      {/* ── Dreamworks Wrapped Banner ─────────────────────────────────────── */}
+      <section className="mb-8">
+        <button
+          onClick={() => setWrappedOpen(true)}
+          className="group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border border-acid/40 bg-acid/10 p-6 text-left transition-all hover:border-acid/60 hover:bg-acid/15"
+        >
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-acid/20 text-acid shadow-[0_0_20px_-5px_rgba(var(--color-acid-rgb),0.5)]">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-[18px] font-bold text-foreground">Your Year in Gaming is Here</h2>
+              <p className="text-[13px] text-muted/80 group-hover:text-acid transition-colors">Launch your Dreamworks Wrapped experience →</p>
+            </div>
+          </div>
+          <div className="absolute -right-20 -top-20 z-0 h-64 w-64 rounded-full bg-acid/10 blur-3xl transition-transform duration-700 group-hover:scale-150" />
+        </button>
+      </section>
+
+      {/* ── Quests & Spend ─────────────────────────────────────────────── */}
+      <div className="mb-8">
+        <QuestsPanel />
+      </div>
       <SpendHoursDashboard />
 
       {/* ── Stats grid ───────────────────────────────────────────────────── */}
@@ -115,6 +147,22 @@ export function ProfilePage() {
           trend={stats ? `${stats.perfectGames} perfect games` : ""}
           tone="positive"
         />
+      </section>
+
+      {/* ── Additional Profile Modules ─────────────────────────────────────── */}
+      <section className="mb-8 grid gap-6 md:grid-cols-2">
+        <PlaytimeHeatmap />
+        <AvatarWardrobe />
+        <FamilyTimeProfiles />
+        <PostMatchCoach />
+      </section>
+
+      {/* ── System Info Panel ────────────────────────────────────────────── */}
+      <section className="mb-8">
+        <SystemInfoPanel />
+        <div className="mt-6">
+          <DynamicProfileTheme />
+        </div>
       </section>
 
       {/* ── Showcase ─────────────────────────────────────────────────────── */}
@@ -158,6 +206,11 @@ export function ProfilePage() {
         open={customizerOpen}
         onClose={() => setCustomizerOpen(false)}
         initialOptions={avatarOptions}
+      />
+
+      <DreamworksWrapped
+        open={wrappedOpen}
+        onClose={() => setWrappedOpen(false)}
       />
     </motion.div>
   );

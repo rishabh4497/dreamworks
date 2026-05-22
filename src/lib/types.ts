@@ -792,6 +792,8 @@ export interface FeatureRoadmapItem {
   currentState: string;
   nextStep: string;
   acceptance: string;
+  /** Optional route to the page where this feature lives. */
+  href?: string;
 }
 
 // ── Downloads (mock UI state) ───────────────────────────────────────────────

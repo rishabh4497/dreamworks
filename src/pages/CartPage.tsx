@@ -6,6 +6,7 @@ import { useGames } from "@/hooks/use-games";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
 import { PriceTag } from "@/components/ui/price-tag";
+import { ChipInGifting } from "@/components/cart/ChipInGifting";
 import { ROUTES } from "@/lib/routes";
 import { formatPrice } from "@/lib/utils";
 
@@ -247,6 +248,9 @@ export function CartPage() {
           <div className="border-t border-separator pt-3 flex items-center justify-between text-[14px] font-semibold text-foreground">
             <span>Total</span>
             <span>{formatPrice(subtotal)}</span>
+          </div>
+          <div className="pt-2">
+            <ChipInGifting totalCents={subtotal} />
           </div>
           <button
             onClick={() => navigate(ROUTES.checkout)}

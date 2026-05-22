@@ -40,6 +40,9 @@ import { Card } from "@/components/ui/card";
 import { FriendsWhoOwn } from "@/components/store/FriendsWhoOwn";
 import { ReviewPollModal } from "@/components/store/ReviewPollModal";
 import { CloudSaveConflictResolver } from "@/components/library/CloudSaveConflictResolver";
+import { CloudSaves } from "@/components/library/CloudSaves";
+import { AutoTuner } from "@/components/library/AutoTuner";
+import { ModCompatibility } from "@/components/workshop/ModCompatibility";
 import { CompatibilityPanel } from "@/components/store/CompatibilityPanel";
 
 interface SessionRow {
@@ -676,6 +679,9 @@ export function LibraryGamePage() {
 
         {/* Side rail */}
         <aside className="space-y-4">
+          <AutoTuner gameId={detail.id} />
+          <CloudSaves gameId={detail.id} />
+          <ModCompatibility mods={["HD Textures", "Better Lighting", "UI Tweaks"]} />
           <Card className="p-4">
             <h2 className="mb-3 text-[14px] font-semibold text-foreground">
               Install & access

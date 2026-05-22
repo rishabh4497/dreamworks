@@ -12,7 +12,6 @@ const TILES = [
   { to: ROUTES.dbSales, title: "Sales Tracker", icon: Tag, desc: "Biggest current discounts." },
   { to: ROUTES.dbCalendar, title: "Calendar", icon: Calendar, desc: "Upcoming releases & sales." },
   { to: ROUTES.dbAccount, title: "My Analytics", icon: Activity, desc: "Your library, by the numbers." },
-  { to: ROUTES.dbRoadmap, title: "Feature Roadmap", icon: ListTodo, desc: "Missing launcher capabilities and implementation status." },
 ];
 
 export function DbHomePage() {

@@ -23,6 +23,11 @@ import type { Collection, Game, LauncherSource, LibraryEntry } from "@/lib/types
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SaveRollback } from "@/components/library/SaveRollback";
+import { WishlistSync } from "@/components/library/WishlistSync";
+import { ModManager } from "@/components/library/ModManager";
+import { PlayRandomButton } from "@/components/library/PlayRandomButton";
+import { CloudSaveConflict } from "@/components/library/CloudSaveConflict";
 import { RefundBadge } from "@/components/library/RefundBadge";
 import { AddToLibraryModal } from "@/components/library/AddToLibraryModal";
 import { AutoScanModal } from "@/components/library/AutoScanModal";
@@ -249,6 +254,13 @@ export function LibraryPage() {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
+      <CloudSaveConflict />
+      <section className="grid gap-6 md:grid-cols-2">
+        <SaveRollback />
+        <ModManager />
+      </section>
+      <WishlistSync />
+
       {/* 1. Greeting + portfolio hero band */}
       <section
         className={cn(
@@ -496,6 +508,7 @@ export function LibraryPage() {
         </div>
       ) : view === "grid" ? (
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <PlayRandomButton />
           {filteredEntries.map((e) => {
             const game = gameById.get(e.gameId);
             if (!game) return null;
