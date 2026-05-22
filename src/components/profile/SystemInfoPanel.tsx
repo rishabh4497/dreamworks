@@ -1,14 +1,32 @@
 import { Cpu, Monitor, Zap, Server, ChevronRight, Edit2, Check, X } from "lucide-react";
 import { useLibraryStore } from "@/stores/library-store";
 import { useGames } from "@/hooks/use-games";
-import { useMemo, useState } from "react";
-import { useProfileStore } from "@/stores/profile-store";
+import { useMemo, useState, useEffect } from "react";
+import { useProfileStore, detectSystemRig } from "@/stores/profile-store";
 
 export function SystemInfoPanel() {
   const { data: games } = useGames();
   const library = useLibraryStore((s) => s.entries);
-  const { systemRig, customFps, setCustomFps } = useProfileStore();
+  const { systemRig, customFps, setCustomFps, setSystemRig } = useProfileStore();
   const [isEditingFps, setIsEditingFps] = useState(false);
+
+  useEffect(() => {
+    // Re-detect on mount to ensure Tauri OS plugins have injected their window variables
+    setSystemRig(detectSystemRig());
+    
+    // Asynchronously fetch exact hardware limits from native backend
+    import("@/lib/platform").then(({ invokeDesktop }) => {
+      invokeDesktop<any>("read_hardware_info").then(res => {
+        if (res && res.ok && res.data) {
+          setSystemRig({
+            cpu: res.data.cpu,
+            ram: res.data.ram,
+            storage: res.data.storage,
+          });
+        }
+      }).catch(console.error);
+    });
+  }, [setSystemRig]);
 
   const baseFpsRecommendations = useMemo(() => {
     if (!games) return [];

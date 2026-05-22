@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sysinfo::{System, Disks};
 use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
+
+// ... (skip down to the end to add read_hardware_info and add to invoke_handler)
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -607,6 +610,58 @@ fn read_system_capabilities() -> CommandResult<SystemCapabilities> {
     })
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HardwareInfo {
+    cpu: String,
+    ram: String,
+    storage: String,
+}
+
+#[tauri::command]
+fn read_hardware_info() -> CommandResult<HardwareInfo> {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+    
+    let cpu = sys.cpus().first()
+        .map(|c| c.brand().to_string())
+        .unwrap_or_else(|| "Unknown Processor".to_string());
+    
+    let total_ram_bytes = sys.total_memory();
+    let ram_gb = (total_ram_bytes as f64 / 1_073_741_824.0).ceil() as u64;
+    let ram = format!("{} GB RAM", ram_gb);
+    
+    let disks = Disks::new_with_refreshed_list();
+    let mut unique_capacities = std::collections::HashSet::new();
+    
+    for disk in &disks {
+        let space = disk.total_space();
+        // Ignore partitions smaller than 10GB (recovery/boot)
+        if space > 10_000_000_000 {
+            unique_capacities.insert(space);
+        }
+    }
+    
+    let total_storage_bytes: u64 = unique_capacities.iter().sum();
+    
+    let mut storage = "Unknown Storage".to_string();
+    if total_storage_bytes > 0 {
+        let tb = total_storage_bytes as f64 / 1_099_511_627_776.0;
+        let gb = total_storage_bytes as f64 / 1_073_741_824.0;
+        if tb >= 0.9 {
+            storage = format!("{:.1} TB Storage", tb);
+        } else {
+            storage = format!("{:.0} GB Storage", gb);
+        }
+    }
+    
+    ok(HardwareInfo {
+        cpu,
+        ram,
+        storage,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -635,7 +690,8 @@ pub fn run() {
             move_install,
             uninstall_game,
             open_install_folder,
-            read_system_capabilities
+            read_system_capabilities,
+            read_hardware_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

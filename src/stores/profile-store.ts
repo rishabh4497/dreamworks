@@ -29,7 +29,7 @@ interface ProfileStore {
   setCustomFps: (gameId: string, estimate: FpsEstimate) => void;
 }
 
-const detectSystemRig = (): SystemRig => {
+export const detectSystemRig = (): SystemRig => {
   let os = "Unknown OS";
   let cpu = "Unknown Processor";
   let ram = "Unknown Memory";
