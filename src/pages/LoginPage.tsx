@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Loader2 } from "lucide-react";
-import logoSrc from "@/assets/logo.svg";
+const logoSrc = "/logo.png";
 import { useAuthStore } from "@/stores/auth-store";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/stores/toast-store";

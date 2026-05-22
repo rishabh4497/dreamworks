@@ -11,6 +11,8 @@ import { ControllerProfiles } from "@/components/settings/ControllerProfiles";
 import { SubscriptionPausing } from "@/components/settings/SubscriptionPausing";
 import { RefundMeter } from "@/components/settings/RefundMeter";
 import { cn } from "@/lib/utils";
+import { QuickResumePC, CrossPlatformWishlistSync, SeamlessRemotePlay, DynamicStoreBackgrounds } from "@/components/features/UserFeatures";
+import { AiStuckAssistant, AiVoiceTranslation, AiHardwareOptimizer, AiTextureUpscaler } from "@/components/features/AiFeatures";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePlatform } from "@/hooks/use-platform";
 import { useUiStore } from "@/stores/ui-store";
@@ -275,6 +277,9 @@ export function SettingsPage() {
               <div className="border-t border-[#2a2a2a] my-8" />
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">Linked Platforms</h2>
+                <div className="mb-4">
+                  <CrossPlatformWishlistSync />
+                </div>
                 <PlatformIntegrations />
               </div>
 
@@ -297,6 +302,10 @@ export function SettingsPage() {
             >
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">General Preferences</h2>
+                <div className="space-y-4 mb-6">
+                  <QuickResumePC />
+                  <SeamlessRemotePlay />
+                </div>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[11px] text-[#999] uppercase tracking-wider mb-1.5 font-medium">Client Language</label>
@@ -383,12 +392,15 @@ export function SettingsPage() {
                   </div>
                 </div>
               </div>
-
               <div className="border-t border-[#2a2a2a] my-8" />
 
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">Window & Layout</h2>
-                <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-4 py-1 divide-y divide-separator/50">
+                <div className="space-y-4 mb-4">
+                  <AiHardwareOptimizer />
+                  <AiTextureUpscaler />
+                </div>
+                <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-0 divide-y divide-[#2a2a2a]">
                   <ToggleRow
                     label="Close window to system tray"
                     description="Keep launcher active in background when clicking close button"
@@ -414,6 +426,9 @@ export function SettingsPage() {
 
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">Color Theme</h2>
+                <div className="mb-4">
+                  <DynamicStoreBackgrounds />
+                </div>
                 <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-2 py-1.5 flex gap-2">
                   {(["dark", "light", "system"] as const).map((m) => (
                     <button
@@ -441,6 +456,9 @@ export function SettingsPage() {
             >
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">Overlay Settings</h2>
+                <div className="mb-4">
+                  <AiStuckAssistant />
+                </div>
                 <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-4 py-1">
                   <ToggleRow
                     label="Enable In-Game Overlay"
@@ -711,7 +729,10 @@ export function SettingsPage() {
             >
               <div>
                 <h2 className="text-[13px] font-medium text-white mb-3">Chat Preferences</h2>
-                <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-4 py-1 divide-y divide-separator/50">
+                <div className="mb-4">
+                  <AiVoiceTranslation />
+                </div>
+                <div className="rounded-xl border border-[#2a2a2a] border-[#2a2a2a] bg-transparent border-[#2a2a2a] px-0 divide-y divide-[#2a2a2a]">
                   <ToggleRow
                     label="Sign in to friends list on startup"
                     description="Go online immediately when launcher starts"

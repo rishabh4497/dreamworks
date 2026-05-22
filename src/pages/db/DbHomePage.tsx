@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Activity, BarChart3, Calendar, ListTodo, Tag, TrendingUp } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
+import { 
+  DeadGamePredictor, TwitchImpactOverlay, DiscountEfficiencyMatrix,
+  HistoricalPlayerCountReplays, RegionalPopularityGlobe, RefundReasonAnalytics,
+  CompletionRateVsLength, GenreSaturationIndex, LowestPricePredictor,
+  DlcAttachRateTracker
+} from "@/components/features/DbFeatures";
 
 const TILES = [
   { to: ROUTES.dbChart("top-played"), icon: TrendingUp, title: "Top Played", desc: "Most-played games right now." },
@@ -41,6 +47,22 @@ export function DbHomePage() {
             <p className="mt-1 text-[12px] text-muted/60">{t.desc}</p>
           </Link>
         ))}
+      </div>
+
+      <div className="mt-12 mb-6 border-t border-separator pt-8">
+        <h2 className="text-[18px] font-semibold text-foreground mb-4">Advanced Analytics Hub</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <DeadGamePredictor />
+          <TwitchImpactOverlay />
+          <DiscountEfficiencyMatrix />
+          <HistoricalPlayerCountReplays />
+          <RegionalPopularityGlobe />
+          <RefundReasonAnalytics />
+          <CompletionRateVsLength />
+          <GenreSaturationIndex />
+          <LowestPricePredictor />
+          <DlcAttachRateTracker />
+        </div>
       </div>
     </motion.div>
   );

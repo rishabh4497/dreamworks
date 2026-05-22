@@ -34,6 +34,8 @@ import { AutoScanModal } from "@/components/library/AutoScanModal";
 import { SyncModal } from "@/components/library/SyncModal";
 import { usePlatform } from "@/hooks/use-platform";
 import { launchGameNative } from "@/lib/native-launcher";
+import { UniversalPhotoGallery, LocalCoopMatchmaker, InteractiveDigitalManuals, AutomatedModProfiles } from "@/components/features/UserFeatures";
+import { AiDynamicPatchNotes } from "@/components/features/AiFeatures";
 
 const LAUNCHER_LABEL: Record<LauncherSource, string> = {
   dreamworks: "Dreamworks",
@@ -260,6 +262,13 @@ export function LibraryPage() {
         <ModManager />
       </section>
       <WishlistSync />
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <UniversalPhotoGallery />
+        <LocalCoopMatchmaker />
+        <InteractiveDigitalManuals />
+        <AutomatedModProfiles />
+        <AiDynamicPatchNotes />
+      </section>
 
       {/* 1. Greeting + portfolio hero band */}
       <section

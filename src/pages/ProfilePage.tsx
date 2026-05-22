@@ -33,6 +33,8 @@ import { DynamicProfileTheme } from "@/components/profile/DynamicProfileTheme";
 import { RecommendationsSection } from "@/components/profile/RecommendationsSection";
 import { toast } from "@/stores/toast-store";
 import type { Friend, Game, LibraryEntry } from "@/lib/types";
+import { InteractiveAchievementRooms } from "@/components/features/UserFeatures";
+import { AiHighlightReel } from "@/components/features/AiFeatures";
 
 export function ProfilePage() {
   const profile = useAuthStore((s) => s.profile);
@@ -120,6 +122,12 @@ export function ProfilePage() {
         <QuestsPanel />
       </div>
       <SpendHoursDashboard />
+
+      {/* ── New Profile Features ─────────────────────────────────────────── */}
+      <section className="my-8 grid gap-6 md:grid-cols-2">
+        <InteractiveAchievementRooms />
+        <AiHighlightReel />
+      </section>
 
       {/* ── Stats grid ───────────────────────────────────────────────────── */}
       <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">

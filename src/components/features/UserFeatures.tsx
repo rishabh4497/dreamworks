@@ -1,0 +1,171 @@
+import { Camera, PlaySquare, FileCode2, Users, Trophy, RefreshCcw, HardDrive, Smartphone, BookOpen, MonitorPlay } from "lucide-react";
+
+export function UniversalPhotoGallery() {
+  return (
+    <div className="rounded-xl border border-separator bg-card p-5 hover:border-cyan/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-cyan/10 text-cyan">
+          <Camera className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Universal Photo Mode Gallery</h3>
+      </div>
+      <p className="text-xs text-muted/70 leading-relaxed">
+        A central masonry-grid hub to view, edit, apply filters, and share screenshots captured across any game.
+      </p>
+    </div>
+  );
+}
+
+export function QuickResumePC() {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-acid/10 text-acid">
+          <PlaySquare className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">"Quick Resume" for PC</h3>
+          <p className="text-xs text-muted/60 mt-0.5">Suspend game state to disk for instant hot-swapping.</p>
+        </div>
+      </div>
+      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
+        Enable
+      </button>
+    </div>
+  );
+}
+
+export function AutomatedModProfiles() {
+  return (
+    <div className="rounded-xl border border-separator bg-card p-5 hover:border-acid/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500">
+          <FileCode2 className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Automated Modding Profiles</h3>
+      </div>
+      <p className="text-xs text-muted/70 leading-relaxed">
+        Share your exact loadout of 50+ mods with a single text string for friends to one-click install.
+      </p>
+    </div>
+  );
+}
+
+export function LocalCoopMatchmaker() {
+  return (
+    <div className="rounded-xl border border-separator bg-card p-5 hover:border-green/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-green/10 text-green">
+          <Users className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Local Co-op Matchmaker</h3>
+      </div>
+      <p className="text-xs text-muted/70 leading-relaxed">
+        Detects plugged-in controllers and dynamically suggests games you own that support that many local players.
+      </p>
+    </div>
+  );
+}
+
+export function InteractiveAchievementRooms() {
+  return (
+    <div className="rounded-xl border border-separator bg-card p-5 hover:border-yellow-500/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-500">
+          <Trophy className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Interactive Achievement Rooms</h3>
+      </div>
+      <p className="text-xs text-muted/70 leading-relaxed">
+        A customizable 3D/2D virtual room where your rarest achievements are displayed as physical trophies.
+      </p>
+    </div>
+  );
+}
+
+export function CrossPlatformWishlistSync() {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+          <RefreshCcw className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Cross-Platform Wishlist Sync</h3>
+          <p className="text-xs text-muted/60 mt-0.5">Mirror wishlists across PlayStation, Xbox, and Steam.</p>
+        </div>
+      </div>
+      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
+        Sync Now
+      </button>
+    </div>
+  );
+}
+
+export function HardwareAwareWarnings() {
+  return (
+    <div className="rounded-xl border border-red/30 bg-red/5 p-4 flex items-start gap-3">
+      <HardDrive className="h-5 w-5 text-red shrink-0 mt-0.5" />
+      <div>
+        <h3 className="text-xs font-bold text-red uppercase tracking-wider mb-1">Hardware Warning</h3>
+        <p className="text-xs text-red/80">
+          Your current GPU (GTX 1060) is below the minimum required specs for this game. Performance may be severely degraded.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function SeamlessRemotePlay() {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+          <Smartphone className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Seamless Remote Play</h3>
+          <p className="text-xs text-muted/60 mt-0.5">Stream desktop games to your phone or laptop.</p>
+        </div>
+      </div>
+      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
+        Pair Device
+      </button>
+    </div>
+  );
+}
+
+export function InteractiveDigitalManuals() {
+  return (
+    <div className="rounded-xl border border-separator bg-card p-5 hover:border-pink-500/50 transition-colors">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="p-2 rounded-lg bg-pink-500/10 text-pink-500">
+          <BookOpen className="h-5 w-5" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Interactive Digital Manuals</h3>
+      </div>
+      <p className="text-xs text-muted/70 leading-relaxed">
+        High-resolution, flippable digital manuals and lore books accessible directly from the library.
+      </p>
+    </div>
+  );
+}
+
+export function DynamicStoreBackgrounds() {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-cyan/10 text-cyan">
+          <MonitorPlay className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">Dynamic Store Backgrounds</h3>
+          <p className="text-xs text-muted/60 mt-0.5">Launcher theme adapts to the currently viewed game.</p>
+        </div>
+      </div>
+      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
+        Options
+      </button>
+    </div>
+  );
+}

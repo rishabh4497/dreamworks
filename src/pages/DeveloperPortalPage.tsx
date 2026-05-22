@@ -68,6 +68,19 @@ import { AIBugTriage } from "@/components/developer/AIBugTriage";
 import { CrossSaveAPI } from "@/components/developer/CrossSaveAPI";
 import { SilentHotfixDeployer } from "@/components/developer/SilentHotfixDeployer";
 import { MatchmakingSandbox } from "@/components/developer/MatchmakingSandbox";
+import {
+  AutomatedModerationQueue,
+  ShadowBanSandbox,
+  ReviewBombingMitigation,
+  EmergencyRollback,
+  AbTestingStorefronts,
+  CrashDumpAggregator,
+  CloudSaveConflictDashboard,
+  ToxicityReports,
+  EarlyAccessMilestones,
+  PreLoadAnalyzer,
+} from "@/components/features/DevFeatures";
+import { AiNpcVoiceMimic } from "@/components/features/AiFeatures";
 
 const RELEASE_WINDOWS: { value: ReleaseWindow; label: string }[] = [
   { value: "morning", label: "Morning" },
@@ -393,39 +406,56 @@ export function DeveloperPortalPage() {
       )}
 
       {activeTab === "analytics" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
-          <LocalizationHeatmaps />
-          <RefundSurveyAnalytics />
-          <ReviewExtractor />
-          <TelemetryHeatmaps />
-          <HypeFunnel />
-          <CrashVisualizer />
-          <RefundPredictor />
-          <SentimentAnalysis />
-          <DropOffHeatmaps />
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-6">
+            <CrashDumpAggregator />
+            <ToxicityReports />
+            <LocalizationHeatmaps />
+            <RefundSurveyAnalytics />
+            <ReviewExtractor />
+            <TelemetryHeatmaps />
+          </div>
+          <div className="space-y-6">
+            <HypeFunnel />
+            <CrashVisualizer />
+            <RefundPredictor />
+            <SentimentAnalysis />
+            <DropOffHeatmaps />
+          </div>
         </motion.div>
       )}
 
       {activeTab === "marketing" && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6">
-          <PressKitGenerator />
-          <InteractiveWidgets />
-          <DynamicBackgrounds />
-          <InfluencerDiscovery />
-          <BundlePricing />
-          <CapsuleABTesting />
-          <CrossPromoBuilder />
-          <WebWidgets />
-          <MTXSimulator />
-          <ABTesting />
-          <PromoEngine />
-          <BountyBoard />
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-6">
+            <AbTestingStorefronts />
+            <EarlyAccessMilestones />
+            <PressKitGenerator />
+            <InteractiveWidgets />
+            <DynamicBackgrounds />
+            <InfluencerDiscovery />
+            <BundlePricing />
+          </div>
+          <div className="space-y-6">
+            <CapsuleABTesting />
+            <CrossPromoBuilder />
+            <WebWidgets />
+            <MTXSimulator />
+            <ABTesting />
+            <PromoEngine />
+            <BountyBoard />
+          </div>
         </motion.div>
       )}
 
       {activeTab === "ops" && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid gap-6 md:grid-cols-2">
           <div className="space-y-6">
+            <EmergencyRollback />
+            <AutomatedModerationQueue />
+            <CloudSaveConflictDashboard />
+            <PreLoadAnalyzer />
+            <AiNpcVoiceMimic />
             <SilentHotfixDeployer />
             <CrossSaveAPI />
             <PreLoadOptimizer />
@@ -433,13 +463,15 @@ export function DeveloperPortalPage() {
             <AntiCheatML />
             <SubtitleSync />
             <ServerAutoScaler />
+          </div>
+          <div className="space-y-6">
+            <ShadowBanSandbox />
+            <ReviewBombingMitigation />
             <AILocalization />
             <DeveloperAMAs />
             <CloudSaveMigration />
             <PlaytestDeploy />
             <InGameNews />
-          </div>
-          <div className="space-y-6">
             <PriceHarmonization />
             <MatchmakingSandbox />
             <PortEstimator />

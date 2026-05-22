@@ -21,6 +21,8 @@ import {
 } from "@/hooks/use-games";
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
 import { ROUTES } from "@/lib/routes";
+import { AiStoreCurator, AiReviewSummarizer } from "@/components/features/AiFeatures";
+import { HardwareAwareWarnings } from "@/components/features/UserFeatures";
 
 /** Friendlier copy for the existing shelf IDs. */
 const SHELF_TITLE_OVERRIDES: Record<string, string> = {
@@ -61,9 +63,16 @@ export function StoreHomePage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6">
       <GreetingStrip />
       <FeaturedHeroBanner />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-6">
+        <AiStoreCurator />
+        <div className="flex flex-col gap-4">
+          <AiReviewSummarizer />
+          <HardwareAwareWarnings />
+        </div>
+      </div>
       <ContinuePlayingRail />
       <FriendsActivityRail />
       <EditorialSpotlight />

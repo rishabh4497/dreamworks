@@ -22,7 +22,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from "lucide-react";
-import logoSrc from "@/assets/logo.svg";
+const logoSrc = "/internal-logo.png";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/stores/auth-store";
