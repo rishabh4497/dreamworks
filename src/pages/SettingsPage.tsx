@@ -112,6 +112,19 @@ export function SettingsPage() {
   const { data: notificationKinds = [] } = useNotificationKinds();
   const { data: languages = [] } = useLanguages();
 
+  // Self-heal a stale `settings.language` left behind from when the dropdown
+  // exposed unsupported locales — without this the select silently shows the
+  // first option but never updates state, so the row appears unresponsive.
+  useEffect(() => {
+    if (languages.length === 0) return;
+    const validNames = new Set(
+      languages.map((l) => (l.meta?.nativeName as string) ?? resolveLabel(l.labels)),
+    );
+    if (!validNames.has(settings.language)) {
+      updateSettings({ language: "English" });
+    }
+  }, [languages, settings.language, updateSettings]);
+
   const cloudUsedBytes = cloudSaveSlots.reduce((sum, slot) => sum + (slot.sizeBytes || 0), 0);
   const cloudUsagePct = Math.min(100, (cloudUsedBytes / CLOUD_QUOTA_BYTES) * 100);
   const cloudLastSyncedSorted = cloudSaveSlots

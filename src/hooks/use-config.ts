@@ -80,12 +80,66 @@ export function useCountries() {
   });
 }
 
+// Only languages with actual UI dictionaries belong in the dropdown — picking
+// anything else silently falls back to English because the translator can't
+// resolve the locale. Falls back to a hardcoded list when Firestore isn't
+// seeded so the dropdown is never empty.
+const SUPPORTED_LANG_IDS = new Set(["en", "fr", "de", "es", "ja", "ko"]);
+
+const FALLBACK_LANGUAGES: ConfigEntry[] = [
+  {
+    id: "en",
+    labels: { en: "English" },
+    sortOrder: 0,
+    enabled: true,
+    meta: { nativeName: "English" },
+  },
+  {
+    id: "fr",
+    labels: { en: "French" },
+    sortOrder: 1,
+    enabled: true,
+    meta: { nativeName: "Français" },
+  },
+  {
+    id: "de",
+    labels: { en: "German" },
+    sortOrder: 2,
+    enabled: true,
+    meta: { nativeName: "Deutsch" },
+  },
+  {
+    id: "es",
+    labels: { en: "Spanish" },
+    sortOrder: 3,
+    enabled: true,
+    meta: { nativeName: "Español" },
+  },
+  {
+    id: "ja",
+    labels: { en: "Japanese" },
+    sortOrder: 4,
+    enabled: true,
+    meta: { nativeName: "日本語" },
+  },
+  {
+    id: "ko",
+    labels: { en: "Korean" },
+    sortOrder: 5,
+    enabled: true,
+    meta: { nativeName: "한국어" },
+  },
+];
+
 export function useLanguages() {
   return useQuery({
     queryKey: ["config", "languages"],
     queryFn: getLanguages,
     staleTime: CONFIG_STALE_MS,
-    select: selectActive,
+    select: (doc: ConfigDocument | null) => {
+      const entries = selectActive(doc).filter((e) => SUPPORTED_LANG_IDS.has(e.id));
+      return entries.length > 0 ? entries : FALLBACK_LANGUAGES;
+    },
   });
 }
 

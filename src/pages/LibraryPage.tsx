@@ -24,21 +24,18 @@ import type { Collection, Game, LauncherSource, LibraryEntry } from "@/lib/types
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SaveRollback } from "@/components/library/SaveRollback";
-import { WishlistSync } from "@/components/library/WishlistSync";
-import { ModManager } from "@/components/library/ModManager";
 import { PlayRandomButton } from "@/components/library/PlayRandomButton";
 import { CloudSaveConflict } from "@/components/library/CloudSaveConflict";
 import { RefundBadge } from "@/components/library/RefundBadge";
 import { AddToLibraryModal } from "@/components/library/AddToLibraryModal";
 import { AutoScanModal } from "@/components/library/AutoScanModal";
 import { SyncModal } from "@/components/library/SyncModal";
+import { LibraryTabs, type LibraryTab } from "@/components/library/LibraryTabs";
+import { LibraryToolsPanel } from "@/components/library/LibraryToolsPanel";
 import { usePlatform } from "@/hooks/use-platform";
 import { launchGameNative } from "@/lib/native-launcher";
 import { UniversalPhotoGallery, LocalCoopMatchmaker, InteractiveDigitalManuals, AutomatedModProfiles } from "@/components/features/UserFeatures";
 import { AiDynamicPatchNotes } from "@/components/features/AiFeatures";
-import { LibraryAutoOrganizer } from "@/components/library/LibraryAutoOrganizer";
-import { CrossLauncherSearch } from "@/components/library/CrossLauncherSearch";
 
 const LAUNCHER_LABEL: Record<LauncherSource, string> = {
   dreamworks: "Dreamworks",
@@ -92,6 +89,7 @@ export function LibraryPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [aiCollectionIds, setAiCollectionIds] = useState<string[] | null>(null);
   const [aiCollectionName, setAiCollectionName] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<LibraryTab>("games");
 
   // ─── Derived data ──────────────────────────────────────────────────────
   const gameById = useMemo(() => {
@@ -273,44 +271,6 @@ export function LibraryPage() {
       className="space-y-6"
     >
       <CloudSaveConflict />
-      <section className="grid gap-6 md:grid-cols-2">
-        <SaveRollback />
-        <ModManager />
-      </section>
-      <WishlistSync />
-      <CrossLauncherSearch />
-      <LibraryAutoOrganizer
-        onPickCollection={(ids, name) => {
-          setAiCollectionIds(ids);
-          setAiCollectionName(name);
-          setActiveCollection(null);
-        }}
-      />
-      {aiCollectionIds && aiCollectionName && (
-        <section className="flex items-center justify-between rounded-xl border border-acid/30 bg-acid/5 px-3 py-2">
-          <p className="text-[12px] text-foreground/85">
-            Filtering by AI collection ·{" "}
-            <span className="font-semibold text-acid">{aiCollectionName}</span> · {aiCollectionIds.length} games
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setAiCollectionIds(null);
-              setAiCollectionName(null);
-            }}
-            className="text-[11px] text-muted/80 underline-offset-2 hover:text-foreground/80 hover:underline"
-          >
-            Clear
-          </button>
-        </section>
-      )}
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <UniversalPhotoGallery />
-        <LocalCoopMatchmaker />
-        <InteractiveDigitalManuals />
-        <AutomatedModProfiles />
-        <AiDynamicPatchNotes />
-      </section>
 
       {/* 1. Greeting + portfolio hero band */}
       <section
@@ -385,69 +345,26 @@ export function LibraryPage() {
         </div>
       </section>
 
-      {/* 2. Continue playing rail */}
-      {continuePlaying.length > 0 && (
-        <section>
-          <header className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-[14px] font-semibold text-foreground">
-              Continue playing
-            </h2>
-            <span className="text-[11px] text-muted/60">
-              {continuePlaying.length} recent
-            </span>
-          </header>
-          <div className="flex gap-3 overflow-x-auto shelf-scroll pb-1">
-            {continuePlaying.map((e) => {
-              const game = gameById.get(e.gameId);
-              if (!game) return null;
-              const external =
-                e.sourceLauncher && e.sourceLauncher !== "dreamworks";
-              return (
-                <button
-                  key={e.gameId}
-                  onClick={() => navigate(ROUTES.libraryGame(e.gameId))}
-                  className={cn(
-                    "group relative shrink-0 overflow-hidden rounded-xl border border-separator",
-                    "h-[140px] w-[280px] text-left transition-all hover:border-acid/30",
-                  )}
-                >
-                  <img
-                    src={game.headerUrl}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold text-foreground">
-                        {game.name}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-muted/70">
-                        Last played {relativeDate(e.lastPlayed!)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        void handlePlay(e, external);
-                      }}
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-md bg-green/90 px-2 py-1",
-                        "text-[10px] font-semibold text-white hover:bg-green",
-                      )}
-                    >
-                      <Play className="h-3 w-3" />
-                      Play
-                    </button>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {/* 2. Tab bar — Games (default) | Tools */}
+      <LibraryTabs active={activeTab} onChange={setActiveTab} />
 
+      {activeTab === "tools" ? (
+        <LibraryToolsPanel
+          onPickCollection={(ids, name) => {
+            setAiCollectionIds(ids);
+            setAiCollectionName(name);
+            setActiveCollection(null);
+            setActiveTab("games");
+          }}
+        />
+      ) : (
+      <motion.div
+        key="library-games-tab"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="space-y-6"
+      >
       {/* 3. Toolbar + view-mode toggle */}
       <section className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[220px] flex-1 max-w-[360px]">
@@ -539,7 +456,27 @@ export function LibraryPage() {
         </section>
       )}
 
-      {/* 5. Main library grid / list */}
+      {/* 5. AI collection filter banner — reflects active filter from Tools tab */}
+      {aiCollectionIds && aiCollectionName && (
+        <section className="flex items-center justify-between rounded-xl border border-acid/30 bg-acid/5 px-3 py-2">
+          <p className="text-[12px] text-foreground/85">
+            Filtering by AI collection ·{" "}
+            <span className="font-semibold text-acid">{aiCollectionName}</span> · {aiCollectionIds.length} games
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setAiCollectionIds(null);
+              setAiCollectionName(null);
+            }}
+            className="text-[11px] text-muted/80 underline-offset-2 hover:text-foreground/80 hover:underline"
+          >
+            Clear
+          </button>
+        </section>
+      )}
+
+      {/* 6. Main library grid / list */}
       {filteredEntries.length === 0 ? (
         <div className="rounded-2xl border border-separator bg-card p-10 text-center">
           <p className="text-[13px] text-muted/70">
@@ -735,6 +672,98 @@ export function LibraryPage() {
             })}
           </ul>
         </section>
+      )}
+
+      {/* 7. Continue playing rail (moved below grid as a secondary surface) */}
+      {continuePlaying.length > 0 && (
+        <section>
+          <header className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-[14px] font-semibold text-foreground">
+              Continue playing
+            </h2>
+            <span className="text-[11px] text-muted/60">
+              {continuePlaying.length} recent
+            </span>
+          </header>
+          <div className="flex gap-3 overflow-x-auto shelf-scroll pb-1">
+            {continuePlaying.map((e) => {
+              const game = gameById.get(e.gameId);
+              if (!game) return null;
+              const external =
+                e.sourceLauncher && e.sourceLauncher !== "dreamworks";
+              return (
+                <button
+                  key={e.gameId}
+                  onClick={() => navigate(ROUTES.libraryGame(e.gameId))}
+                  className={cn(
+                    "group relative shrink-0 overflow-hidden rounded-xl border border-separator",
+                    "h-[140px] w-[280px] text-left transition-all hover:border-acid/30",
+                  )}
+                >
+                  <img
+                    src={game.headerUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-foreground">
+                        {game.name}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-muted/70">
+                        Last played {relativeDate(e.lastPlayed!)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        void handlePlay(e, external);
+                      }}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md bg-green/90 px-2 py-1",
+                        "text-[10px] font-semibold text-white hover:bg-green",
+                      )}
+                    >
+                      <Play className="h-3 w-3" />
+                      Play
+                    </button>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 8. Discover in your library rail (feature cards as horizontal scroll) */}
+      <section>
+        <header className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-[14px] font-semibold text-foreground">
+            Discover in your library
+          </h2>
+          <span className="text-[11px] text-muted/60">5 features</span>
+        </header>
+        <div className="flex gap-3 overflow-x-auto shelf-scroll pb-1">
+          <div className="w-[320px] shrink-0">
+            <UniversalPhotoGallery />
+          </div>
+          <div className="w-[320px] shrink-0">
+            <LocalCoopMatchmaker />
+          </div>
+          <div className="w-[320px] shrink-0">
+            <InteractiveDigitalManuals />
+          </div>
+          <div className="w-[320px] shrink-0">
+            <AutomatedModProfiles />
+          </div>
+          <div className="w-[320px] shrink-0">
+            <AiDynamicPatchNotes />
+          </div>
+        </div>
+      </section>
+      </motion.div>
       )}
 
       <AddToLibraryModal open={addOpen} onClose={() => setAddOpen(false)} />
