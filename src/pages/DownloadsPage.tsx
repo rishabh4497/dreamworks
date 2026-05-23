@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import {
   AlertTriangle,
@@ -27,6 +27,7 @@ import { useDownloadStore } from "@/stores/download-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import {
   STORAGE_DRIVES,
   buildCleanupCandidates,
@@ -36,6 +37,15 @@ import {
   type CleanupCandidate,
   type StorageDrive,
 } from "@/lib/api/storage";
+import {
+  moveInstall,
+  openInstallFolder,
+  readBackupManifest,
+  uninstallGame,
+  verifyInstall,
+  writeBackupManifest,
+} from "@/lib/api/downloads";
+import { isDesktop, pathExistsSafe } from "@/lib/platform";
 import { getGameById } from "@/lib/mock";
 import { cn, formatBytes, relativeDate } from "@/lib/utils";
 import type { DownloadLimitOption, DownloadStatus, DownloadTask, GameId, LibraryEntry } from "@/lib/types";
@@ -128,20 +138,24 @@ function taskSortScore(task: DownloadTask) {
 
 export function DownloadsPage() {
   const tasks = useDownloadStore((s) => s.tasks);
-  const startDownload = useDownloadStore((s) => s.start);
   const pause = useDownloadStore((s) => s.pause);
   const resume = useDownloadStore((s) => s.resume);
   const cancel = useDownloadStore((s) => s.cancel);
+  const retryTask = useDownloadStore((s) => s.retry);
   const clearCompleted = useDownloadStore((s) => s.clearCompleted);
   const libraryEntries = useLibraryStore((s) => s.entries);
   const moveInstallPath = useLibraryStore((s) => s.moveInstallPath);
   const { settings, updateSettings } = useUiStore();
+  const startDownload = useStartDownload();
+  const desktop = isDesktop();
   const [moveProgress, setMoveProgress] = useState<Record<GameId, number>>({});
   const [verifyState, setVerifyState] = useState<Record<GameId, "verified" | "verifying">>({});
   const [backupTarget, setBackupTarget] = useState("/Backups/Dreamworks/library-manifest.json");
   const [backupManifest, setBackupManifest] = useState<BackupManifest | null>(null);
   const [restorePath, setRestorePath] = useState("/Volumes/Vault/Dreamworks/elden-ring");
   const [restoreStatus, setRestoreStatus] = useState("No restore session");
+  const [selectedCleanupIds, setSelectedCleanupIds] = useState<Set<string>>(new Set());
+  const cleanupSeededRef = useRef(false);
 
   const runningTasks = useMemo(() => tasks.filter((task) => isRunning(task.status)), [tasks]);
   const pausedTasks = useMemo(() => tasks.filter((task) => task.status === "paused"), [tasks]);
@@ -187,13 +201,57 @@ export function DownloadsPage() {
       ),
     [installedEntries, settings.installPath],
   );
+  useEffect(() => {
+    if (cleanupSeededRef.current || cleanupCandidates.length === 0) return;
+    cleanupSeededRef.current = true;
+    setSelectedCleanupIds(
+      new Set(
+        cleanupCandidates.filter((c) => c.selected).map((c) => c.id),
+      ),
+    );
+  }, [cleanupCandidates]);
+
   const selectedCleanupBytes = useMemo(
     () =>
       cleanupCandidates
-        .filter((candidate) => candidate.selected)
+        .filter((candidate) => selectedCleanupIds.has(candidate.id))
         .reduce((sum, candidate) => sum + candidate.sizeBytes, 0),
-    [cleanupCandidates],
+    [cleanupCandidates, selectedCleanupIds],
   );
+
+  const toggleCleanup = (id: string) => {
+    setSelectedCleanupIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleCleanup = async () => {
+    const selected = cleanupCandidates.filter((c) => selectedCleanupIds.has(c.id));
+    if (selected.length === 0) return;
+    const bytes = selected.reduce((sum, c) => sum + c.sizeBytes, 0);
+
+    if (desktop) {
+      const gameCandidates = selected.filter((c) =>
+        installedEntries.some((e) => e.gameId === c.source),
+      );
+      for (const candidate of gameCandidates) {
+        const entry = installedEntries.find((e) => e.gameId === candidate.source);
+        if (!entry) continue;
+        const installPath = installPathForGame(
+          entry.gameId,
+          entry.installPath,
+          settings.installPath,
+        );
+        await uninstallGame({ gameId: entry.gameId, installPath });
+      }
+    }
+
+    setSelectedCleanupIds(new Set());
+    toast.success(`Reclaimed ${formatBytes(bytes)}`);
+  };
   const driveStats = useMemo(
     () =>
       STORAGE_DRIVES.map((drive) => {
@@ -234,13 +292,13 @@ export function DownloadsPage() {
       toast.info("Dreams Engine is already in the queue");
       return;
     }
-    startDownload("Dreams Engine", ENGINE_SIZE_BYTES);
+    startDownload("Dreams Engine", ENGINE_SIZE_BYTES, { silent: true });
     toast.success("Dreams Engine download started");
   };
 
   const handleRetry = (task: DownloadTask) => {
-    startDownload(task.gameId, task.totalBytes || ENGINE_SIZE_BYTES);
-    toast.success(`${task.gameId} added back to the queue`);
+    retryTask(task.taskId);
+    toast.success(`${task.gameId} resuming`);
   };
 
   const handlePauseAll = () => {
@@ -253,8 +311,14 @@ export function DownloadsPage() {
     toast.success("Paused downloads resumed");
   };
 
-  const handleOpenFolder = (task?: DownloadTask) => {
-    toast.info(`Opening ${task?.installPath ?? settings.installPath}`);
+  const handleOpenFolder = async (task?: DownloadTask) => {
+    const path = task?.installPath ?? settings.installPath;
+    if (!desktop) {
+      toast.info("Open folder is desktop-only");
+      return;
+    }
+    const result = await openInstallFolder(path);
+    if (!result.ok) toast.error(result.error.message);
   };
 
   const handleClearFinished = () => {
@@ -262,34 +326,90 @@ export function DownloadsPage() {
     toast.success("Finished downloads cleared");
   };
 
-  const handleMoveInstall = (entry: LibraryEntry, targetDriveId: string) => {
+  const handleMoveInstall = async (entry: LibraryEntry, targetDriveId: string) => {
+    const fromPath = installPathForGame(
+      entry.gameId,
+      entry.installPath,
+      settings.installPath,
+    );
+    const toPath = buildMovedInstallPath(entry.gameId, targetDriveId);
+    if (fromPath === toPath) return;
+
     setMoveProgress((current) => ({ ...current, [entry.gameId]: 35 }));
     toast.info(`Moving ${entry.gameId}`);
-    window.setTimeout(() => {
-      setMoveProgress((current) => ({ ...current, [entry.gameId]: 72 }));
-    }, 450);
-    window.setTimeout(() => {
-      const nextPath = buildMovedInstallPath(entry.gameId, targetDriveId);
-      moveInstallPath(entry.gameId, nextPath);
+
+    if (desktop) {
+      const result = await moveInstall({
+        gameId: entry.gameId,
+        fromPath,
+        toPath,
+      });
       setMoveProgress((current) => {
         const next = { ...current };
         delete next[entry.gameId];
         return next;
       });
-      toast.success(`${entry.gameId} moved to ${nextPath}`);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      await moveInstallPath(entry.gameId, toPath);
+      toast.success(`${entry.gameId} moved to ${toPath}`);
+      return;
+    }
+
+    // Web fallback: simulate
+    window.setTimeout(() => {
+      setMoveProgress((current) => ({ ...current, [entry.gameId]: 72 }));
+    }, 450);
+    window.setTimeout(async () => {
+      await moveInstallPath(entry.gameId, toPath);
+      setMoveProgress((current) => {
+        const next = { ...current };
+        delete next[entry.gameId];
+        return next;
+      });
+      toast.success(`${entry.gameId} moved to ${toPath}`);
     }, 900);
   };
 
-  const handleVerifyInstall = (entry: LibraryEntry) => {
+  const handleVerifyInstall = async (entry: LibraryEntry) => {
     setVerifyState((current) => ({ ...current, [entry.gameId]: "verifying" }));
     toast.info(`Verifying ${entry.gameId}`);
+
+    if (desktop) {
+      const installPath = installPathForGame(
+        entry.gameId,
+        entry.installPath,
+        settings.installPath,
+      );
+      const result = await verifyInstall({ gameId: entry.gameId, installPath });
+      if (result.ok && result.data.exists) {
+        setVerifyState((current) => ({ ...current, [entry.gameId]: "verified" }));
+        toast.success(`${entry.gameId} verified`);
+      } else {
+        setVerifyState((current) => {
+          const next = { ...current };
+          delete next[entry.gameId];
+          return next;
+        });
+        toast.error(
+          result.ok
+            ? `${entry.gameId} install folder missing`
+            : result.error.message,
+        );
+      }
+      return;
+    }
+
+    // Web fallback
     window.setTimeout(() => {
       setVerifyState((current) => ({ ...current, [entry.gameId]: "verified" }));
       toast.success(`${entry.gameId} verified`);
     }, 800);
   };
 
-  const handleCreateBackup = () => {
+  const handleCreateBackup = async () => {
     const manifest: BackupManifest = {
       id: `manifest-${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -297,14 +417,38 @@ export function DownloadsPage() {
       sizeBytes: installedBytes,
       targetPath: backupTarget,
     };
+
+    if (desktop) {
+      const ok = await writeBackupManifest(backupTarget, {
+        ...manifest,
+        entries: installedEntries.map((e) => ({
+          gameId: e.gameId,
+          sizeBytes: e.sizeBytes,
+          installPath: e.installPath,
+        })),
+      });
+      if (!ok) {
+        toast.error("Failed to write backup manifest");
+        return;
+      }
+    }
+
     setBackupManifest(manifest);
     toast.success("Backup manifest created");
   };
 
-  const handleRestoreRelink = () => {
+  const handleRestoreRelink = async () => {
+    if (desktop) {
+      const exists = await pathExistsSafe(restorePath);
+      if (!exists) {
+        setRestoreStatus(`Path not found: ${restorePath}`);
+        toast.error("Restore path does not exist");
+        return;
+      }
+    }
     const selectedGame = installedEntries[0];
     if (selectedGame) {
-      moveInstallPath(selectedGame.gameId, restorePath);
+      await moveInstallPath(selectedGame.gameId, restorePath);
       setRestoreStatus(`Relinked ${selectedGame.gameId} from ${restorePath}`);
       toast.success("Install relinked");
       return;
@@ -313,7 +457,20 @@ export function DownloadsPage() {
     toast.info("Restore path staged");
   };
 
-  const handleValidateBackup = () => {
+  const handleValidateBackup = async () => {
+    if (desktop) {
+      const onDisk = await readBackupManifest(backupTarget);
+      if (!onDisk) {
+        setRestoreStatus(`No manifest found at ${backupTarget}`);
+        toast.error("Backup manifest not found on disk");
+        return;
+      }
+      setRestoreStatus(
+        `Validated ${onDisk.gameCount} entries (${formatBytes(onDisk.sizeBytes)})`,
+      );
+      toast.success("Backup manifest validated");
+      return;
+    }
     const count = backupManifest?.gameCount ?? installedEntries.length;
     setRestoreStatus(`Validated ${count} manifest entries`);
     toast.success("Backup manifest validated");
@@ -571,7 +728,7 @@ export function DownloadsPage() {
           </div>
           <Button
             variant="secondary"
-            onClick={() => toast.success(`Marked ${formatBytes(selectedCleanupBytes)} for cleanup`)}
+            onClick={handleCleanup}
             disabled={selectedCleanupBytes === 0}
           >
             <Trash2 className="h-4 w-4" />
@@ -637,7 +794,12 @@ export function DownloadsPage() {
               </div>
               <div className="space-y-2">
                 {cleanupCandidates.slice(0, 5).map((candidate) => (
-                  <CleanupCandidateRow key={candidate.id} candidate={candidate} />
+                  <CleanupCandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    selected={selectedCleanupIds.has(candidate.id)}
+                    onToggle={() => toggleCleanup(candidate.id)}
+                  />
                 ))}
               </div>
             </Card>
@@ -784,31 +946,39 @@ function DriveCard({ drive }: { drive: DriveStats }) {
   );
 }
 
-function CleanupCandidateRow({ candidate }: { candidate: CleanupCandidate }) {
+function CleanupCandidateRow({
+  candidate,
+  selected,
+  onToggle,
+}: {
+  candidate: CleanupCandidate;
+  selected: boolean;
+  onToggle: () => void;
+}) {
   const drive = STORAGE_DRIVES.find((item) => item.id === candidate.driveId);
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-card-active/35 px-3 py-2">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full",
-              candidate.selected ? "bg-acid" : "bg-muted/35",
-            )}
-          />
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-card-active/35 px-3 py-2 hover:bg-card-active/55">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border border-separator bg-input accent-acid focus:outline-none focus:ring-1 focus:ring-acid/40"
+        />
+        <div className="min-w-0">
           <p className="truncate text-[12px] font-semibold text-foreground/85">
             {candidate.label}
           </p>
+          <p className="mt-0.5 truncate text-[10px] text-muted/40">
+            {candidate.source} · {drive?.name ?? "Unknown drive"}
+          </p>
         </div>
-        <p className="mt-1 truncate text-[10px] text-muted/40">
-          {candidate.source} · {drive?.name ?? "Unknown drive"}
-        </p>
       </div>
       <p className="shrink-0 text-[12px] font-semibold text-foreground/75">
         {formatBytes(candidate.sizeBytes)}
       </p>
-    </div>
+    </label>
   );
 }
 

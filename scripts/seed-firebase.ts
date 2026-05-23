@@ -621,6 +621,26 @@ async function main() {
   logTally(COLLECTIONS.apps, appsTally, GAME_SEEDS.length);
   logTally(COLLECTIONS.games, gamesTally, GAME_SEEDS.length);
 
+  // ── Phase 6b: dw_meta/catalog.version ───────────────────────────────────
+  // Clients hold a 30-min sessionStorage catalog snapshot keyed by version.
+  // Bumping this field tells every open tab on the next storefront fetch
+  // that its cache is stale, so users see the freshly-seeded data without
+  // having to clear sessionStorage by hand.
+  const catalogVersion = Date.now();
+  try {
+    await db.collection("dw_meta").doc("catalog").set(
+      {
+        version: catalogVersion,
+        seededAt: nowIso(),
+        games: GAME_SEEDS.length,
+      },
+      { merge: true },
+    );
+    console.log(`✓ dw_meta/catalog: version=${catalogVersion}`);
+  } catch (err) {
+    console.error(`  ✗ dw_meta/catalog: ${(err as Error).message}`);
+  }
+
   // ── Phase 7: MOCK_USERS.md ──────────────────────────────────────────────
   const ownedStudios = [...studios.values()].filter((s) => s.uid);
   writeFileSync(MOCK_USERS_MD_PATH, renderMockUsersMarkdown(ownedStudios), "utf-8");
