@@ -65,6 +65,8 @@ export function StudioProfileEditor() {
   };
 
   const publicSlug = dev?.id ?? slugify(name);
+  const logoPath = publicSlug ? `dw_developers/${publicSlug}/logo` : undefined;
+  const bannerPath = publicSlug ? `dw_developers/${publicSlug}/banner` : undefined;
 
   return (
     <Card className="mx-auto max-w-3xl space-y-5 p-6">

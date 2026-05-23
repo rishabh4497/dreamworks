@@ -836,11 +836,15 @@ struct MonitorState {
 async fn start_resource_monitor(
     app: AppHandle,
     state: tauri::State<'_, MonitorState>,
-) -> CommandResult<()> {
+) -> Result<CommandResult<()>, ()> {
     {
         let guard = state.handle.lock().expect("monitor handle poisoned");
         if guard.is_some() {
-            return err("monitor_running", "Resource monitor is already running.", true);
+            return Ok(err(
+                "monitor_running",
+                "Resource monitor is already running.",
+                true,
+            ));
         }
     }
 

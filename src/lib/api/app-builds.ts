@@ -42,8 +42,8 @@ export async function createBuild(input: CreateBuildInput): Promise<AppBuild> {
   let sizeBytes = 0;
   if (input.file) {
     const ext = input.file instanceof File ? input.file.name.split(".").pop() : "bin";
-    const path = `apps/${input.appId}/builds/${id}.${ext || "bin"}`;
-    const result = await uploadAsset(input.file, path);
+    const path = `dw_apps/${input.appId}/builds/${id}.${ext || "bin"}`;
+    const result = await uploadAsset(input.file, path, { onStorageError: "throw" });
     assetUrl = result.url;
     sizeBytes = result.sizeBytes;
   }
