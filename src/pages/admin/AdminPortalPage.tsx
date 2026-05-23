@@ -5,6 +5,7 @@ import {
   Briefcase,
   Building,
   Package,
+  Radio,
   ScrollText,
   ShieldAlert,
   ShieldCheck,
@@ -30,6 +31,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase, matchPrefix: ROUTES.adminPublishers },
   { to: ROUTES.adminStudios, label: "Studios", icon: Building, matchPrefix: ROUTES.adminStudios },
   { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText, matchPrefix: ROUTES.adminAuditLog },
+  { to: ROUTES.adminCdn, label: "CDN", icon: Radio, matchPrefix: ROUTES.adminCdn },
 ];
 
 export function AdminPortalPage() {

@@ -74,9 +74,21 @@ export const ROUTES = {
   friends: "/friends",
 
   settings: "/settings",
+  licenses: "/settings/licenses",
   cloudSaves: "/cloud-saves",
   compatibility: "/compatibility",
   diagnostics: "/diagnostics",
+
+  // CDN admin
+  adminCdn: "/admin/cdn",
+
+  // Voice
+  voice: "/voice",
+  voiceChannel: (id: string) => `/voice/${id}`,
+
+  // Communities
+  communities: "/communities",
+  community: (slug: string) => `/communities/${slug}`,
 } as const;
 
 export const DESKTOP_ONLY_ROUTES: ReadonlySet<string> = new Set([

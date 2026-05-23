@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "@/components/common/Toaster";
 import { CommandPalette } from "@/components/common/CommandPalette";
+import { VoiceWidget } from "@/components/voice/VoiceWidget";
 import { useWishlistAlerts } from "@/hooks/use-wishlist-alerts";
 import { useLibraryImportNotifier } from "@/hooks/use-library-import-notifier";
 import { useAccentStore } from "@/stores/accent-store";
@@ -81,6 +82,7 @@ export function AppLayout() {
         </div>
       </div>
       <Toaster />
+      <VoiceWidget />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );

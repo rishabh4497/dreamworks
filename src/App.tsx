@@ -55,6 +55,7 @@ const UserDetailPage = lazyNamed(() => import("@/pages/admin/UserDetailPage"), "
 const PublisherReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "PublisherReviewPage");
 const StudioReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "StudioReviewPage");
 const AuditLogPage = lazyNamed(() => import("@/pages/admin/AuditLogPage"), "AuditLogPage");
+const CdnAdminPage = lazyNamed(() => import("@/pages/admin/CdnAdminPage"), "CdnAdminPage");
 const LibraryPage = lazyNamed(() => import("@/pages/LibraryPage"), "LibraryPage");
 const LibraryGamePage = lazyNamed(() => import("@/pages/LibraryGamePage"), "LibraryGamePage");
 const LibraryCollectionPage = lazyNamed(() => import("@/pages/LibraryCollectionPage"), "LibraryCollectionPage");
@@ -81,6 +82,10 @@ const TopChartsPage = lazyNamed(() => import("@/pages/db/TopChartsPage"), "TopCh
 const SalesTrackerPage = lazyNamed(() => import("@/pages/db/SalesTrackerPage"), "SalesTrackerPage");
 const CalendarPage = lazyNamed(() => import("@/pages/db/CalendarPage"), "CalendarPage");
 const AccountAnalyticsPage = lazyNamed(() => import("@/pages/db/AccountAnalyticsPage"), "AccountAnalyticsPage");
+const LicensesPage = lazyNamed(() => import("@/pages/LicensesPage"), "LicensesPage");
+const VoicePage = lazyNamed(() => import("@/pages/VoicePage"), "VoicePage");
+const CommunitiesPage = lazyNamed(() => import("@/pages/CommunitiesPage"), "CommunitiesPage");
+const CommunityDetailPage = lazyNamed(() => import("@/pages/CommunityDetailPage"), "CommunityDetailPage");
 
 function IndexRoute() {
   const startupLocation = useUiStore((s) => s.settings?.startupLocation || "store");
@@ -163,6 +168,7 @@ export default function App() {
               <Route path="studios" element={<StudioReviewPage />} />
               <Route path="studios/:id" element={<StudioReviewPage />} />
               <Route path="audit-log" element={<AuditLogPage />} />
+              <Route path="cdn" element={<CdnAdminPage />} />
             </Route>
 
             <Route path="db" element={<DbHomePage />} />
@@ -209,6 +215,13 @@ export default function App() {
             <Route path="profile/:userId" element={<ProfilePage />} />
             <Route path="friends" element={<FriendsPage />} />
             <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />
+            <Route path="settings/licenses" element={<LicensesPage />} />
+
+            <Route path="voice" element={<VoicePage />} />
+            <Route path="voice/:channelId" element={<VoicePage />} />
+
+            <Route path="communities" element={<CommunitiesPage />} />
+            <Route path="communities/:slug" element={<CommunityDetailPage />} />
             <Route
               path="diagnostics"
               element={<DesktopOnly><DiagnosticsPage /></DesktopOnly>}

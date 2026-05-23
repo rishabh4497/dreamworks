@@ -1821,6 +1821,207 @@ export interface Cosmetic {
   slot: CosmeticSlot;
 }
 
+// ── CDN / Distribution backbone ─────────────────────────────────────────────
+export type CdnNodeStatus = "online" | "degraded" | "offline" | "maintenance";
+export type CdnRegion =
+  | "na-east"
+  | "na-west"
+  | "eu-west"
+  | "eu-central"
+  | "ap-northeast"
+  | "ap-southeast"
+  | "sa-east"
+  | "oce";
+
+export interface CdnNode {
+  id: string;
+  region: CdnRegion;
+  hostname: string;
+  status: CdnNodeStatus;
+  /** GB/s sustained throughput at last sample. */
+  throughputGbps: number;
+  /** Percent capacity in use, 0–100. */
+  loadPct: number;
+  /** Active connected clients. */
+  activeClients: number;
+  cacheHitPct: number;
+  lastHeartbeatAt: ISODate;
+}
+
+export interface DistributionStatPoint {
+  /** ISO timestamp bucketed to the hour. */
+  bucket: ISODate;
+  region: CdnRegion;
+  bytesServed: number;
+  cacheHitPct: number;
+}
+
+export interface DistributionStatsDoc {
+  region: CdnRegion;
+  /** Last 24 hourly points, newest last. */
+  series: DistributionStatPoint[];
+  totalBytes24h: number;
+  avgCacheHitPct: number;
+}
+
+export type ManifestChunkStatus = "fresh" | "stale" | "missing";
+
+export interface ManifestChunk {
+  id: string;
+  /** SHA-256 of the chunk contents — used for delta diffing. */
+  hash: string;
+  sizeBytes: number;
+  status: ManifestChunkStatus;
+}
+
+export interface GameManifest {
+  /** `${gameId}__${version}` */
+  id: string;
+  gameId: GameId;
+  version: string;
+  releasedAt: ISODate;
+  totalBytes: number;
+  chunkCount: number;
+  chunks: ManifestChunk[];
+}
+
+export interface DeltaPatch {
+  /** `${gameId}__${fromVersion}__${toVersion}` */
+  id: string;
+  gameId: GameId;
+  fromVersion: string;
+  toVersion: string;
+  releasedAt: ISODate;
+  /** Chunk IDs that changed between fromVersion and toVersion. */
+  changedChunkIds: string[];
+  /** Total bytes transferred for this delta (sum of changed chunks). */
+  deltaBytes: number;
+  /** Full-redownload size, for comparison. */
+  fullBytes: number;
+  /** 0–100 — how much smaller the delta is vs. the full download. */
+  savingsPct: number;
+}
+
+// ── DRM / Licensing ─────────────────────────────────────────────────────────
+export type DrmLicenseStatus = "active" | "revoked" | "expired" | "pending";
+
+export interface HardwareFingerprint {
+  /** Stable hash of CPU+motherboard+OS install id. */
+  hash: string;
+  hostname: string;
+  os: OSPlatform;
+  firstSeenAt: ISODate;
+  lastSeenAt: ISODate;
+}
+
+export interface DrmLicense {
+  id: string;
+  userId: string;
+  gameId: GameId;
+  /** Opaque license key, e.g. AAAA-BBBB-CCCC-DDDD. */
+  key: string;
+  status: DrmLicenseStatus;
+  issuedAt: ISODate;
+  /** null = perpetual; ISO date = subscription / rental expiry. */
+  expiresAt: ISODate | null;
+  /** Max devices that may be simultaneously activated. */
+  maxActivations: number;
+  /** Hardware fingerprints that have activated this license. */
+  activations: HardwareFingerprint[];
+}
+
+export interface LicenseVerifyResult {
+  ok: boolean;
+  reason?: "not-found" | "revoked" | "expired" | "activation-limit" | "hardware-mismatch";
+  license?: DrmLicense;
+}
+
+// ── Voice chat ──────────────────────────────────────────────────────────────
+export type VoiceChannelKind = "party" | "guild" | "community" | "game";
+export type VoiceParticipantState = "speaking" | "idle" | "muted" | "deafened";
+
+export interface VoiceParticipant {
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  state: VoiceParticipantState;
+  joinedAt: ISODate;
+}
+
+export interface VoiceChannel {
+  id: string;
+  name: string;
+  kind: VoiceChannelKind;
+  /** Owning entity — guildId, communityId, or gameId depending on kind. */
+  ownerId: string | null;
+  /** Max simultaneous voice participants. */
+  capacity: number;
+  /** Region the signaling server runs in. */
+  region: CdnRegion;
+  createdAt: ISODate;
+}
+
+export interface VoiceSession {
+  /** Same id as the channel — one active session per channel. */
+  id: string;
+  channelId: string;
+  startedAt: ISODate;
+  participants: VoiceParticipant[];
+}
+
+// ── Communities / Social-graph scale ────────────────────────────────────────
+export type CommunityRole = "owner" | "moderator" | "member";
+export type CommunityVisibility = "public" | "invite-only" | "private";
+
+export interface Community {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  bannerUrl: string;
+  iconUrl: string;
+  visibility: CommunityVisibility;
+  /** Featured games this community is centered around. */
+  gameIds: GameId[];
+  memberCount: number;
+  postCount: number;
+  /** ISO timestamps of trending activity (count of posts in last 24h). */
+  trendingScore: number;
+  createdAt: ISODate;
+}
+
+export interface CommunityMember {
+  /** `${communityId}__${userId}` */
+  id: string;
+  communityId: string;
+  userId: string;
+  role: CommunityRole;
+  joinedAt: ISODate;
+}
+
+export interface CommunityPost {
+  id: string;
+  communityId: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  title: string;
+  body: string;
+  /** Optional game tag the post relates to. */
+  gameId?: GameId;
+  likeCount: number;
+  commentCount: number;
+  createdAt: ISODate;
+}
+
+export interface SocialGraphCountersDoc {
+  /** Doc id is the userId. */
+  userId: string;
+  followers: number;
+  following: number;
+  communities: number;
+}
+
 // ── Global augmentations ─────────────────────────────────────────────────────
 // Non-standard browser extensions used for capability detection. `window`-side
 // Tauri internals are already typed by `@tauri-apps/plugin-os` and don't need

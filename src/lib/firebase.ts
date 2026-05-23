@@ -113,6 +113,21 @@ export const COLLECTIONS = {
   speedrunRuns: "dw_speedrun_runs",
   // Avatar wardrobe catalog
   cosmetics: "dw_cosmetics",
+  // CDN / distribution backbone
+  cdnNodes: "dw_cdn_nodes",
+  distributionStats: "dw_distribution_stats",
+  gameManifests: "dw_game_manifests",
+  deltaPatches: "dw_delta_patches",
+  // DRM / licensing
+  drmLicenses: "dw_drm_licenses",
+  // Voice chat
+  voiceChannels: "dw_voice_channels",
+  voiceSessions: "dw_voice_sessions",
+  // Communities / social-graph scale
+  communities: "dw_communities",
+  communityMembers: "dw_community_members",
+  communityPosts: "dw_community_posts",
+  socialGraphCounters: "dw_social_graph_counters",
 } as const;
 
 // Per-user subcollection paths under `dw_users/{uid}/...`.

@@ -1,0 +1,78 @@
+import type { VoiceChannel } from "../types";
+
+const NOW = new Date().toISOString();
+
+export const VOICE_CHANNELS: VoiceChannel[] = [
+  {
+    id: "party-friday-night-raid",
+    name: "Friday Night Raid",
+    kind: "party",
+    ownerId: null,
+    capacity: 6,
+    region: "na-east",
+    createdAt: NOW,
+  },
+  {
+    id: "party-casual-coop",
+    name: "Casual Co-op",
+    kind: "party",
+    ownerId: null,
+    capacity: 8,
+    region: "eu-west",
+    createdAt: NOW,
+  },
+  {
+    id: "guild-iron-banner",
+    name: "Iron Banner — Officers",
+    kind: "guild",
+    ownerId: "guild_iron_banner",
+    capacity: 24,
+    region: "eu-central",
+    createdAt: NOW,
+  },
+  {
+    id: "guild-sundered-isles",
+    name: "Sundered Isles — Open Mic",
+    kind: "guild",
+    ownerId: "guild_sundered_isles",
+    capacity: 50,
+    region: "na-west",
+    createdAt: NOW,
+  },
+  {
+    id: "community-cyberpunk-2077",
+    name: "Cyberpunk Lounge",
+    kind: "community",
+    ownerId: "cyberpunk-2077",
+    capacity: 100,
+    region: "eu-west",
+    createdAt: NOW,
+  },
+  {
+    id: "community-black-myth-wukong",
+    name: "Black Myth: Wukong",
+    kind: "community",
+    ownerId: "black-myth-wukong",
+    capacity: 80,
+    region: "ap-northeast",
+    createdAt: NOW,
+  },
+  {
+    id: "game-witcher-3-modding",
+    name: "Witcher 3 Modding Lab",
+    kind: "game",
+    ownerId: "witcher-3",
+    capacity: 32,
+    region: "na-east",
+    createdAt: NOW,
+  },
+  {
+    id: "game-gta-5-heists",
+    name: "GTA V Heists",
+    kind: "game",
+    ownerId: "gta-5",
+    capacity: 16,
+    region: "na-west",
+    createdAt: NOW,
+  },
+];
