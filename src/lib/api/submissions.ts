@@ -115,9 +115,15 @@ export async function listMySubmissions(): Promise<AppSubmission[]> {
 
 export async function listSubmissionQueue(status?: SubmissionStatus): Promise<AppSubmission[]> {
   const ref = collection(getDb(), COLLECTIONS.appSubmissions);
+  // When filtering by status, skip the server-side orderBy to avoid needing
+  // a composite (status, submittedAt) index — sort client-side instead. The
+  // composite index is still defined in firestore.indexes.json for when the
+  // queue grows large enough to justify it.
   const q = status
-    ? query(ref, where("status", "==", status), orderBy("submittedAt", "desc"))
+    ? query(ref, where("status", "==", status))
     : query(ref, orderBy("submittedAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => asAppSubmission(d.id, d.data()));
+  const rows = snap.docs.map((d) => asAppSubmission(d.id, d.data()));
+  if (status) rows.sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1));
+  return rows;
 }

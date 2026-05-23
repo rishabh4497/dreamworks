@@ -28,6 +28,7 @@ export const ROUTES = {
   admin: "/admin",
   adminSubmissions: "/admin/submissions",
   adminSubmissionDetail: (id: string) => `/admin/submissions/${id}`,
+  adminApps: "/admin/apps",
   adminUsers: "/admin/users",
   adminUserDetail: (uid: string) => `/admin/users/${uid}`,
   adminContentModeration: "/admin/content-moderation",

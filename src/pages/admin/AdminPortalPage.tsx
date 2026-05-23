@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import {
+  Boxes,
   Briefcase,
   Building,
   Package,
@@ -23,6 +24,7 @@ interface AdminNavItem {
 const NAV_ITEMS: AdminNavItem[] = [
   { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck, matchPrefix: ROUTES.admin, exact: true },
   { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package, matchPrefix: ROUTES.adminSubmissions },
+  { to: ROUTES.adminApps, label: "Apps", icon: Boxes, matchPrefix: ROUTES.adminApps },
   { to: ROUTES.adminUsers, label: "Users", icon: User, matchPrefix: ROUTES.adminUsers },
   { to: ROUTES.adminContentModeration, label: "Content", icon: ShieldAlert, matchPrefix: ROUTES.adminContentModeration },
   { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase, matchPrefix: ROUTES.adminPublishers },

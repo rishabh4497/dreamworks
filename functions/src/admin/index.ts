@@ -4,3 +4,4 @@ export { reviewAppSubmission } from "./review-app.js";
 export { publishApprovedApp } from "./publish-app.js";
 export { setUserRole } from "./set-user-role.js";
 export { reviewPublisherProfile, reviewStudioProfile } from "./review-creator-profile.js";
+export { deleteAppAdmin } from "./delete-app.js";

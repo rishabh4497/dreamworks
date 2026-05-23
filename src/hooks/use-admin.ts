@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteAppAdmin,
   getAdminKpis,
   getAdminUser,
   listAdminUsers,
+  listAllApps,
   listCreatorSubmissionQueue,
   reviewPublisherProfile,
   reviewStudioProfile,
   setUserRole,
 } from "@/lib/api/admin";
+import { appKeys } from "@/hooks/use-apps";
+import { invalidateCatalogCache } from "@/lib/api/games";
 import type {
+  AppStage,
   CreatorSubmissionType,
   SubmissionStatus,
   UserRole,
@@ -22,7 +27,30 @@ export const adminKeys = {
   user: (uid: string) => [...adminKeys.all, "user", uid] as const,
   creatorQueue: (type: CreatorSubmissionType, status?: SubmissionStatus | "all") =>
     [...adminKeys.all, "creator", type, status ?? "all"] as const,
+  apps: (filter: { stage?: AppStage | "all"; search?: string }) =>
+    [...adminKeys.all, "apps", filter] as const,
 };
+
+export function useAllApps(filter: { stage?: AppStage | "all"; search?: string } = {}) {
+  return useQuery({
+    queryKey: adminKeys.apps(filter),
+    queryFn: () => listAllApps(filter),
+  });
+}
+
+export function useDeleteAppAdmin() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAppAdmin,
+    onSuccess: (_data, input) => {
+      qc.invalidateQueries({ queryKey: adminKeys.all });
+      qc.invalidateQueries({ queryKey: appKeys.all });
+      qc.invalidateQueries({ queryKey: appKeys.byId(input.appId) });
+      qc.invalidateQueries({ queryKey: ["games"] });
+      invalidateCatalogCache();
+    },
+  });
+}
 
 export function useAdminKpis() {
   return useQuery({ queryKey: adminKeys.kpis(), queryFn: getAdminKpis });

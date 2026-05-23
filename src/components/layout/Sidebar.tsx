@@ -2,8 +2,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   BarChart3,
-  Briefcase,
-  Building,
   Calendar,
   Globe,
   Heart,
@@ -11,9 +9,7 @@ import {
   Library,
   LogOut,
   Search,
-  ScrollText,
   Settings,
-  ShieldAlert,
   ShieldCheck,
   ShoppingCart,
   Tag,
@@ -73,13 +69,7 @@ export function Sidebar() {
 
   const isAdmin = profile?.role === "admin";
   const adminNav: NavItem[] = [
-    { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck },
-    { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package },
-    { to: ROUTES.adminUsers, label: "Users", icon: User },
-    { to: ROUTES.adminContentModeration, label: "Content", icon: ShieldAlert },
-    { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase },
-    { to: ROUTES.adminStudios, label: "Studios", icon: Building },
-    { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText },
+    { to: ROUTES.admin, label: "Admin Panel", icon: ShieldCheck },
   ];
 
   // Steam parity: the full Library experience and download queue are
@@ -218,7 +208,7 @@ function NavGroup({
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === "/store" || item.to === "/db" || item.to === "/profile" || item.to === "/admin"}
+            end={item.to === "/store" || item.to === "/db" || item.to === "/profile"}
             className={({ isActive: rrIsActive }) =>
               cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150",

@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { type ReactNode } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DesktopOnly } from "@/components/layout/DesktopOnly";
-import { StuckHelperOverlay } from "@/components/social/StuckHelperOverlay";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthHelperPage } from "@/pages/AuthHelperPage";
@@ -35,6 +34,7 @@ import { AdminPortalPage } from "@/pages/admin/AdminPortalPage";
 import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
 import { AppSubmissionsQueuePage } from "@/pages/admin/AppSubmissionsQueuePage";
 import { AppSubmissionDetailPage } from "@/pages/admin/AppSubmissionDetailPage";
+import { AppsAdminPage } from "@/pages/admin/AppsAdminPage";
 import { UsersPage } from "@/pages/admin/UsersPage";
 import { UserDetailPage } from "@/pages/admin/UserDetailPage";
 import { PublisherReviewPage, StudioReviewPage } from "@/pages/admin/CreatorReviewPage";
@@ -91,7 +91,6 @@ export default function App() {
           element={
             <AuthGuard>
               <AppLayout />
-              <StuckHelperOverlay />
               {/* <OverlayBrowser /> Hidden by default, toggled via hotkey in real app */}
             </AuthGuard>
           }
@@ -134,6 +133,7 @@ export default function App() {
             <Route index element={<AdminDashboardPage />} />
             <Route path="submissions" element={<AppSubmissionsQueuePage />} />
             <Route path="submissions/:submissionId" element={<AppSubmissionDetailPage />} />
+            <Route path="apps" element={<AppsAdminPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:uid" element={<UserDetailPage />} />
             <Route path="content-moderation" element={<ModerationQueuePage />} />

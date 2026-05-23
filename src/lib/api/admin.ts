@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   getDoc,
   getDocs,
   doc,
@@ -20,6 +21,8 @@ import {
 } from "@/lib/firebase";
 import type {
   AdminUserSummary,
+  App,
+  AppStage,
   AuditAction,
   AuditEntry,
   AuditTargetType,
@@ -28,6 +31,56 @@ import type {
   SubmissionStatus,
   UserRole,
 } from "@/lib/types";
+
+// ── App management (admin) ─────────────────────────────────────────────────
+
+export async function listAllApps(opts: {
+  stage?: AppStage | "all";
+  search?: string;
+} = {}): Promise<App[]> {
+  const ref = collection(getDb(), COLLECTIONS.apps);
+  // Same pattern as the submission queues: drop the server-side orderBy when
+  // a where filter is present, sort client-side. Avoids requiring a composite
+  // (stage, updatedAt) index. 500-doc cap keeps the client sort cheap.
+  const q = opts.stage && opts.stage !== "all"
+    ? query(ref, where("stage", "==", opts.stage), fbLimit(500))
+    : query(ref, orderBy("updatedAt", "desc"), fbLimit(500));
+  const snap = await getDocs(q);
+  const list: App[] = [];
+  snap.forEach((d) => list.push(d.data() as App));
+  if (opts.stage && opts.stage !== "all") {
+    list.sort((a, b) => ((a.updatedAt ?? "") < (b.updatedAt ?? "") ? 1 : -1));
+  }
+  const search = opts.search?.trim().toLowerCase();
+  if (!search) return list;
+  return list.filter(
+    (app) =>
+      app.gameTitle?.toLowerCase().includes(search) ||
+      app.id.toLowerCase().includes(search) ||
+      app.developerIds?.some((slug) => slug.toLowerCase().includes(search)) ||
+      app.publisherIds?.some((slug) => slug.toLowerCase().includes(search)),
+  );
+}
+
+export interface DeleteAppAdminResult {
+  deletedApp: boolean;
+  deletedGame: boolean;
+  deletedSubmissions: number;
+  deletedBuilds: number;
+  deletedAchievements: number;
+}
+
+export async function deleteAppAdmin(input: {
+  appId: string;
+  alsoDeleteGame?: boolean;
+}): Promise<DeleteAppAdminResult> {
+  const fn = httpsCallable<typeof input, DeleteAppAdminResult>(
+    getFirebaseFunctions(),
+    "deleteAppAdmin",
+  );
+  const res = await fn(input);
+  return res.data;
+}
 
 // ── Bootstrap callable (used by auth-store) ────────────────────────────────
 
@@ -188,11 +241,17 @@ export async function listCreatorSubmissionQueue(
     getDb(),
     type === "publisher" ? COLLECTIONS.publisherSubmissions : COLLECTIONS.developerSubmissions,
   );
+  // When filtering by status, skip the server-side orderBy so we don't need
+  // a composite (status, submittedAt) index — pending queues are small enough
+  // to sort client-side. Indexes in firestore.indexes.json are still set up
+  // for when queue volume justifies switching back.
   const q = status
-    ? query(ref, where("status", "==", status), orderBy("submittedAt", "desc"))
+    ? query(ref, where("status", "==", status))
     : query(ref, orderBy("submittedAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => asCreatorSubmission(type, d));
+  const rows = snap.docs.map((d) => asCreatorSubmission(type, d));
+  if (status) rows.sort((a, b) => (a.submittedAt < b.submittedAt ? 1 : -1));
+  return rows;
 }
 
 export async function reviewPublisherProfile(input: {

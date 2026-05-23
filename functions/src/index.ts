@@ -11,4 +11,5 @@ export {
   setUserRole,
   reviewPublisherProfile,
   reviewStudioProfile,
+  deleteAppAdmin,
 } from "./admin/index.js";

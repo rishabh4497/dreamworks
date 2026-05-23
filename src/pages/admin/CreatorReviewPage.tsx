@@ -61,7 +61,10 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
         <Card className="p-6 text-[13px] text-muted/65">Loading queue…</Card>
       ) : error ? (
         <Card className="p-6 text-[13px] text-red">
-          Failed to load: {(error as Error).message}
+          <p className="font-semibold">Failed to load queue.</p>
+          <p className="mt-1 break-all text-[12px] text-red/85">
+            {(error as Error).message}
+          </p>
         </Card>
       ) : !data || data.length === 0 ? (
         <EmptyState
