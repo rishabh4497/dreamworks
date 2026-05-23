@@ -1,79 +1,74 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { LinkedPlatform, LinkedPlatformId } from "@/lib/types";
-
-const SEED_PLATFORMS: Record<LinkedPlatformId, LinkedPlatform> = {
-  psn: {
-    id: "psn",
-    name: "PlayStation Network",
-    connected: true,
-    lastSyncedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  "xbox-live": {
-    id: "xbox-live",
-    name: "Xbox Live",
-    connected: false,
-    lastSyncedAt: null,
-  },
-  steam: {
-    id: "steam",
-    name: "Steam",
-    connected: true,
-    lastSyncedAt: new Date().toISOString(),
-  },
-  epic: {
-    id: "epic",
-    name: "Epic Games",
-    connected: false,
-    lastSyncedAt: null,
-  },
-};
+import { doc, onSnapshot } from "firebase/firestore";
+import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  connectPlatform,
+  emptyPlatforms,
+  markPlatformSynced,
+  unlinkPlatform,
+} from "@/lib/api/user-platforms";
+import type {
+  LinkedPlatform,
+  LinkedPlatformId,
+  UserPlatformsDoc,
+} from "@/lib/types";
 
 interface LinkedPlatformsStore {
   platforms: Record<LinkedPlatformId, LinkedPlatform>;
-  connect: (id: LinkedPlatformId) => void;
-  unlink: (id: LinkedPlatformId) => void;
-  sync: (id: LinkedPlatformId) => void;
+  connect: (id: LinkedPlatformId) => Promise<void>;
+  unlink: (id: LinkedPlatformId) => Promise<void>;
+  sync: (id: LinkedPlatformId) => Promise<void>;
 }
 
-export const useLinkedPlatformsStore = create<LinkedPlatformsStore>()(
-  persist(
-    (set) => ({
-      platforms: { ...SEED_PLATFORMS },
-      connect: (id) =>
-        set((s) => ({
-          platforms: {
-            ...s.platforms,
-            [id]: {
-              ...s.platforms[id],
-              connected: true,
-              lastSyncedAt: new Date().toISOString(),
-            },
-          },
-        })),
-      unlink: (id) =>
-        set((s) => ({
-          platforms: {
-            ...s.platforms,
-            [id]: { ...s.platforms[id], connected: false, lastSyncedAt: null },
-          },
-        })),
-      sync: (id) =>
-        set((s) => ({
-          platforms: {
-            ...s.platforms,
-            [id]: { ...s.platforms[id], lastSyncedAt: new Date().toISOString() },
-          },
-        })),
-    }),
-    {
-      name: "dreamworks-linked-platforms",
-      version: 1,
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        // Fill in any platform ids that didn't exist when the user last persisted.
-        state.platforms = { ...SEED_PLATFORMS, ...state.platforms };
-      },
-    },
-  ),
-);
+const INITIAL_PLATFORMS = emptyPlatforms("").platforms;
+
+export const useLinkedPlatformsStore = create<LinkedPlatformsStore>(() => ({
+  platforms: { ...INITIAL_PLATFORMS },
+  connect: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await connectPlatform(uid, id);
+  },
+  unlink: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await unlinkPlatform(uid, id);
+  },
+  sync: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await markPlatformSynced(uid, id);
+  },
+}));
+
+let lastUid: string | undefined = undefined;
+let unsubscribe: (() => void) | null = null;
+
+useAuthStore.subscribe((state) => {
+  const uid = state.profile?.uid;
+  if (uid === lastUid) return;
+  lastUid = uid;
+
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+
+  if (!uid) {
+    useLinkedPlatformsStore.setState({ platforms: { ...INITIAL_PLATFORMS } });
+    return;
+  }
+
+  const ref = doc(getDb(), COLLECTIONS.userPlatforms, uid);
+  unsubscribe = onSnapshot(ref, (snap) => {
+    if (!snap.exists()) {
+      useLinkedPlatformsStore.setState({ platforms: { ...INITIAL_PLATFORMS } });
+      return;
+    }
+    const data = snap.data() as UserPlatformsDoc;
+    useLinkedPlatformsStore.setState({
+      platforms: { ...INITIAL_PLATFORMS, ...data.platforms },
+    });
+  });
+});

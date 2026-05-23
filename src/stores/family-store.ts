@@ -1,61 +1,66 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { FamilyMember } from "@/lib/types";
-
-const SEED_MEMBERS: FamilyMember[] = [
-  {
-    id: "family-sarah",
-    name: "Sarah",
-    relationship: "Sister",
-    authorized: true,
-    lastActiveAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "family-leo",
-    name: "Leo",
-    relationship: "Brother",
-    authorized: false,
-    lastActiveAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-type AddInput = Pick<FamilyMember, "name" | "relationship"> & {
-  authorized?: boolean;
-};
+import { doc, onSnapshot } from "firebase/firestore";
+import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  addFamilyMember,
+  removeFamilyMember,
+  setMemberAuthorized,
+  type FamilyMemberInput,
+} from "@/lib/api/user-family";
+import type { FamilyMember, UserFamilyDoc } from "@/lib/types";
 
 interface FamilyStore {
   members: FamilyMember[];
-  add: (member: AddInput) => void;
-  remove: (id: string) => void;
-  setAuthorized: (id: string, next: boolean) => void;
+  add: (member: FamilyMemberInput) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  setAuthorized: (id: string, next: boolean) => Promise<void>;
 }
 
-export const useFamilyStore = create<FamilyStore>()(
-  persist(
-    (set) => ({
-      members: [...SEED_MEMBERS],
-      add: (member) =>
-        set((s) => ({
-          members: [
-            ...s.members,
-            {
-              id: `family-${Date.now()}`,
-              name: member.name,
-              relationship: member.relationship,
-              authorized: member.authorized ?? false,
-              lastActiveAt: null,
-            },
-          ],
-        })),
-      remove: (id) => set((s) => ({ members: s.members.filter((m) => m.id !== id) })),
-      setAuthorized: (id, next) =>
-        set((s) => ({
-          members: s.members.map((m) => (m.id === id ? { ...m, authorized: next } : m)),
-        })),
-    }),
-    {
-      name: "dreamworks-family",
-      version: 1,
-    },
-  ),
-);
+export const useFamilyStore = create<FamilyStore>(() => ({
+  members: [],
+  add: async (member) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await addFamilyMember(uid, member);
+  },
+  remove: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await removeFamilyMember(uid, id);
+  },
+  setAuthorized: async (id, next) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await setMemberAuthorized(uid, id, next);
+  },
+}));
+
+let lastUid: string | undefined = undefined;
+let unsubscribe: (() => void) | null = null;
+
+useAuthStore.subscribe((state) => {
+  const uid = state.profile?.uid;
+  if (uid === lastUid) return;
+  lastUid = uid;
+
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+
+  if (!uid) {
+    useFamilyStore.setState({ members: [] });
+    return;
+  }
+
+  const ref = doc(getDb(), COLLECTIONS.userFamily, uid);
+  unsubscribe = onSnapshot(ref, (snap) => {
+    if (!snap.exists()) {
+      useFamilyStore.setState({ members: [] });
+      return;
+    }
+    const data = snap.data() as UserFamilyDoc;
+    useFamilyStore.setState({ members: data.members ?? [] });
+  });
+});

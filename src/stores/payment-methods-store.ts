@@ -1,63 +1,69 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { PaymentMethod } from "@/lib/types";
+import { doc, onSnapshot } from "firebase/firestore";
+import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  addPaymentMethod,
+  removePaymentMethod,
+  setDefaultPaymentMethod,
+} from "@/lib/api/user-billing";
+import type { PaymentMethod, UserBillingDoc } from "@/lib/types";
 
-const SEED_CARDS: PaymentMethod[] = [
-  {
-    id: "card-visa-4242",
-    brand: "Visa",
-    last4: "4242",
-    expiryMonth: 12,
-    expiryYear: 2028,
-    holderName: "Card Holder",
-    isDefault: true,
-  },
-];
-
-type AddInput = Omit<PaymentMethod, "id" | "isDefault"> & { isDefault?: boolean };
+type AddInput = Omit<PaymentMethod, "id" | "isDefault"> & {
+  isDefault?: boolean;
+};
 
 interface PaymentMethodsStore {
   cards: PaymentMethod[];
-  add: (card: AddInput) => void;
-  remove: (id: string) => void;
-  setDefault: (id: string) => void;
+  add: (card: AddInput) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  setDefault: (id: string) => Promise<void>;
 }
 
-export const usePaymentMethodsStore = create<PaymentMethodsStore>()(
-  persist(
-    (set) => ({
-      cards: [...SEED_CARDS],
-      add: (card) =>
-        set((s) => {
-          const makeDefault = card.isDefault || s.cards.length === 0;
-          const next: PaymentMethod = {
-            ...card,
-            id: `card-${Date.now()}`,
-            isDefault: makeDefault,
-          };
-          const others = makeDefault
-            ? s.cards.map((c) => ({ ...c, isDefault: false }))
-            : s.cards;
-          return { cards: [...others, next] };
-        }),
-      remove: (id) =>
-        set((s) => {
-          const filtered = s.cards.filter((c) => c.id !== id);
-          // If we removed the default and any cards remain, promote the first.
-          const hasDefault = filtered.some((c) => c.isDefault);
-          const next = !hasDefault && filtered.length > 0
-            ? filtered.map((c, i) => ({ ...c, isDefault: i === 0 }))
-            : filtered;
-          return { cards: next };
-        }),
-      setDefault: (id) =>
-        set((s) => ({
-          cards: s.cards.map((c) => ({ ...c, isDefault: c.id === id })),
-        })),
-    }),
-    {
-      name: "dreamworks-payment-methods",
-      version: 1,
-    },
-  ),
-);
+export const usePaymentMethodsStore = create<PaymentMethodsStore>(() => ({
+  cards: [],
+  add: async (card) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await addPaymentMethod(uid, card);
+  },
+  remove: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await removePaymentMethod(uid, id);
+  },
+  setDefault: async (id) => {
+    const uid = useAuthStore.getState().profile?.uid;
+    if (!uid) return;
+    await setDefaultPaymentMethod(uid, id);
+  },
+}));
+
+let lastUid: string | undefined = undefined;
+let unsubscribe: (() => void) | null = null;
+
+useAuthStore.subscribe((state) => {
+  const uid = state.profile?.uid;
+  if (uid === lastUid) return;
+  lastUid = uid;
+
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+
+  if (!uid) {
+    usePaymentMethodsStore.setState({ cards: [] });
+    return;
+  }
+
+  const ref = doc(getDb(), COLLECTIONS.userBilling, uid);
+  unsubscribe = onSnapshot(ref, (snap) => {
+    if (!snap.exists()) {
+      usePaymentMethodsStore.setState({ cards: [] });
+      return;
+    }
+    const data = snap.data() as UserBillingDoc;
+    usePaymentMethodsStore.setState({ cards: data.paymentMethods ?? [] });
+  });
+});
