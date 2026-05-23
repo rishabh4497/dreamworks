@@ -46,6 +46,10 @@ const DEFAULT_SETTINGS: ClientSettings = {
   largerFocusTargets: false,
   controllerHints: true,
   language: "English",
+  quickResumeEnabled: false,
+  remotePlayPairedDevice: null,
+  dynamicStoreBackgroundsEnabled: true,
+  textureUpscalerNotifyMe: false,
 };
 
 interface UiStore {

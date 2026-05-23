@@ -1262,6 +1262,10 @@ export interface ClientSettings {
   largerFocusTargets: boolean;
   controllerHints: boolean;
   language: string;
+  quickResumeEnabled: boolean;
+  remotePlayPairedDevice: string | null;
+  dynamicStoreBackgroundsEnabled: boolean;
+  textureUpscalerNotifyMe: boolean;
 }
 
 // ── Social Feed ─────────────────────────────────────────────────────────────
