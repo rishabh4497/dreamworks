@@ -1,0 +1,34 @@
+{
+  "name": "@dreamworks/sdk",
+  "version": "0.1.0",
+  "description": "Dreamworks SDK — achievements, stats, and runtime handshake for games published on the Dreamworks store.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./signature": {
+      "types": "./dist/signature.d.ts",
+      "import": "./dist/signature.mjs",
+      "require": "./dist/signature.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.0"
+  }
+}
