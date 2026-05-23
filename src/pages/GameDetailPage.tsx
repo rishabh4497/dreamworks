@@ -244,9 +244,7 @@ export function GameDetailPage() {
           )}
         </section>
 
-        {detail.aiOverview && (
-          <AIGameOverview overview={detail.aiOverview} gameName={detail.name} />
-        )}
+        <AIGameOverview gameDetail={detail} />
 
         {/* About */}
         <section className="mt-10">

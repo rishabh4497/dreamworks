@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useGamesByPublisher } from "@/hooks/use-games";
+import { usePublisher } from "@/hooks/use-publisher";
 import { EntityStorefront } from "@/components/store/EntityStorefront";
 
 function titleCase(slug: string): string {
@@ -12,8 +13,9 @@ function titleCase(slug: string): string {
 export function PublisherPage() {
   const { slug = "" } = useParams();
   const { data: games, isLoading } = useGamesByPublisher(slug);
+  const { data: entity } = usePublisher(slug);
   const list = games ?? [];
-  const name = list[0]?.publisher ?? titleCase(slug);
+  const name = entity?.name ?? list[0]?.publisher ?? titleCase(slug);
 
   return (
     <EntityStorefront

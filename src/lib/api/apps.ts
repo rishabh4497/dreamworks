@@ -39,8 +39,10 @@ function requireUserId(): string {
   return user.uid;
 }
 
-function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+function stripUndefined<T>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).filter(([, v]) => v !== undefined),
+  ) as T;
 }
 
 const DEFAULT_BRANCHES: AppBranch[] = [

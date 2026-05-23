@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useGamesByDeveloper } from "@/hooks/use-games";
+import { useDeveloper } from "@/hooks/use-developer";
 import { EntityStorefront } from "@/components/store/EntityStorefront";
 
 function titleCase(slug: string): string {
@@ -12,8 +13,9 @@ function titleCase(slug: string): string {
 export function DeveloperPage() {
   const { slug = "" } = useParams();
   const { data: games, isLoading } = useGamesByDeveloper(slug);
+  const { data: entity } = useDeveloper(slug);
   const list = games ?? [];
-  const name = list[0]?.developer ?? titleCase(slug);
+  const name = entity?.name ?? list[0]?.developer ?? titleCase(slug);
 
   return (
     <EntityStorefront
