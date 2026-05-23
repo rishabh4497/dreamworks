@@ -125,13 +125,8 @@ export function FeedPage() {
   const [filterGameId, setFilterGameId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
-  // Who to Follow following states (in-memory mock toggles)
-  const [following, setFollowing] = useState<Record<string, boolean>>({
-    "@rockstargames": true,
-    "@fromsoftware": false,
-    "@hadesgame": false,
-    "@ign": true,
-  });
+  // Who to Follow following states (in-memory toggles; not yet persisted)
+  const [following, setFollowing] = useState<Record<string, boolean>>({});
 
   const handleToggleFollow = (handle: string) => {
     setFollowing((prev) => ({ ...prev, [handle]: !prev[handle] }));

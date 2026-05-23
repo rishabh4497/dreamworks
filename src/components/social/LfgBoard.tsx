@@ -10,82 +10,27 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGames } from "@/hooks/use-games";
+import {
+  useCreateLfgGuide,
+  useCreateLfgPost,
+  useLfgGuides,
+  useLfgPosts,
+} from "@/hooks/use-lfg-board";
+import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
-import { cn } from "@/lib/utils";
-
-interface LfgPost {
-  id: string;
-  gameId: string;
-  game: string;
-  author: string;
-  type: string;
-  desc: string;
-  time: string;
-  friend: string;
-  tags: string[];
-}
-
-const SEED_LFG: LfgPost[] = [
-  {
-    id: "1",
-    gameId: "helldivers-2",
-    game: "Helldivers 2",
-    author: "LibertyPrime",
-    type: "Operation",
-    desc: "Need 2 for Suicide Mission. Mic required.",
-    time: "2m ago",
-    friend: "Any friend",
-    tags: ["Mic", "Experienced"],
-  },
-  {
-    id: "2",
-    gameId: "baldurs-gate-3",
-    game: "Baldur's Gate 3",
-    author: "TavTheGreat",
-    type: "Campaign",
-    desc: "Starting fresh Honor Mode run. LF Bard.",
-    time: "5m ago",
-    friend: "Maya",
-    tags: ["Fresh start", "Tryhard"],
-  },
-  {
-    id: "3",
-    gameId: "counter-strike-2",
-    game: "Counter-Strike 2",
-    author: "AimBotz",
-    type: "Ranked",
-    desc: "Premier 15k+ ELO. Dust 2 only.",
-    time: "12m ago",
-    friend: "Aarav",
-    tags: ["Competitive", "Voice"],
-  },
-];
-
-const GUIDE_SEEDS = [
-  {
-    id: "guide-1",
-    game: "Elden Ring",
-    title: "Early-game bleed route",
-    author: "Rishav",
-    kind: "Build",
-    votes: 128,
-  },
-  {
-    id: "guide-2",
-    game: "Cyberpunk 2077",
-    title: "Phantom Liberty stealth netrunner",
-    author: "Maya",
-    kind: "Guide",
-    votes: 91,
-  },
-];
+import { cn, relativeDate } from "@/lib/utils";
 
 const SESSION_TYPES = ["Co-op", "Ranked", "Raid", "Campaign", "Trade", "Achievement"];
 const FRIENDS = ["Any friend", "Maya", "Aarav", "Leo", "Sarah"];
 
 export function LfgBoard() {
   const { data: games = [] } = useGames();
-  const [posts, setPosts] = useState(SEED_LFG);
+  const { data: posts = [] } = useLfgPosts();
+  const { data: guides = [] } = useLfgGuides();
+  const createPostMut = useCreateLfgPost();
+  const createGuideMut = useCreateLfgGuide();
+  const profile = useAuthStore((s) => s.profile);
+
   const [gameId, setGameId] = useState("elden-ring");
   const [type, setType] = useState("Co-op");
   const [friend, setFriend] = useState("Any friend");
@@ -112,31 +57,51 @@ export function LfgBoard() {
       return;
     }
     const tags = [mic ? "Mic" : "No mic", ranked ? "Ranked" : "Casual"];
-    setPosts((current) => [
+    createPostMut.mutate(
       {
-        id: `lfg-${Date.now()}`,
         gameId: selectedGame.id,
         game: selectedGame.name,
-        author: "rishav",
+        author: profile?.displayName ?? "Guest",
         type,
         desc: description.trim(),
-        time: "Just now",
         friend,
         tags,
       },
-      ...current,
-    ]);
-    setDescription("");
-    toast.success("LFG post created");
+      {
+        onSuccess: () => {
+          setDescription("");
+          toast.success("LFG post created");
+        },
+        onError: () => {
+          toast.error("Couldn't post LFG. Try again.");
+        },
+      },
+    );
   };
 
   const createGuide = () => {
-    if (!guideDraft.trim()) {
+    const title = guideDraft.trim();
+    if (!title) {
       toast.info("Name the guide before saving it");
       return;
     }
-    toast.success(`Guide draft saved: ${guideDraft.trim()}`);
-    setGuideDraft("");
+    createGuideMut.mutate(
+      {
+        game: selectedGame.name,
+        title,
+        author: profile?.displayName ?? "Guest",
+        kind: "Guide",
+      },
+      {
+        onSuccess: () => {
+          setGuideDraft("");
+          toast.success(`Guide draft saved: ${title}`);
+        },
+        onError: () => {
+          toast.error("Couldn't save guide draft. Try again.");
+        },
+      },
+    );
   };
 
   return (
@@ -188,7 +153,12 @@ export function LfgBoard() {
                 <Shield className="h-3 w-3" />
                 Ranked
               </ToggleChip>
-              <Button type="button" size="sm" onClick={createPost}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={createPost}
+                disabled={createPostMut.isPending}
+              >
                 <Plus className="h-3.5 w-3.5" />
                 Post LFG
               </Button>
@@ -213,7 +183,7 @@ export function LfgBoard() {
                   <p className="mt-0.5 truncate text-[12px] text-foreground/85">{post.desc}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className="text-[10px] text-muted/60">
-                      {post.author} · {post.time}
+                      {post.author} · {relativeDate(post.createdAt)}
                     </span>
                     {post.tags.map((tag) => (
                       <span
@@ -246,7 +216,7 @@ export function LfgBoard() {
               <h3 className="text-[13px] font-semibold text-foreground">Guides</h3>
             </div>
             <div className="space-y-2">
-              {GUIDE_SEEDS.map((guide) => (
+              {guides.map((guide) => (
                 <button
                   key={guide.id}
                   type="button"
@@ -277,7 +247,14 @@ export function LfgBoard() {
               placeholder="Guide title or build name"
               className="h-9 rounded-lg"
             />
-            <Button type="button" variant="secondary" size="sm" className="mt-2 w-full" onClick={createGuide}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={createGuide}
+              disabled={createGuideMut.isPending}
+            >
               Save draft
             </Button>
           </div>

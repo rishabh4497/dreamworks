@@ -951,29 +951,505 @@ function SelectField<T extends string>({
   );
 }
 
-function PaymentMethods() {
-  return (
-    <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
-      <div className="flex items-center justify-between rounded-lg border border-separator bg-input p-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-12 items-center justify-center rounded bg-foreground p-1">
-            <span className="text-[14px] font-bold italic text-background">Visa</span>
+// ── Account-tab sub-components ──────────────────────────────────────────────
+
+type Translator = (key: string, vars?: Record<string, string | number>) => string;
+
+interface ProfileCardProps {
+  profile: ReturnType<typeof useAuthStore.getState>["profile"];
+  updateProfile: ReturnType<typeof useAuthStore.getState>["updateProfile"];
+  signOut: ReturnType<typeof useAuthStore.getState>["signOut"];
+  t: Translator;
+}
+
+function ProfileCard({ profile, updateProfile, signOut, t }: ProfileCardProps) {
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(profile?.displayName ?? "");
+  const [draftCountry, setDraftCountry] = useState(profile?.country ?? "");
+  const [draftBio, setDraftBio] = useState(profile?.bio ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const enterEdit = () => {
+    setDraftName(profile?.displayName ?? "");
+    setDraftCountry(profile?.country ?? "");
+    setDraftBio(profile?.bio ?? "");
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      await updateProfile({
+        displayName: draftName.trim() || profile.displayName,
+        country: draftCountry.trim(),
+        bio: draftBio.trim(),
+      });
+      toast.success(t("Profile updated"));
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-cyan to-acid text-lg font-bold text-background shadow-sm">
+            {profile?.displayName?.slice(0, 2).toUpperCase() || "DW"}
           </div>
-          <div>
-            <p className="text-[13px] font-semibold text-foreground">•••• 4242</p>
-            <p className="text-[11px] text-muted/65">Expires 12/28</p>
+          <div className="flex-1">
+            <h3 className="text-[14px] font-semibold text-foreground">{t("Edit profile")}</h3>
+            <p className="text-[12px] text-muted/65">{profile?.email}</p>
           </div>
         </div>
-        <span className="rounded-md bg-acid/10 px-2 py-0.5 text-[10px] font-bold text-acid">
-          Default
+
+        <div>
+          <FieldLabel>{t("Display name")}</FieldLabel>
+          <input
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+          />
+        </div>
+        <div>
+          <FieldLabel>{t("Country")}</FieldLabel>
+          <input
+            value={draftCountry}
+            onChange={(e) => setDraftCountry(e.target.value)}
+            placeholder="US, FR, JP…"
+            className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+          />
+        </div>
+        <div>
+          <FieldLabel>{t("Bio")}</FieldLabel>
+          <textarea
+            value={draftBio}
+            onChange={(e) => setDraftBio(e.target.value)}
+            rows={3}
+            className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="rounded-lg border border-separator bg-card px-3 py-2 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+          >
+            {t("Cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={saving}
+            className="rounded-lg bg-acid px-3 py-2 text-[12px] font-semibold text-background hover:brightness-110 disabled:opacity-60"
+          >
+            {saving ? t("Syncing") : t("Save")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-separator bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-cyan to-acid text-lg font-bold text-background shadow-sm">
+          {profile?.displayName?.slice(0, 2).toUpperCase() || "DW"}
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-[14px] font-semibold text-foreground">{profile?.displayName}</h3>
+          <p className="text-[12px] text-muted/65">{profile?.email}</p>
+          {profile?.country && (
+            <p className="text-[11px] text-muted/55">{profile.country}</p>
+          )}
+          {profile?.bio && (
+            <p className="mt-1 max-w-prose text-[12px] leading-snug text-muted/70">{profile.bio}</p>
+          )}
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green" />
+            <span className="text-[10px] font-medium text-muted/55">Online</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <button
+          type="button"
+          onClick={enterEdit}
+          className="rounded-lg border border-separator bg-card px-4 py-2 text-[12px] font-medium text-foreground/85 hover:bg-card-active"
+        >
+          {t("Edit")}
+        </button>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="rounded-lg border border-separator bg-card px-4 py-2 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+        >
+          {t("Sign out")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface GuardCardProps {
+  enabled: boolean;
+  onCheckedChange: (next: boolean) => void;
+  t: Translator;
+}
+
+function GuardCard({ enabled, onCheckedChange, t }: GuardCardProps) {
+  return (
+    <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
+      <div className={cn("flex items-center gap-2", enabled ? "text-green" : "text-muted/65")}>
+        <Shield className="h-4 w-4" />
+        <span className="text-[13px] font-semibold">
+          {enabled ? t("Dreamworks Guard — Active") : t("Dreamworks Guard — Inactive")}
         </span>
       </div>
-      <button
-        type="button"
-        className="w-full text-left text-[12px] font-semibold text-cyan transition-colors hover:underline"
-      >
-        + Add new payment method
-      </button>
+      <p className="text-[12px] leading-relaxed text-muted/65">
+        {enabled
+          ? t("Account secured with 2FA. To change your security method or update your password, contact system support.")
+          : t("Two-factor authentication is off. Re-enable it from this card to protect your account.")}
+      </p>
+      <div className="border-t border-separator/50 pt-1">
+        <ToggleRow
+          label={t("Two-factor authentication")}
+          checked={enabled}
+          onCheckedChange={onCheckedChange}
+        />
+      </div>
+    </div>
+  );
+}
+
+function FamilyList({ t }: { t: Translator }) {
+  const members = useFamilyStore((s) => s.members);
+  const add = useFamilyStore((s) => s.add);
+  const remove = useFamilyStore((s) => s.remove);
+  const setAuthorized = useFamilyStore((s) => s.setAuthorized);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [relationship, setRelationship] = useState<FamilyRelationship>("Friend");
+
+  const RELATIONSHIPS: FamilyRelationship[] = [
+    "Sister",
+    "Brother",
+    "Mother",
+    "Father",
+    "Spouse",
+    "Child",
+    "Friend",
+    "Other",
+  ];
+
+  const handleAdd = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    add({ name: trimmed, relationship });
+    toast.success(t("{name} added", { name: trimmed }));
+    setName("");
+    setRelationship("Friend");
+    setAdding(false);
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
+      <p className="text-[12px] text-muted/65">
+        {t("Select family members to share your collection with:")}
+      </p>
+
+      <div className="divide-y divide-separator/50">
+        {members.map((m) => (
+          <div key={m.id} className="flex items-center justify-between gap-2 py-2">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-foreground">
+                {m.name} <span className="text-muted/55">({t(m.relationship)})</span>
+              </p>
+              {m.lastActiveAt && (
+                <p className="text-[11px] text-muted/55">
+                  {t("Last active {time}", { time: relativeTime(m.lastActiveAt, t) })}
+                </p>
+              )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {m.authorized ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthorized(m.id, false);
+                    toast.info(t("{name} revoked", { name: m.name }));
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-green/15 px-2 py-0.5 text-[10px] font-semibold text-green hover:bg-green/25"
+                >
+                  <Check className="h-3 w-3" /> {t("Authorized")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthorized(m.id, true);
+                    toast.success(t("{name} authorized", { name: m.name }));
+                  }}
+                  className="rounded-lg border border-separator bg-card px-2.5 py-1 text-[11px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+                >
+                  {t("Authorize")}
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label={t("{name} removed", { name: m.name })}
+                onClick={() => {
+                  remove(m.id);
+                  toast.info(t("{name} removed", { name: m.name }));
+                }}
+                className="rounded-md p-1 text-muted/50 hover:bg-input hover:text-red"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {adding ? (
+        <div className="space-y-2 rounded-lg border border-separator/60 bg-input/40 p-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <FieldLabel>{t("Name")}</FieldLabel>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              />
+            </div>
+            <div>
+              <FieldLabel>{t("Relationship")}</FieldLabel>
+              <select
+                value={relationship}
+                onChange={(e) => setRelationship(e.target.value as FamilyRelationship)}
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              >
+                {RELATIONSHIPS.map((r) => (
+                  <option key={r} value={r}>
+                    {t(r)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setAdding(false);
+                setName("");
+              }}
+              className="rounded-lg border border-separator bg-card px-3 py-1.5 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="rounded-lg bg-acid px-3 py-1.5 text-[12px] font-semibold text-background hover:brightness-110"
+            >
+              {t("Save")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-cyan transition-colors hover:underline"
+        >
+          <Plus className="h-3.5 w-3.5" /> {t("Add family member")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PaymentMethods({ t }: { t: Translator }) {
+  const cards = usePaymentMethodsStore((s) => s.cards);
+  const addCard = usePaymentMethodsStore((s) => s.add);
+  const removeCard = usePaymentMethodsStore((s) => s.remove);
+  const setDefault = usePaymentMethodsStore((s) => s.setDefault);
+  const [adding, setAdding] = useState(false);
+  const [brand, setBrand] = useState<PaymentBrand>("Visa");
+  const [last4, setLast4] = useState("");
+  const [month, setMonth] = useState(12);
+  const [year, setYear] = useState(new Date().getFullYear() + 2);
+  const [holder, setHolder] = useState("");
+
+  const BRANDS: PaymentBrand[] = ["Visa", "Mastercard", "Amex", "Discover"];
+  const last4Valid = /^\d{4}$/.test(last4);
+
+  const submit = () => {
+    if (!last4Valid || !holder.trim()) return;
+    addCard({
+      brand,
+      last4,
+      expiryMonth: month,
+      expiryYear: year,
+      holderName: holder.trim(),
+    });
+    toast.success(t("Card added"));
+    setBrand("Visa");
+    setLast4("");
+    setMonth(12);
+    setYear(new Date().getFullYear() + 2);
+    setHolder("");
+    setAdding(false);
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
+      {cards.map((c) => {
+        const mm = String(c.expiryMonth).padStart(2, "0");
+        const yy = String(c.expiryYear % 100).padStart(2, "0");
+        return (
+          <div
+            key={c.id}
+            className="flex items-center justify-between rounded-lg border border-separator bg-input p-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-12 items-center justify-center rounded bg-foreground p-1">
+                <span className="text-[12px] font-bold italic text-background">{c.brand}</span>
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-foreground">•••• {c.last4}</p>
+                <p className="text-[11px] text-muted/65">
+                  {t("Expires {mm}/{yy}", { mm, yy })}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {c.isDefault ? (
+                <span className="rounded-md bg-acid/10 px-2 py-0.5 text-[10px] font-bold text-acid">
+                  {t("Default")}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDefault(c.id);
+                    toast.success(t("Default card updated"));
+                  }}
+                  className="rounded-md border border-separator px-2 py-0.5 text-[10px] font-semibold text-muted hover:bg-card-active hover:text-foreground"
+                >
+                  {t("Set as default")}
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label={t("Card removed")}
+                onClick={() => {
+                  removeCard(c.id);
+                  toast.info(t("Card removed"));
+                }}
+                className="rounded-md p-1 text-muted/50 hover:bg-card-active hover:text-red"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      {adding ? (
+        <div className="space-y-2 rounded-lg border border-separator/60 bg-input/40 p-3">
+          <p className="text-[12px] font-semibold text-foreground">{t("Add payment method")}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <FieldLabel>{t("Brand")}</FieldLabel>
+              <select
+                value={brand}
+                onChange={(e) => setBrand(e.target.value as PaymentBrand)}
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              >
+                {BRANDS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>{t("Last 4 digits")}</FieldLabel>
+              <input
+                value={last4}
+                onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="1234"
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              />
+            </div>
+            <div>
+              <FieldLabel>{t("Expiry month")}</FieldLabel>
+              <select
+                value={month}
+                onChange={(e) => setMonth(Number(e.target.value))}
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                  <option key={m} value={m}>
+                    {String(m).padStart(2, "0")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>{t("Expiry year")}</FieldLabel>
+              <input
+                value={year}
+                onChange={(e) =>
+                  setYear(Number(e.target.value.replace(/\D/g, "").slice(0, 4)) || year)
+                }
+                inputMode="numeric"
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel>{t("Cardholder name")}</FieldLabel>
+              <input
+                value={holder}
+                onChange={(e) => setHolder(e.target.value)}
+                className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setAdding(false)}
+              className="rounded-lg border border-separator bg-card px-3 py-1.5 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!last4Valid || !holder.trim()}
+              className="rounded-lg bg-acid px-3 py-1.5 text-[12px] font-semibold text-background hover:brightness-110 disabled:opacity-50"
+            >
+              {t("Save")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="w-full text-left text-[12px] font-semibold text-cyan transition-colors hover:underline"
+        >
+          {t("+ Add new payment method")}
+        </button>
+      )}
     </div>
   );
 }
