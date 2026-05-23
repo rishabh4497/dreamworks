@@ -140,13 +140,28 @@ export async function homeDirSafe(): Promise<string> {
 // ── Asset uploads ──────────────────────────────────────────────────────────
 //
 // Single funnel for any binary the developer portal needs to persist — build
-// artifacts, capsule art, banners, achievement icons. Tries Firebase Storage
-// first; if the project isn't configured for it (common in local dev), falls
-// back to inlining as a data URL so the UI can still preview small files.
+// artifacts, capsule art, banners, achievement icons. All Storage paths use
+// the `dw_` prefix convention so they sit alongside the `dw_*` Firestore
+// collections.
 
 export interface UploadedAsset {
   url: string;
   sizeBytes: number;
+}
+
+export interface UploadOptions {
+  /**
+   * What to do when Firebase Storage is unreachable / misconfigured.
+   * - `"data-url"` (default): inline the file as a base64 data URL so the UI
+   *   keeps working in local dev without a Storage bucket. Convenient but
+   *   bloats Firestore docs.
+   * - `"throw"`: surface the original Storage error so the caller can show a
+   *   real "couldn't upload" UI. Use this for production-shaped flows
+   *   (image dropzone, build upload) where silent fallback hides bugs.
+   */
+  onStorageError?: "data-url" | "throw";
+  /** Override the inferred content-type. Defaults to file.type or octet-stream. */
+  contentType?: string;
 }
 
 async function readAsDataUrl(file: File | Blob): Promise<string> {
@@ -158,8 +173,13 @@ async function readAsDataUrl(file: File | Blob): Promise<string> {
   });
 }
 
-export async function uploadAsset(file: File | Blob, path: string): Promise<UploadedAsset> {
+export async function uploadAsset(
+  file: File | Blob,
+  path: string,
+  options: UploadOptions = {},
+): Promise<UploadedAsset> {
   const sizeBytes = file.size;
+  const fallback = options.onStorageError ?? "data-url";
   try {
     const [{ getStorage, ref, uploadBytes, getDownloadURL }, { getFirebaseApp }] = await Promise.all([
       import("firebase/storage"),
@@ -167,14 +187,29 @@ export async function uploadAsset(file: File | Blob, path: string): Promise<Uplo
     ]);
     const storage = getStorage(getFirebaseApp());
     const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
+    const contentType =
+      options.contentType ??
+      (file instanceof File && file.type ? file.type : undefined) ??
+      "application/octet-stream";
+    await uploadBytes(storageRef, file, { contentType });
     const url = await getDownloadURL(storageRef);
     return { url, sizeBytes };
-  } catch {
-    // Storage bucket not configured (or offline) — fall back to a data URL so
-    // the UI can still display the asset locally. Large files will balloon
-    // Firestore docs; that's an acceptable tradeoff in dev/preview.
+  } catch (err) {
+    if (fallback === "throw") throw err;
     const url = await readAsDataUrl(file);
     return { url, sizeBytes };
   }
+}
+
+/** Convert a base64 data URL into a Blob, preserving content type. Useful when
+ * the source is a `<canvas>.toDataURL()` and the caller wants to upload via
+ * `uploadAsset` instead of storing the inline base64. */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!match) throw new Error("Not a base64 data URL");
+  const [, mime, b64] = match;
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
 }

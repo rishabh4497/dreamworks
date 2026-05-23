@@ -1,0 +1,300 @@
+import {
+  collection,
+  getDoc,
+  getDocs,
+  doc,
+  limit as fbLimit,
+  orderBy,
+  query,
+  startAfter,
+  where,
+  type QueryConstraint,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+} from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import {
+  COLLECTIONS,
+  getDb,
+  getFirebaseFunctions,
+} from "@/lib/firebase";
+import type {
+  AdminUserSummary,
+  AuditAction,
+  AuditEntry,
+  AuditTargetType,
+  CreatorProfileSubmission,
+  CreatorSubmissionType,
+  SubmissionStatus,
+  UserRole,
+} from "@/lib/types";
+
+// ── Bootstrap callable (used by auth-store) ────────────────────────────────
+
+export async function claimAdminIfAllowlisted(): Promise<{ admin: boolean }> {
+  const fn = httpsCallable<unknown, { admin: boolean }>(
+    getFirebaseFunctions(),
+    "claimAdminIfAllowlisted",
+  );
+  const res = await fn({});
+  return res.data;
+}
+
+// ── User management ────────────────────────────────────────────────────────
+
+export async function setUserRole(input: {
+  targetUid: string;
+  role: UserRole;
+  permissions?: string[];
+}): Promise<{ ok: true }> {
+  const fn = httpsCallable<typeof input, { ok: true }>(
+    getFirebaseFunctions(),
+    "setUserRole",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function listAdminUsers(opts: { search?: string; role?: UserRole | "all" } = {}): Promise<AdminUserSummary[]> {
+  const ref = collection(getDb(), COLLECTIONS.users);
+  // Without server-side full-text search, fetch the most recent N users and
+  // filter client-side. Fine for the admin console where the working-set is
+  // small; swap for Algolia/Typesense later if the user table grows.
+  const constraints: QueryConstraint[] = [];
+  if (opts.role && opts.role !== "all") {
+    constraints.push(where("role", "==", opts.role));
+  }
+  constraints.push(fbLimit(200));
+  const snap = await getDocs(query(ref, ...constraints));
+  const list: AdminUserSummary[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    list.push({
+      uid: d.id,
+      email: data.email ?? "",
+      displayName: data.displayName ?? data.email?.split("@")[0] ?? "User",
+      photoURL: data.photoURL,
+      role: (data.role as UserRole) ?? "user",
+      permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      suspended: !!data.suspended,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.memberSince,
+      lastSignInAt: data.lastSignInAt,
+    });
+  });
+  const search = opts.search?.trim().toLowerCase();
+  if (search) {
+    return list.filter(
+      (u) =>
+        u.email.toLowerCase().includes(search) ||
+        u.displayName.toLowerCase().includes(search) ||
+        u.uid.toLowerCase().includes(search),
+    );
+  }
+  return list;
+}
+
+export async function getAdminUser(uid: string): Promise<AdminUserSummary | null> {
+  const snap = await getDoc(doc(getDb(), COLLECTIONS.users, uid));
+  if (!snap.exists()) return null;
+  const data = snap.data() as any;
+  return {
+    uid: snap.id,
+    email: data.email ?? "",
+    displayName: data.displayName ?? data.email?.split("@")[0] ?? "User",
+    photoURL: data.photoURL,
+    role: (data.role as UserRole) ?? "user",
+    permissions: Array.isArray(data.permissions) ? data.permissions : [],
+    suspended: !!data.suspended,
+    createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.memberSince,
+    lastSignInAt: data.lastSignInAt,
+  };
+}
+
+// ── Audit log ──────────────────────────────────────────────────────────────
+
+function asAuditEntry(snap: QueryDocumentSnapshot<DocumentData>): AuditEntry {
+  const data = snap.data() as any;
+  return {
+    id: snap.id,
+    actorUid: data.actorUid,
+    actorEmail: data.actorEmail ?? "",
+    action: data.action as AuditAction,
+    targetType: data.targetType as AuditTargetType,
+    targetId: data.targetId,
+    beforeState: data.beforeState,
+    afterState: data.afterState,
+    metadata: data.metadata,
+    ts: data.ts?.toDate?.()?.toISOString?.() ?? data.ts ?? "",
+  };
+}
+
+export interface AuditLogPage {
+  entries: AuditEntry[];
+  cursor: QueryDocumentSnapshot<DocumentData> | null;
+}
+
+export async function listAuditLog(opts: {
+  action?: AuditAction;
+  actorUid?: string;
+  targetType?: AuditTargetType;
+  targetId?: string;
+  pageSize?: number;
+  after?: QueryDocumentSnapshot<DocumentData> | null;
+} = {}): Promise<AuditLogPage> {
+  const ref = collection(getDb(), COLLECTIONS.adminAudit);
+  const constraints: QueryConstraint[] = [];
+  if (opts.action) constraints.push(where("action", "==", opts.action));
+  if (opts.actorUid) constraints.push(where("actorUid", "==", opts.actorUid));
+  if (opts.targetType) constraints.push(where("targetType", "==", opts.targetType));
+  if (opts.targetId) constraints.push(where("targetId", "==", opts.targetId));
+  constraints.push(orderBy("ts", "desc"));
+  if (opts.after) constraints.push(startAfter(opts.after));
+  constraints.push(fbLimit(opts.pageSize ?? 50));
+  const snap = await getDocs(query(ref, ...constraints));
+  const entries = snap.docs.map(asAuditEntry);
+  const cursor = snap.docs[snap.docs.length - 1] ?? null;
+  return { entries, cursor };
+}
+
+// ── Creator-profile submissions ────────────────────────────────────────────
+
+function asCreatorSubmission(
+  type: CreatorSubmissionType,
+  snap: QueryDocumentSnapshot<DocumentData>,
+): CreatorProfileSubmission {
+  const data = snap.data() as any;
+  return {
+    id: snap.id,
+    creatorType: type,
+    creatorId: data.creatorId,
+    submitterUserId: data.submitterUserId,
+    submitterEmail: data.submitterEmail ?? "",
+    profileSnapshot: data.profileSnapshot,
+    status: data.status as SubmissionStatus,
+    submittedAt: data.submittedAt,
+    claimedAt: data.claimedAt,
+    claimedByUid: data.claimedByUid,
+    decidedAt: data.decidedAt,
+    decidedByUid: data.decidedByUid,
+    decision: data.decision,
+  };
+}
+
+export async function listCreatorSubmissionQueue(
+  type: CreatorSubmissionType,
+  status?: SubmissionStatus,
+): Promise<CreatorProfileSubmission[]> {
+  const ref = collection(
+    getDb(),
+    type === "publisher" ? COLLECTIONS.publisherSubmissions : COLLECTIONS.developerSubmissions,
+  );
+  const q = status
+    ? query(ref, where("status", "==", status), orderBy("submittedAt", "desc"))
+    : query(ref, orderBy("submittedAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => asCreatorSubmission(type, d));
+}
+
+export async function reviewPublisherProfile(input: {
+  submissionId: string;
+  outcome: "approve" | "request_changes" | "reject";
+  summaryNote: string;
+  reasons?: string[];
+}): Promise<{ submissionId: string; status: SubmissionStatus; creatorId: string }> {
+  const fn = httpsCallable<typeof input, { submissionId: string; status: SubmissionStatus; creatorId: string }>(
+    getFirebaseFunctions(),
+    "reviewPublisherProfile",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function reviewStudioProfile(input: {
+  submissionId: string;
+  outcome: "approve" | "request_changes" | "reject";
+  summaryNote: string;
+  reasons?: string[];
+}): Promise<{ submissionId: string; status: SubmissionStatus; creatorId: string }> {
+  const fn = httpsCallable<typeof input, { submissionId: string; status: SubmissionStatus; creatorId: string }>(
+    getFirebaseFunctions(),
+    "reviewStudioProfile",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+// ── KPIs (small dashboard reads) ───────────────────────────────────────────
+
+export interface AdminKpis {
+  pendingSubmissions: number;
+  inReviewSubmissions: number;
+  approvedThisWeek: number;
+  rejectedThisWeek: number;
+  pendingPublisherClaims: number;
+  pendingStudioClaims: number;
+  newUsers7d: number;
+}
+
+export async function getAdminKpis(): Promise<AdminKpis> {
+  const db = getDb();
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const [pendingSubs, inReviewSubs, recentDecided, pendingPub, pendingDev, recentUsers] =
+    await Promise.all([
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.appSubmissions),
+          where("status", "==", "pending"),
+        ),
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.appSubmissions),
+          where("status", "==", "in_review"),
+        ),
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.appSubmissions),
+          where("decidedAt", ">=", weekAgo),
+          orderBy("decidedAt", "desc"),
+        ),
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.publisherSubmissions),
+          where("status", "==", "pending"),
+        ),
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.developerSubmissions),
+          where("status", "==", "pending"),
+        ),
+      ),
+      getDocs(
+        query(
+          collection(db, COLLECTIONS.users),
+          where("memberSince", ">=", weekAgo),
+        ),
+      ),
+    ]);
+
+  let approvedThisWeek = 0;
+  let rejectedThisWeek = 0;
+  recentDecided.forEach((d) => {
+    const s = (d.data() as any).status;
+    if (s === "approved") approvedThisWeek += 1;
+    else if (s === "rejected") rejectedThisWeek += 1;
+  });
+
+  return {
+    pendingSubmissions: pendingSubs.size,
+    inReviewSubmissions: inReviewSubs.size,
+    approvedThisWeek,
+    rejectedThisWeek,
+    pendingPublisherClaims: pendingPub.size,
+    pendingStudioClaims: pendingDev.size,
+    newUsers7d: recentUsers.size,
+  };
+}
