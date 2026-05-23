@@ -7,6 +7,7 @@ import {
 } from "@/lib/api/games";
 import type { Game, GameDetail, GameId } from "@/lib/types";
 import { slugify } from "@/lib/utils";
+import { buildGameIndex, searchGames, type GameSearchIndex } from "@/lib/game-search";
 
 // ── Cache strategy ────────────────────────────────────────────────────────
 //
@@ -173,20 +174,39 @@ export function useSearch(filters: SearchFilters) {
   return useCatalogSelect((games) => searchByFilters(games, filters));
 }
 
+// Cache the fuzzy index per games-array identity. React Query gives us the
+// same reference across renders unless the catalog changes, so this rebuilds
+// only on a true refresh.
+let cachedIndex: { games: readonly Game[]; index: GameSearchIndex } | null = null;
+function getGameIndex(games: readonly Game[]): GameSearchIndex {
+  if (cachedIndex && cachedIndex.games === games) return cachedIndex.index;
+  cachedIndex = { games, index: buildGameIndex(games) };
+  return cachedIndex.index;
+}
+
+function matchesFilters(g: Game, filters: SearchFilters): boolean {
+  if (filters.genres?.length && !g.genres.some((x) => filters.genres!.includes(x))) return false;
+  if (filters.tags?.length && !g.tags.some((x) => filters.tags!.includes(x))) return false;
+  if (filters.platforms?.length && !g.platforms.some((x) => filters.platforms!.includes(x))) return false;
+  if (filters.onSaleOnly && !g.isOnSale) return false;
+  if (filters.freeOnly && !g.price.isFree) return false;
+  if (filters.minPrice !== undefined && g.price.final < filters.minPrice) return false;
+  if (filters.maxPrice !== undefined && g.price.final > filters.maxPrice) return false;
+  if (filters.minReviewPct !== undefined && g.reviewSummary.scorePct < filters.minReviewPct) return false;
+  return true;
+}
+
 function searchByFilters(games: Game[], filters: SearchFilters): Game[] {
-  const q = filters.q?.toLowerCase().trim() ?? "";
-  return games.filter((g) => {
-    if (q && !(g.name.toLowerCase().includes(q) || g.tags.some((t) => t.includes(q)))) return false;
-    if (filters.genres?.length && !g.genres.some((x) => filters.genres!.includes(x))) return false;
-    if (filters.tags?.length && !g.tags.some((x) => filters.tags!.includes(x))) return false;
-    if (filters.platforms?.length && !g.platforms.some((x) => filters.platforms!.includes(x))) return false;
-    if (filters.onSaleOnly && !g.isOnSale) return false;
-    if (filters.freeOnly && !g.price.isFree) return false;
-    if (filters.minPrice !== undefined && g.price.final < filters.minPrice) return false;
-    if (filters.maxPrice !== undefined && g.price.final > filters.maxPrice) return false;
-    if (filters.minReviewPct !== undefined && g.reviewSummary.scorePct < filters.minReviewPct) return false;
-    return true;
-  });
+  const q = filters.q?.trim() ?? "";
+  // When the user types a query, route through the fuzzy index so typos
+  // ("cybepunk"), short forms ("cp77"), and word-order tolerance ("souls dark")
+  // all hit the right title. Then apply structured filters on top.
+  if (q) {
+    const index = getGameIndex(games);
+    const ranked = searchGames(index, q, games.length);
+    return ranked.filter((g) => matchesFilters(g, filters));
+  }
+  return games.filter((g) => matchesFilters(g, filters));
 }
 
 export function useCategoryGames(slug: string) {
