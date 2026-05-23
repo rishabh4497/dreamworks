@@ -51,8 +51,6 @@ const DEFAULT_SETTINGS: ClientSettings = {
   dynamicStoreBackgroundsEnabled: true,
   textureUpscalerNotifyMe: false,
   twoFactorEnabled: true,
-  subscriptionPaused: false,
-  subscriptionPausedUntil: null,
   lastWishlistSyncAt: null,
 };
 

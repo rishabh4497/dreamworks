@@ -1267,8 +1267,6 @@ export interface ClientSettings {
   dynamicStoreBackgroundsEnabled: boolean;
   textureUpscalerNotifyMe: boolean;
   twoFactorEnabled: boolean;
-  subscriptionPaused: boolean;
-  subscriptionPausedUntil: ISODate | null;
   lastWishlistSyncAt: ISODate | null;
 }
 

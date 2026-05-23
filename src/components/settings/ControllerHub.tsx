@@ -1,7 +1,11 @@
 import { Gamepad2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useControllerLayouts } from "@/hooks/use-controller-layouts";
+import { compactNumber } from "@/lib/utils";
 
 export function ControllerHub() {
+  const { data: layouts = [], isLoading } = useControllerLayouts();
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border border-separator bg-card p-4">
@@ -20,26 +24,27 @@ export function ControllerHub() {
 
       <div className="rounded-xl border border-separator bg-card p-4">
         <h3 className="mb-4 text-[13px] font-semibold text-foreground">Community Layouts (Global)</h3>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {[
-            { name: "FPS Tryhard (No Deadzone)", creator: "xX_Sniper_Xx", downloads: "12.4k" },
-            { name: "Relaxed RPG Layout", creator: "CozyGamer", downloads: "5.1k" },
-            { name: "Souls-like Dodge on R1", creator: "PraiseTheSun", downloads: "8.9k" },
-            { name: "Default + Gyro Aim", creator: "Dreamworks", downloads: "142k" },
-          ].map((layout, i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border border-separator/50 bg-card-active p-3">
-              <div>
-                <p className="text-[12px] font-semibold text-foreground">{layout.name}</p>
-                <div className="flex items-center gap-2 text-[10px] text-muted/70">
-                  <span>by {layout.creator}</span>
-                  <span>·</span>
-                  <span className="flex items-center gap-0.5"><Download className="h-3 w-3" /> {layout.downloads}</span>
+        {isLoading ? (
+          <p className="text-[12px] text-muted">Loading layouts…</p>
+        ) : layouts.length === 0 ? (
+          <p className="text-[12px] text-muted">No community layouts yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {layouts.map((layout) => (
+              <div key={layout.id} className="flex items-center justify-between rounded-lg border border-separator/50 bg-card-active p-3">
+                <div>
+                  <p className="text-[12px] font-semibold text-foreground">{layout.name}</p>
+                  <div className="flex items-center gap-2 text-[10px] text-muted/70">
+                    <span>by {layout.creator}</span>
+                    <span>·</span>
+                    <span className="flex items-center gap-0.5"><Download className="h-3 w-3" /> {compactNumber(layout.downloads)}</span>
+                  </div>
                 </div>
+                <Button variant="secondary" size="sm" className="h-7 px-3 text-[11px]">Apply</Button>
               </div>
-              <Button variant="secondary" size="sm" className="h-7 px-3 text-[11px]">Apply</Button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

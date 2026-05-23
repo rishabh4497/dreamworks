@@ -1,25 +1,28 @@
 import { PauseCircle, PlayCircle, Calendar } from "lucide-react";
-import { useUiStore } from "@/stores/ui-store";
+import { useSubscriptionStore } from "@/stores/subscription-store";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/stores/toast-store";
 import { formatDate } from "@/lib/utils";
 
-const NEXT_BILLING_FALLBACK_ISO = "2026-10-15T00:00:00.000Z";
 const PAUSE_DAYS = 60;
 
 export function SubscriptionPausing() {
-  const paused = useUiStore((s) => s.settings.subscriptionPaused);
-  const pausedUntil = useUiStore((s) => s.settings.subscriptionPausedUntil);
-  const updateSettings = useUiStore((s) => s.updateSettings);
+  const subscription = useSubscriptionStore((s) => s.subscription);
+  const pause = useSubscriptionStore((s) => s.pause);
+  const resume = useSubscriptionStore((s) => s.resume);
   const { t } = useTranslation();
 
-  const togglePause = () => {
+  const paused = subscription.paused;
+  const pausedUntil = subscription.pausedUntil;
+  const nextBillingAt = subscription.nextBillingAt;
+
+  const togglePause = async () => {
     if (paused) {
-      updateSettings({ subscriptionPaused: false, subscriptionPausedUntil: null });
+      await resume();
       toast.success(t("Subscription resumed"));
     } else {
       const until = new Date(Date.now() + PAUSE_DAYS * 24 * 60 * 60 * 1000).toISOString();
-      updateSettings({ subscriptionPaused: true, subscriptionPausedUntil: until });
+      await pause(until);
       toast.info(t("Subscription paused"));
     }
   };
@@ -50,7 +53,9 @@ export function SubscriptionPausing() {
               <Calendar className="h-3 w-3" />
               {paused && pausedUntil
                 ? t("Paused until {date}", { date: formatDate(pausedUntil) })
-                : t("Next billing date: {date}", { date: formatDate(NEXT_BILLING_FALLBACK_ISO) })}
+                : nextBillingAt
+                  ? t("Next billing date: {date}", { date: formatDate(nextBillingAt) })
+                  : t("No active subscription")}
             </p>
           </div>
         </div>
