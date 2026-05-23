@@ -30,7 +30,7 @@ import { toast } from "@/stores/toast-store";
 import { pickFolder } from "@/lib/platform";
 import { useTranslation } from "@/lib/i18n";
 import { useCloudSaveSlots } from "@/hooks/use-cloud-saves";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, relativeTime } from "@/lib/utils";
 import type {
   NotificationKind,
   StartupLocation,
@@ -91,18 +91,6 @@ const NOTIFICATION_ROWS: { kind: NotificationKind; label: string; description?: 
 const LANGUAGE_OPTIONS = ["English", "Français", "Deutsch", "Español", "日本語", "한국어"];
 
 const CLOUD_QUOTA_BYTES = 15 * 1_000_000_000;
-
-function relativeTime(iso: string, t: (k: string, vars?: Record<string, string | number>) => string): string {
-  const elapsedMs = Date.now() - new Date(iso).getTime();
-  const seconds = Math.max(0, Math.floor(elapsedMs / 1000));
-  if (seconds < 60) return t("Just now");
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return t("{n}m ago", { n: minutes });
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t("{n}h ago", { n: hours });
-  const days = Math.floor(hours / 24);
-  return t("{n}d ago", { n: days });
-}
 
 type SettingsTab =
   | "account"

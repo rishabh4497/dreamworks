@@ -50,6 +50,10 @@ const DEFAULT_SETTINGS: ClientSettings = {
   remotePlayPairedDevice: null,
   dynamicStoreBackgroundsEnabled: true,
   textureUpscalerNotifyMe: false,
+  twoFactorEnabled: true,
+  subscriptionPaused: false,
+  subscriptionPausedUntil: null,
+  lastWishlistSyncAt: null,
 };
 
 interface UiStore {

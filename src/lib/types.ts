@@ -1266,6 +1266,52 @@ export interface ClientSettings {
   remotePlayPairedDevice: string | null;
   dynamicStoreBackgroundsEnabled: boolean;
   textureUpscalerNotifyMe: boolean;
+  twoFactorEnabled: boolean;
+  subscriptionPaused: boolean;
+  subscriptionPausedUntil: ISODate | null;
+  lastWishlistSyncAt: ISODate | null;
+}
+
+// ── Account-tab persisted entities ─────────────────────────────────────────
+export type PaymentBrand = "Visa" | "Mastercard" | "Amex" | "Discover";
+
+export interface PaymentMethod {
+  id: string;
+  brand: PaymentBrand;
+  /** Last 4 digits only — never the full PAN. */
+  last4: string;
+  expiryMonth: number;
+  expiryYear: number;
+  holderName: string;
+  isDefault: boolean;
+}
+
+export type FamilyRelationship =
+  | "Sister"
+  | "Brother"
+  | "Mother"
+  | "Father"
+  | "Spouse"
+  | "Child"
+  | "Friend"
+  | "Other";
+
+export interface FamilyMember {
+  id: string;
+  name: string;
+  relationship: FamilyRelationship;
+  authorized: boolean;
+  lastActiveAt: ISODate | null;
+}
+
+export type LinkedPlatformId = "psn" | "xbox-live" | "steam" | "epic";
+
+export interface LinkedPlatform {
+  id: LinkedPlatformId;
+  /** English fallback name; UI calls t() at render time. */
+  name: string;
+  connected: boolean;
+  lastSyncedAt: ISODate | null;
 }
 
 // ── Social Feed ─────────────────────────────────────────────────────────────

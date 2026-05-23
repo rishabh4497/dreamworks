@@ -76,6 +76,26 @@ export function relativeDate(iso: string): string {
   return `${Math.floor(days / 365)} years ago`;
 }
 
+/**
+ * Short relative-time string ("Just now", "5m ago", "3h ago", "2d ago") with
+ * caller-provided i18n. `t` is the translator returned from useTranslation();
+ * pass a no-op identity function in non-React contexts.
+ */
+export function relativeTime(
+  iso: string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const elapsedMs = Date.now() - new Date(iso).getTime();
+  const seconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  if (seconds < 60) return t("Just now");
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return t("{n}m ago", { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("{n}h ago", { n: hours });
+  const days = Math.floor(hours / 24);
+  return t("{n}d ago", { n: days });
+}
+
 export function discountPct(base: number, final: number): number {
   if (base <= 0 || final >= base) return 0;
   return Math.round(((base - final) / base) * 100);
