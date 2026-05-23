@@ -28,7 +28,9 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useLibraryStore } from "@/stores/library-store";
+import { useUiStore } from "@/stores/ui-store";
 import { usePlatform } from "@/hooks/use-platform";
+import { useTranslation } from "@/lib/i18n";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { DownloadsQueue } from "./DownloadsQueue";
 import { useDownloadStore } from "@/stores/download-store";
@@ -53,100 +55,135 @@ export function Sidebar() {
   const installedCount = useLibraryStore((s) =>
     s.entries.filter((e) => e.installed).length,
   );
+  const compactMode = useUiStore((s) => s.settings.compactMode);
   const location = useLocation();
   const { isDesktop } = usePlatform();
+  const { t } = useTranslation();
 
   const storeNav: NavItem[] = [
-    { to: ROUTES.store, label: "Home", icon: Home },
-    { to: ROUTES.storeSearch, label: "Search", icon: Search },
-    { to: ROUTES.plus, label: "Dreamworks+", icon: Sparkles },
-    { to: ROUTES.feed, label: "Feed", icon: Globe },
-    { to: ROUTES.workshop, label: "Workshop", icon: Puzzle },
+    { to: ROUTES.store, label: t("Home"), icon: Home },
+    { to: ROUTES.storeSearch, label: t("Search"), icon: Search },
+    { to: ROUTES.plus, label: t("Dreamworks+"), icon: Sparkles },
+    { to: ROUTES.feed, label: t("Feed"), icon: Globe },
+    { to: ROUTES.workshop, label: t("Workshop"), icon: Puzzle },
   ];
 
   const devNav: NavItem[] = [
-    { to: ROUTES.developerPortal, label: "Developer Portal", icon: Package },
+    { to: ROUTES.developerPortal, label: t("Developer Portal"), icon: Package },
   ];
 
   const isAdmin = profile?.role === "admin";
   const adminNav: NavItem[] = [
-    { to: ROUTES.admin, label: "Admin Panel", icon: ShieldCheck },
+    { to: ROUTES.admin, label: t("Admin Panel"), icon: ShieldCheck },
   ];
 
   // Steam parity: the full Library experience and download queue are
   // desktop-only. Web users still have wishlist, cart, and profile.
   const youNav: NavItem[] = filterByPlatform(
     [
-      { to: ROUTES.library, label: "Library", icon: Library, badge: installedCount },
-      { to: ROUTES.downloads, label: "Downloads", icon: Download, badge: activeDownloads },
-      { to: ROUTES.wishlist, label: "Wishlist", icon: Heart, badge: wishlistCount },
-      { to: ROUTES.cart, label: "Cart", icon: ShoppingCart, badge: cartCount },
-      { to: ROUTES.profile, label: "Profile", icon: User },
+      { to: ROUTES.library, label: t("Library"), icon: Library, badge: installedCount },
+      { to: ROUTES.downloads, label: t("Downloads"), icon: Download, badge: activeDownloads },
+      { to: ROUTES.wishlist, label: t("Wishlist"), icon: Heart, badge: wishlistCount },
+      { to: ROUTES.cart, label: t("Cart"), icon: ShoppingCart, badge: cartCount },
+      { to: ROUTES.profile, label: t("Profile"), icon: User },
     ],
     isDesktop,
   );
 
   const dbNav: NavItem[] = [
-    { to: ROUTES.db, label: "Overview", icon: BarChart3 },
-    { to: ROUTES.dbChart("top-played"), label: "Top Charts", icon: TrendingUp },
-    { to: ROUTES.dbSales, label: "Sales Tracker", icon: Tag },
-    { to: ROUTES.dbCalendar, label: "Calendar", icon: Calendar },
-    { to: ROUTES.dbAccount, label: "My Analytics", icon: Activity },
+    { to: ROUTES.db, label: t("Overview"), icon: BarChart3 },
+    { to: ROUTES.dbChart("top-played"), label: t("Top Charts"), icon: TrendingUp },
+    { to: ROUTES.dbSales, label: t("Sales Tracker"), icon: Tag },
+    { to: ROUTES.dbCalendar, label: t("Calendar"), icon: Calendar },
+    { to: ROUTES.dbAccount, label: t("My Analytics"), icon: Activity },
   ];
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col bg-transparent">
-      <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
+    <aside
+      className={cn(
+        "flex shrink-0 flex-col bg-transparent transition-[width] duration-200",
+        compactMode ? "w-16" : "w-56",
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2.5",
+          compactMode ? "justify-center px-2 pt-6 pb-5" : "px-5 pt-6 pb-5",
+        )}
+      >
         <img src={logoSrc} alt="Dreamworks" className="h-7 w-7 rounded-lg" />
-        <span className="text-[13px] font-semibold text-foreground/90 tracking-tight">
-          Dreamworks
-        </span>
+        {!compactMode && (
+          <span className="text-[13px] font-semibold text-foreground/90 tracking-tight">
+            Dreamworks
+          </span>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-3">
-        <p className={GROUP_LABEL}>Store</p>
-        <NavGroup items={storeNav} currentPath={location.pathname} />
+      <nav className={cn("flex-1 overflow-y-auto pb-3", compactMode ? "px-2" : "px-3")}>
+        {!compactMode && <p className={GROUP_LABEL}>{t("Store")}</p>}
+        {compactMode && <div className="mt-4 mb-1.5" />}
+        <NavGroup items={storeNav} currentPath={location.pathname} compactMode={compactMode} />
 
-        <p className={GROUP_LABEL}>You</p>
-        <NavGroup items={youNav} currentPath={location.pathname} />
+        {!compactMode && <p className={GROUP_LABEL}>{t("You")}</p>}
+        {compactMode && <div className="mt-4 mb-1.5" />}
+        <NavGroup items={youNav} currentPath={location.pathname} compactMode={compactMode} />
 
-        <p className={GROUP_LABEL}>Analytics</p>
-        <NavGroup items={dbNav} currentPath={location.pathname} matchPrefix="/db" />
+        {!compactMode && <p className={GROUP_LABEL}>{t("Analytics")}</p>}
+        {compactMode && <div className="mt-4 mb-1.5" />}
+        <NavGroup
+          items={dbNav}
+          currentPath={location.pathname}
+          matchPrefix="/db"
+          compactMode={compactMode}
+        />
 
         {isAdmin && (
           <>
-            <p className={GROUP_LABEL}>Admin</p>
-            <NavGroup items={adminNav} currentPath={location.pathname} matchPrefix="/admin" />
+            {!compactMode && <p className={GROUP_LABEL}>{t("Admin")}</p>}
+            {compactMode && <div className="mt-4 mb-1.5" />}
+            <NavGroup
+              items={adminNav}
+              currentPath={location.pathname}
+              matchPrefix="/admin"
+              compactMode={compactMode}
+            />
           </>
         )}
 
-        <p className={GROUP_LABEL}>Developer</p>
-        <NavGroup items={devNav} currentPath={location.pathname} />
+        {!compactMode && <p className={GROUP_LABEL}>{t("Developer")}</p>}
+        {compactMode && <div className="mt-4 mb-1.5" />}
+        <NavGroup items={devNav} currentPath={location.pathname} compactMode={compactMode} />
 
         {isDesktop && (
           <div className="mt-4 pt-3">
             <NavGroup
               items={[
-                { to: ROUTES.diagnostics, label: "Diagnostics", icon: Activity },
-                { to: ROUTES.settings, label: "Settings", icon: Settings },
+                { to: ROUTES.diagnostics, label: t("Diagnostics"), icon: Activity },
+                { to: ROUTES.settings, label: t("Settings"), icon: Settings },
               ]}
               currentPath={location.pathname}
+              compactMode={compactMode}
             />
           </div>
         )}
       </nav>
 
       {isDesktop && (
-        <div className="px-3 pb-3 pt-3">
-          <DreamsEngineWidget />
+        <div className={cn("pb-3 pt-3", compactMode ? "px-2" : "px-3")}>
+          <DreamsEngineWidget compactMode={compactMode} />
         </div>
       )}
 
       {isDesktop && <DownloadsQueue />}
 
       {profile && (
-        <div className="px-3 py-3">
-          <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
+        <div className={cn("py-3", compactMode ? "px-2" : "px-3")}>
+          <div
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg px-2 py-1.5",
+              compactMode && "justify-center px-1",
+            )}
+          >
             {profile.avatarOptions ? (
               <UserAvatar
                 options={profile.avatarOptions}
@@ -160,19 +197,23 @@ export function Sidebar() {
                 className="h-7 w-7 rounded-full bg-card-active object-cover"
               />
             )}
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-[12px] font-medium text-foreground/80">
-                {profile.displayName}
-              </p>
-              <p className="truncate text-[11px] text-muted/70">{profile.email}</p>
-            </div>
-            <button
-              onClick={() => void signOut()}
-              className="rounded-md p-1 text-muted/50 hover:bg-input hover:text-foreground/60 transition-all"
-              title="Sign out"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
+            {!compactMode && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-[12px] font-medium text-foreground/80">
+                    {profile.displayName}
+                  </p>
+                  <p className="truncate text-[11px] text-muted/70">{profile.email}</p>
+                </div>
+                <button
+                  onClick={() => void signOut()}
+                  className="rounded-md p-1 text-muted/50 hover:bg-input hover:text-foreground/60 transition-all"
+                  title="Sign out"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -189,16 +230,18 @@ function NavGroup({
   items,
   currentPath,
   matchPrefix,
+  compactMode,
 }: {
   items: NavItem[];
   currentPath: string;
   matchPrefix?: string;
+  compactMode?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
       {items.map((item) => {
         let isActive: boolean;
-        if (matchPrefix === "/db" && item.label === "Top Charts") {
+        if (matchPrefix === "/db" && item.to.startsWith("/db/charts")) {
           isActive = currentPath.startsWith("/db/charts");
         } else if (matchPrefix && item.to !== matchPrefix && item.to.startsWith(matchPrefix)) {
           isActive = currentPath === item.to || currentPath.startsWith(`${item.to}/`);
@@ -210,9 +253,11 @@ function NavGroup({
             key={item.to}
             to={item.to}
             end={item.to === "/store" || item.to === "/db" || item.to === "/profile"}
+            title={compactMode ? item.label : undefined}
             className={({ isActive: rrIsActive }) =>
               cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150",
+                "flex items-center rounded-lg text-[13px] font-medium transition-all duration-150",
+                compactMode ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-[7px]",
                 rrIsActive || isActive
                   ? "bg-card-active text-foreground shadow-[inset_0_0.5px_0_rgba(255,255,255,0.06)]"
                   : "text-muted hover:bg-input hover:text-foreground/80",
@@ -220,11 +265,18 @@ function NavGroup({
             }
           >
             <item.icon className="h-[15px] w-[15px] opacity-70" />
-            <span className="flex-1 truncate">{item.label}</span>
-            {item.badge !== undefined && item.badge > 0 && (
-              <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-card-active px-1 text-[10px] font-bold text-foreground/80">
-                {item.badge}
-              </span>
+            {!compactMode && (
+              <>
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-card-active px-1 text-[10px] font-bold text-foreground/80">
+                    {item.badge}
+                  </span>
+                )}
+              </>
+            )}
+            {compactMode && item.badge !== undefined && item.badge > 0 && (
+              <span className="ml-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-acid" aria-hidden />
             )}
           </NavLink>
         );
@@ -233,7 +285,7 @@ function NavGroup({
   );
 }
 
-function DreamsEngineWidget() {
+function DreamsEngineWidget({ compactMode }: { compactMode?: boolean }) {
   const navigate = useNavigate();
   const startDownload = useStartDownload();
   const tasks = useDownloadStore((s) => s.tasks);
@@ -259,8 +311,12 @@ function DreamsEngineWidget() {
   return (
     <button
       onClick={handleAction}
+      title={compactMode ? "Dreams Engine" : undefined}
       className={cn(
-        "relative w-full flex items-center justify-center gap-2 rounded-full h-9 text-[12.5px] font-bold transition-all shadow-md overflow-hidden",
+        "relative flex items-center justify-center font-bold transition-all shadow-md overflow-hidden",
+        compactMode
+          ? "h-9 w-9 mx-auto rounded-full"
+          : "w-full gap-2 rounded-full h-9 text-[12.5px]",
         isComplete
           ? "bg-gradient-to-b from-price to-price/85 text-background shadow-price/20 hover:brightness-110 active:brightness-95 cursor-pointer"
           : isDownloading
@@ -268,7 +324,7 @@ function DreamsEngineWidget() {
           : "bg-gradient-to-b from-cyan to-cyan/85 text-background shadow-cyan/20 hover:brightness-110 active:brightness-95 cursor-pointer"
       )}
     >
-      {isDownloading && (
+      {isDownloading && !compactMode && (
         <div
           className="absolute inset-y-0 left-0 bg-cyan/15 transition-all duration-300 pointer-events-none"
           style={{ width: `${progress}%` }}
@@ -278,17 +334,17 @@ function DreamsEngineWidget() {
         {isComplete ? (
           <>
             <Play className="h-3.5 w-3.5" fill="currentColor" />
-            <span>Dreams Engine</span>
+            {!compactMode && <span>Dreams Engine</span>}
           </>
         ) : isDownloading ? (
           <>
             <div className="h-3 w-3 rounded-full border-2 border-muted/30 border-t-muted animate-spin" />
-            <span>Dreams Engine ({progress}%)</span>
+            {!compactMode && <span>Dreams Engine ({progress}%)</span>}
           </>
         ) : (
           <>
             <Download className="h-3.5 w-3.5" />
-            <span>Dreams Engine</span>
+            {!compactMode && <span>Dreams Engine</span>}
           </>
         )}
       </div>

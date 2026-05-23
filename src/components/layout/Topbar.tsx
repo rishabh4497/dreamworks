@@ -12,6 +12,7 @@ import { useUiStore } from "@/stores/ui-store";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
+import { useTranslation } from "@/lib/i18n";
 
 export function Topbar() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export function Topbar() {
   const profile = useAuthStore((s) => s.profile);
   const settings = useUiStore((s) => s.settings);
   const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
@@ -71,7 +73,7 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => updateSettings({ offlineModeEnabled: !settings.offlineModeEnabled })}
-          title={settings.offlineModeEnabled ? "Offline mode is on" : "Turn on offline mode"}
+          title={settings.offlineModeEnabled ? t("Offline mode is on") : t("Turn on offline mode")}
           aria-pressed={settings.offlineModeEnabled}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-semibold transition-colors",
@@ -83,14 +85,14 @@ export function Topbar() {
         >
           <WifiOff className="h-4 w-4" />
           <span className="hidden lg:inline">
-            {settings.offlineModeEnabled ? "Offline" : "Online"}
+            {settings.offlineModeEnabled ? t("Offline") : t("Online")}
           </span>
         </button>
         {settings.handheldMode && isDesktop() && (
           <button
             type="button"
-            title="Handheld mode active"
-            aria-label="Handheld mode active"
+            title={t("Handheld mode active")}
+            aria-label={t("Handheld mode active")}
             onClick={() => navigate(ROUTES.settings)}
             className={cn(
               "rounded-lg border border-separator/70 bg-transparent p-2 text-muted hover:bg-input hover:text-foreground/80",
@@ -100,10 +102,10 @@ export function Topbar() {
             <Gamepad2 className="h-4 w-4" />
           </button>
         )}
-        <IconLink label="Wishlist" onClick={() => navigate(ROUTES.wishlist)} count={wishlistCount}>
+        <IconLink label={t("Wishlist")} onClick={() => navigate(ROUTES.wishlist)} count={wishlistCount}>
           <Heart className="h-4 w-4" />
         </IconLink>
-        <IconLink label="Friends" onClick={() => navigate(ROUTES.friends)}>
+        <IconLink label={t("Friends")} onClick={() => navigate(ROUTES.friends)}>
           <Users className="h-4 w-4" />
         </IconLink>
         <div className="relative">
@@ -118,7 +120,7 @@ export function Topbar() {
             anchorRef={bellRef}
           />
         </div>
-        <IconLink label="Cart" onClick={() => navigate(ROUTES.cart)} count={cartCount}>
+        <IconLink label={t("Cart")} onClick={() => navigate(ROUTES.cart)} count={cartCount}>
           <ShoppingCart className="h-4 w-4" />
         </IconLink>
         {profile && (

@@ -26,6 +26,10 @@ import type {
   DynamicPatchNotesPayload,
 } from "@/lib/ai/payload-types";
 import { useProfileStore } from "@/stores/profile-store";
+import { useUiStore } from "@/stores/ui-store";
+import { useTranslation } from "@/lib/i18n";
+import { toast } from "@/stores/toast-store";
+import { cn } from "@/lib/utils";
 
 /** Parse "32 GB RAM" / "16 GB DDR5" / "16" → 16. Falls back to 16 GB if blank. */
 function parseRamGB(raw: string): number {
@@ -465,6 +469,16 @@ export function AiHardwareOptimizer({
 // Image super-resolution — not an LLM task. Real-ESRGAN integration is Phase 2.
 
 export function AiTextureUpscaler() {
+  const notifyMe = useUiStore((s) => s.settings.textureUpscalerNotifyMe);
+  const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
+
+  const onClick = () => {
+    const next = !notifyMe;
+    updateSettings({ textureUpscalerNotifyMe: next });
+    if (next) toast.success(t("You'll be notified when AI Texture Upscaler is available."));
+  };
+
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
       <div className="flex items-center gap-3">
@@ -472,18 +486,25 @@ export function AiTextureUpscaler() {
           <ImageUp className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">AI Texture Upscaler</h3>
+          <h3 className="text-sm font-semibold text-foreground">{t("AI Texture Upscaler")}</h3>
           <p className="text-xs text-muted/60 mt-0.5">
-            Built-in AI upscaling injector for older titles.
+            {t("Built-in AI upscaling injector for older titles.")}
           </p>
         </div>
       </div>
       <button
-        disabled
-        title="Coming soon: needs Real-ESRGAN/DLSS-style image pipeline."
-        className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium opacity-50 cursor-not-allowed"
+        type="button"
+        onClick={onClick}
+        aria-pressed={notifyMe}
+        title="Image super-resolution — needs Real-ESRGAN/DLSS-style pipeline. Phase 2."
+        className={cn(
+          "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+          notifyMe
+            ? "border-purple-500/40 bg-purple-500/10 text-purple-500 hover:bg-purple-500/15"
+            : "border-separator bg-card-active hover:bg-card-hover",
+        )}
       >
-        Coming soon
+        {notifyMe ? t("Enabled") : t("Notify me")}
       </button>
     </div>
   );

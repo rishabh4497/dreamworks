@@ -1,4 +1,8 @@
 import { Camera, PlaySquare, FileCode2, Users, Trophy, RefreshCcw, HardDrive, Smartphone, BookOpen, MonitorPlay } from "lucide-react";
+import { useUiStore } from "@/stores/ui-store";
+import { useTranslation } from "@/lib/i18n";
+import { toast } from "@/stores/toast-store";
+import { cn } from "@/lib/utils";
 
 export function UniversalPhotoGallery() {
   return (
@@ -17,6 +21,16 @@ export function UniversalPhotoGallery() {
 }
 
 export function QuickResumePC() {
+  const enabled = useUiStore((s) => s.settings.quickResumeEnabled);
+  const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
+
+  const toggle = () => {
+    const next = !enabled;
+    updateSettings({ quickResumeEnabled: next });
+    toast.success(next ? t("Quick Resume enabled") : t("Quick Resume disabled"));
+  };
+
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
       <div className="flex items-center gap-3">
@@ -24,13 +38,30 @@ export function QuickResumePC() {
           <PlaySquare className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">"Quick Resume" for PC</h3>
-          <p className="text-xs text-muted/60 mt-0.5">Suspend game state to disk for instant hot-swapping.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("\"Quick Resume\" for PC")}</h3>
+          <p className="text-xs text-muted/60 mt-0.5">{t("Suspend game state to disk for instant hot-swapping.")}</p>
         </div>
       </div>
-      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
-        Enable
-      </button>
+      <div className="flex items-center gap-2">
+        {enabled && (
+          <span className="rounded-md bg-green/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-green">
+            {t("Enabled")}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-pressed={enabled}
+          className={cn(
+            "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+            enabled
+              ? "border-acid/40 bg-acid/10 text-acid hover:bg-acid/15"
+              : "border-separator bg-card-active hover:bg-card-hover",
+          )}
+        >
+          {enabled ? t("Disable") : t("Enable")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -117,6 +148,23 @@ export function HardwareAwareWarnings() {
 }
 
 export function SeamlessRemotePlay() {
+  const pairedDevice = useUiStore((s) => s.settings.remotePlayPairedDevice);
+  const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
+
+  const onClick = () => {
+    if (pairedDevice) {
+      updateSettings({ remotePlayPairedDevice: null });
+      toast.info(t("Device unpaired"));
+      return;
+    }
+    const name = window.prompt(t("Name this device"));
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    updateSettings({ remotePlayPairedDevice: trimmed });
+    toast.success(t("Paired to {device}", { device: trimmed }));
+  };
+
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
       <div className="flex items-center gap-3">
@@ -124,12 +172,21 @@ export function SeamlessRemotePlay() {
           <Smartphone className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Seamless Remote Play</h3>
-          <p className="text-xs text-muted/60 mt-0.5">Stream desktop games to your phone or laptop.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("Seamless Remote Play")}</h3>
+          <p className="text-xs text-muted/60 mt-0.5">{t("Stream desktop games to your phone or laptop.")}</p>
         </div>
       </div>
-      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
-        Pair Device
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+          pairedDevice
+            ? "border-cyan/40 bg-cyan/10 text-cyan hover:bg-cyan/15"
+            : "border-separator bg-card-active hover:bg-card-hover",
+        )}
+      >
+        {pairedDevice ? t("Unpair {device}", { device: pairedDevice }) : t("Pair Device")}
       </button>
     </div>
   );
@@ -152,6 +209,10 @@ export function InteractiveDigitalManuals() {
 }
 
 export function DynamicStoreBackgrounds() {
+  const enabled = useUiStore((s) => s.settings.dynamicStoreBackgroundsEnabled);
+  const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
       <div className="flex items-center gap-3">
@@ -159,12 +220,22 @@ export function DynamicStoreBackgrounds() {
           <MonitorPlay className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Dynamic Store Backgrounds</h3>
-          <p className="text-xs text-muted/60 mt-0.5">Launcher theme adapts to the currently viewed game.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("Dynamic Store Backgrounds")}</h3>
+          <p className="text-xs text-muted/60 mt-0.5">{t("Launcher theme adapts to the currently viewed game.")}</p>
         </div>
       </div>
-      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
-        Options
+      <button
+        type="button"
+        onClick={() => updateSettings({ dynamicStoreBackgroundsEnabled: !enabled })}
+        aria-pressed={enabled}
+        className={cn(
+          "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+          enabled
+            ? "border-cyan/40 bg-cyan/10 text-cyan hover:bg-cyan/15"
+            : "border-separator bg-card-active hover:bg-card-hover",
+        )}
+      >
+        {enabled ? t("On") : t("Off")}
       </button>
     </div>
   );

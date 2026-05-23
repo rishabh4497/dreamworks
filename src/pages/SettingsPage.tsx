@@ -28,6 +28,7 @@ import { usePlatform } from "@/hooks/use-platform";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
 import { pickFolder } from "@/lib/platform";
+import { useTranslation } from "@/lib/i18n";
 import type {
   NotificationKind,
   StartupLocation,
@@ -85,6 +86,8 @@ const NOTIFICATION_ROWS: { kind: NotificationKind; label: string; description?: 
   },
 ];
 
+const LANGUAGE_OPTIONS = ["English", "Français", "Deutsch", "Español", "日本語", "한국어"];
+
 type SettingsTab =
   | "account"
   | "general"
@@ -95,17 +98,17 @@ type SettingsTab =
 
 interface TabItem {
   id: SettingsTab;
-  label: string;
+  labelKey: string;
   icon: typeof UserIcon;
 }
 
 const TABS: TabItem[] = [
-  { id: "account", label: "Account", icon: UserIcon },
-  { id: "general", label: "General", icon: Sliders },
-  { id: "downloads", label: "Downloads & Storage", icon: Download },
-  { id: "gameplay", label: "Gameplay", icon: Gamepad2 },
-  { id: "social", label: "Notifications & Chat", icon: Bell },
-  { id: "privacy", label: "Privacy", icon: Lock },
+  { id: "account", labelKey: "Account", icon: UserIcon },
+  { id: "general", labelKey: "General", icon: Sliders },
+  { id: "downloads", labelKey: "Downloads & Storage", icon: Download },
+  { id: "gameplay", labelKey: "Gameplay", icon: Gamepad2 },
+  { id: "social", labelKey: "Notifications & Chat", icon: Bell },
+  { id: "privacy", labelKey: "Privacy", icon: Lock },
 ];
 
 export function SettingsPage() {
@@ -115,6 +118,7 @@ export function SettingsPage() {
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
   const { isDesktop, os } = usePlatform();
+  const { t } = useTranslation();
 
   const { settings, updateSettings, notificationPrefs, setNotificationPref } = useUiStore();
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
@@ -146,8 +150,12 @@ export function SettingsPage() {
     setIsCheckingUpdates(true);
     setTimeout(() => {
       setIsCheckingUpdates(false);
-      toast.success("Dreamworks Launcher is up to date (v0.1.0)");
+      toast.success(t("Dreamworks Launcher is up to date (v0.1.0)"));
     }, 1200);
+  };
+
+  const notifyRestartRequired = () => {
+    toast.info(t("Restart Dreamworks for this to take effect."));
   };
 
   const handleBrowseFolder = async () => {
@@ -176,21 +184,22 @@ export function SettingsPage() {
         hour: "numeric",
         minute: "2-digit",
       })
-    : "Never";
+    : t("Never");
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <header>
         <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-muted/50">
           <SettingsIcon className="h-3 w-3" />
-          Settings
+          {t("Settings")}
         </p>
         <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
-          Preferences & account
+          {t("Preferences & account")}
         </h1>
         <p className="mt-1 max-w-3xl text-[13px] leading-relaxed text-muted/65">
-          Manage your account, configure the launcher, tune in-game overlays, and control your
-          privacy, notifications, and family sharing.
+          {t(
+            "Manage your account, configure the launcher, tune in-game overlays, and control your privacy, notifications, and family sharing.",
+          )}
         </p>
       </header>
 
@@ -210,7 +219,7 @@ export function SettingsPage() {
               )}
             >
               <tab.icon className="h-4 w-4 opacity-80" />
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           );
         })}
@@ -331,47 +340,45 @@ export function SettingsPage() {
 
         {activeTab === "general" && (
           <SectionStack>
-            <Section title="General preferences">
+            <Section title={t("General preferences")}>
               <QuickResumePC />
               <SeamlessRemotePlay />
 
               <SelectField
-                label="Client language"
+                label={t("Client language")}
                 value={settings.language}
                 onChange={(v) => updateSettings({ language: v })}
-                options={["English", "Français", "Deutsch", "Español", "日本語", "한국어"].map(
-                  (l) => ({ value: l, label: l }),
-                )}
+                options={LANGUAGE_OPTIONS.map((l) => ({ value: l, label: l }))}
               />
 
               <SelectField
-                label="Startup location"
+                label={t("Startup location")}
                 value={settings.startupLocation}
                 onChange={(v) => updateSettings({ startupLocation: v as StartupLocation })}
                 options={[
-                  { value: "store", label: "Store Home" },
-                  { value: "library", label: "Library" },
-                  { value: "feed", label: "Social Feed" },
-                  { value: "db", label: "SteamDB Analytics" },
+                  { value: "store", label: t("Store Home") },
+                  { value: "library", label: t("Library") },
+                  { value: "feed", label: t("Social Feed") },
+                  { value: "db", label: t("SteamDB Analytics") },
                 ]}
               />
             </Section>
 
-            <Section title="Offline mode">
+            <Section title={t("Offline mode")}>
               <Card>
                 <ToggleRow
-                  label="Start and browse in offline mode"
-                  description="Use cached library data and only launch games marked offline-ready"
+                  label={t("Start and browse in offline mode")}
+                  description={t("Use cached library data and only launch games marked offline-ready")}
                   checked={settings.offlineModeEnabled}
                   onCheckedChange={(next) => updateSettings({ offlineModeEnabled: next })}
                 />
                 <div className="flex flex-col gap-3 border-t border-separator/50 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[13px] font-semibold text-foreground">
-                      Offline cache status
+                      {t("Offline cache status")}
                     </p>
                     <p className="text-[11px] text-muted/55">
-                      Last refreshed: {offlineCacheUpdated}
+                      {t("Last refreshed: {time}", { time: offlineCacheUpdated })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -387,7 +394,7 @@ export function SettingsPage() {
                       )}
                     >
                       <WifiOff className="h-3 w-3" />
-                      {settings.offlineCacheStatus.replace("-", " ")}
+                      {t(settings.offlineCacheStatus.replace("-", " "))}
                     </span>
                     <button
                       type="button"
@@ -396,7 +403,7 @@ export function SettingsPage() {
                           offlineCacheStatus: "syncing",
                           offlineCacheUpdatedAt: new Date().toISOString(),
                         });
-                        toast.success("Offline cache refresh queued");
+                        toast.success(t("Offline cache refresh queued"));
                         window.setTimeout(() => {
                           updateSettings({
                             offlineCacheStatus: "ready",
@@ -406,39 +413,45 @@ export function SettingsPage() {
                       }}
                       className="rounded-lg border border-separator bg-card px-3 py-1.5 text-[12px] font-medium text-foreground/85 hover:bg-card-active"
                     >
-                      Refresh
+                      {t("Refresh")}
                     </button>
                   </div>
                 </div>
               </Card>
             </Section>
 
-            <Section title="Window & layout">
+            <Section title={t("Window & layout")}>
               <AiHardwareOptimizer />
               <AiTextureUpscaler />
               <Card divide>
                 <ToggleRow
-                  label="Close window to system tray"
-                  description="Keep launcher active in background when clicking close button"
+                  label={t("Close window to system tray")}
+                  description={t("Keep launcher active in background when clicking close button")}
                   checked={settings.closeToTray}
-                  onCheckedChange={(next) => updateSettings({ closeToTray: next })}
+                  onCheckedChange={(next) => {
+                    updateSettings({ closeToTray: next });
+                    notifyRestartRequired();
+                  }}
                 />
                 <ToggleRow
-                  label="Enable hardware acceleration"
-                  description="Requires launcher restart to apply changes"
+                  label={t("Enable hardware acceleration")}
+                  description={t("Requires launcher restart to apply changes")}
                   checked={settings.hardwareAcceleration}
-                  onCheckedChange={(next) => updateSettings({ hardwareAcceleration: next })}
+                  onCheckedChange={(next) => {
+                    updateSettings({ hardwareAcceleration: next });
+                    notifyRestartRequired();
+                  }}
                 />
                 <ToggleRow
-                  label="Use compact side navigation mode"
-                  description="Minimize sidebar visual space"
+                  label={t("Use compact side navigation mode")}
+                  description={t("Minimize sidebar visual space")}
                   checked={settings.compactMode}
                   onCheckedChange={(next) => updateSettings({ compactMode: next })}
                 />
               </Card>
             </Section>
 
-            <Section title="Color theme">
+            <Section title={t("Color theme")}>
               <DynamicStoreBackgrounds />
               <div className="flex gap-2 rounded-xl border border-separator bg-card p-1.5">
                 {(["dark", "light", "system"] as const).map((m) => (
@@ -453,21 +466,24 @@ export function SettingsPage() {
                         : "text-muted hover:bg-card-hover/50 hover:text-foreground/80",
                     )}
                   >
-                    {m}
+                    {t(m)}
                   </button>
                 ))}
               </div>
             </Section>
 
-            <Section title="About Dreamworks">
+            <Section title={t("About Dreamworks")}>
               <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-[14px] font-semibold text-foreground">
-                      Dreamworks Launcher
+                      {t("Dreamworks Launcher")}
                     </p>
                     <p className="text-[12px] text-muted/65">
-                      Version 0.1.0-alpha · Running on {isDesktop ? `Desktop (${os})` : "Web"}
+                      {t("Version {version} · Running on {target}", {
+                        version: "0.1.0-alpha",
+                        target: isDesktop ? t("Desktop ({os})", { os }) : t("Web"),
+                      })}
                     </p>
                   </div>
                   <button
@@ -479,19 +495,20 @@ export function SettingsPage() {
                     <RefreshCw
                       className={cn("h-3.5 w-3.5", isCheckingUpdates && "animate-spin")}
                     />
-                    {isCheckingUpdates ? "Checking…" : "Check for updates"}
+                    {isCheckingUpdates ? t("Checking…") : t("Check for updates")}
                   </button>
                 </div>
                 <div className="border-t border-separator/50" />
                 <p className="text-[12px] leading-relaxed text-muted/65">
-                  Dreamworks is a dual-target, unified Steam storefront and database analytics
-                  client, powered by Tauri, React 19, and Tailwind 4.
+                  {t(
+                    "Dreamworks is a dual-target, unified Steam storefront and database analytics client, powered by Tauri, React 19, and Tailwind 4.",
+                  )}
                 </p>
               </div>
               <p className="text-[11px] leading-relaxed text-muted/55">
-                © 2026 Dreamworks Interactive. All rights reserved. Valve, Steam, SteamDB, Epic,
-                GOG, and their respective logos are trademarks or registered trademarks of their
-                owners. Software is provided “as is” without warranties.
+                {t(
+                  "© 2026 Dreamworks Interactive. All rights reserved. Valve, Steam, SteamDB, Epic, GOG, and their respective logos are trademarks or registered trademarks of their owners. Software is provided “as is” without warranties.",
+                )}
               </p>
             </Section>
           </SectionStack>
