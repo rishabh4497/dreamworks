@@ -85,6 +85,16 @@ export const COLLECTIONS = {
   lfgPosts: "dw_lfg_posts",
   lfgGuides: "dw_lfg_guides",
   followSuggestions: "dw_follow_suggestions",
+  // User-scoped account/billing docs (one per uid)
+  userBilling: "dw_user_billing",
+  userFamily: "dw_user_family",
+  userPlatforms: "dw_user_platforms",
+  userFollowing: "dw_user_following",
+  userGiftRecipients: "dw_user_gift_recipients",
+  userHardware: "dw_user_hardware",
+  // Community catalogs
+  controllerLayouts: "dw_controller_layouts",
+  themes: "dw_themes",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

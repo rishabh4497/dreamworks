@@ -1660,3 +1660,74 @@ export interface AchievementCompletionRow {
   /** null when telemetry has not yet been ingested. */
   unlockedPct: number | null;
 }
+
+// ── User-scoped Firestore docs (one doc per uid) ────────────────────────────
+
+export interface UserSubscription {
+  tier: "free" | "plus" | "ultimate";
+  paused: boolean;
+  pausedUntil: ISODate | null;
+  nextBillingAt: ISODate | null;
+}
+
+export interface UserBillingDoc {
+  userId: string;
+  paymentMethods: PaymentMethod[];
+  subscription: UserSubscription;
+  updatedAt: ISODate;
+}
+
+export interface UserFamilyDoc {
+  userId: string;
+  members: FamilyMember[];
+  updatedAt: ISODate;
+}
+
+export interface UserPlatformsDoc {
+  userId: string;
+  platforms: Record<LinkedPlatformId, LinkedPlatform>;
+  updatedAt: ISODate;
+}
+
+export interface UserFollowingDoc {
+  userId: string;
+  /** Handle (including leading `@`) → following true/false. */
+  handles: Record<string, boolean>;
+  updatedAt: ISODate;
+}
+
+export interface UserGiftRecipientsDoc {
+  userId: string;
+  recipients: GiftRecipient[];
+  updatedAt: ISODate;
+}
+
+export interface UserHardwareDoc {
+  userId: string;
+  latestSnapshot: HardwareSnapshot | null;
+  history: HardwareSnapshot[];
+  updatedAt: ISODate;
+}
+
+// ── Community catalog docs ──────────────────────────────────────────────────
+
+export interface ControllerLayout {
+  id: string;
+  name: string;
+  creator: string;
+  downloads: number;
+  rating?: number;
+  /** When set, layout is scoped to a specific game. */
+  gameId?: GameId;
+  createdAt: ISODate;
+}
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  author: string;
+  description: string;
+  /** True for the curated "active by default" theme. */
+  featured: boolean;
+  createdAt: ISODate;
+}
