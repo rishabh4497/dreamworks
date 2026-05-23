@@ -54,5 +54,14 @@ export const COLLECTIONS = {
   notifications: "dw_notifications",
   developerDrafts: "dw_developer_drafts",
   publisherProfiles: "dw_publishers",
+  developers: "dw_developers",
+  publishers: "dw_publishers",
+  apps: "dw_apps",
+} as const;
+
+// Subcollection name fragments (used as second-level path segments under apps/{appId}/...)
+export const SUBCOLLECTIONS = {
+  appBuilds: "builds",
+  appAchievements: "achievements",
 } as const;
 

@@ -120,3 +120,45 @@ export async function homeDirSafe(): Promise<string> {
     return "/";
   }
 }
+
+// ── Asset uploads ──────────────────────────────────────────────────────────
+//
+// Single funnel for any binary the developer portal needs to persist — build
+// artifacts, capsule art, banners, achievement icons. Tries Firebase Storage
+// first; if the project isn't configured for it (common in local dev), falls
+// back to inlining as a data URL so the UI can still preview small files.
+
+export interface UploadedAsset {
+  url: string;
+  sizeBytes: number;
+}
+
+async function readAsDataUrl(file: File | Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadAsset(file: File | Blob, path: string): Promise<UploadedAsset> {
+  const sizeBytes = file.size;
+  try {
+    const [{ getStorage, ref, uploadBytes, getDownloadURL }, { getFirebaseApp }] = await Promise.all([
+      import("firebase/storage"),
+      import("./firebase"),
+    ]);
+    const storage = getStorage(getFirebaseApp());
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    return { url, sizeBytes };
+  } catch {
+    // Storage bucket not configured (or offline) — fall back to a data URL so
+    // the UI can still display the asset locally. Large files will balloon
+    // Firestore docs; that's an acceptable tradeoff in dev/preview.
+    const url = await readAsDataUrl(file);
+    return { url, sizeBytes };
+  }
+}

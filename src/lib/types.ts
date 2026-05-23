@@ -325,6 +325,139 @@ export interface AIOverview {
   updatedAt: ISODate;
 }
 
+// ── Developer Portal (Steamworks-style) ────────────────────────────────────
+//
+// Developer ≠ Publisher. Each is a first-class entity with its own Creator
+// Homepage (/developer/:slug, /publisher/:slug). A game (App) can reference
+// multiple of each. For self-publishing, the same user owns both a Developer
+// and a Publisher doc with the same display name.
+
+export interface CreatorSocialLinks {
+  twitter?: string;
+  discord?: string;
+  youtube?: string;
+  twitch?: string;
+}
+
+export interface Developer {
+  id: string;                  // slug of name
+  name: string;
+  ownerUserId: string;
+  brandColor: string;          // hex, used for storefront wash
+  logoUrl: string;
+  bannerUrl?: string;
+  tagline: string;
+  about?: string;
+  websiteUrl?: string;
+  socialLinks?: CreatorSocialLinks;
+  appIds: string[];            // denormalized list of owned app slugs
+  updatedAt: ISODate;
+}
+
+export interface Publisher {
+  id: string;
+  name: string;
+  ownerUserId: string;
+  brandColor: string;
+  logoUrl: string;
+  bannerUrl?: string;
+  tagline: string;
+  about?: string;
+  websiteUrl?: string;
+  socialLinks?: CreatorSocialLinks;
+  appIds: string[];
+  updatedAt: ISODate;
+}
+
+export type AppStage = "draft" | "in-review" | "coming-soon" | "released";
+
+export type ReleaseWindow = "morning" | "afternoon" | "evening" | "midnight";
+
+export type BranchName = "default" | "beta" | "internal" | (string & {});
+
+export interface AppBuild {
+  id: string;
+  appId: string;
+  buildLabel: string;          // e.g. "0.4.2-rc1"
+  notes: string;
+  sizeBytes: number;
+  uploadedAt: ISODate;
+  uploaderUserId: string;
+  platforms: OSPlatform[];
+  assetUrl?: string;           // Firebase Storage URL or local desktop path
+  status: "uploaded" | "processing" | "ready";
+}
+
+export interface AppBranch {
+  name: BranchName;
+  liveBuildId?: string;        // build currently set live on this branch
+  password?: string;
+  description?: string;
+  updatedAt: ISODate;
+}
+
+export interface AppChecklist {
+  capsuleArt: boolean;
+  controllerSupport: boolean;
+  cloudSaves: boolean;
+  achievements: boolean;
+  newsPost: boolean;
+}
+
+export interface App {
+  id: string;                  // slug of gameTitle, also the eventual GameId
+  developerIds: string[];      // Steam allows multiple
+  publisherIds: string[];
+  ownerUserId: string;
+  stage: AppStage;
+
+  // Store page
+  gameTitle: string;
+  shortDescription: string;
+  longDescription: string;
+  genres: string[];
+  tags: string[];
+  languages: string[];
+  ageRating: string;
+  platforms: OSPlatform[];
+  features: GameFeature[];
+  systemRequirements: {
+    windows?: SystemRequirementsBlock;
+    mac?: SystemRequirementsBlock;
+    linux?: SystemRequirementsBlock;
+  };
+
+  // Media
+  coverUrl?: string;
+  capsuleUrl?: string;
+  headerUrl?: string;
+  screenshots: string[];
+  trailers: Trailer[];
+
+  // Release
+  releaseDate?: ISODate;
+  releaseWindow: ReleaseWindow;
+
+  // Pricing
+  basePriceCents: PriceCents;
+  launchDiscountPct: number;
+  pricesByRegion: RegionalPrice[];
+
+  // Pipeline
+  branches: AppBranch[];
+  latestBuildId?: string;
+
+  // Achievements denorm
+  achievementCount: number;
+
+  // Legacy checklist (used in publish gating)
+  checklist: AppChecklist;
+
+  submittedAt?: ISODate;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
 // ── User & ownership ───────────────────────────────────────────────────────
 import type { AvatarOptions } from "./avatar";
 
