@@ -1461,3 +1461,130 @@ export interface PostImagePreset {
   label: string;
   url: string;
 }
+
+// ── Developer Portal: Live Ops ─────────────────────────────────────────────
+//
+// Player-facing content authored from /developer-portal/ops. Stored in their
+// own collections keyed by appId so the public Game Detail / Creator Homepage
+// can read them without rewiring App docs.
+
+export type AnnouncementCategory = "patch" | "event" | "news" | "maintenance";
+
+export interface Announcement {
+  id: string;
+  appId: string;
+  authorUserId: string;
+  category: AnnouncementCategory;
+  title: string;
+  body: string;
+  heroImageUrl?: string;
+  publishedAt: ISODate;
+  pinnedUntil?: ISODate;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export type LiveEventKind =
+  | "free-weekend"
+  | "double-xp"
+  | "sale"
+  | "tournament"
+  | "season"
+  | "drop";
+
+export interface LiveEvent {
+  id: string;
+  appId: string;
+  kind: LiveEventKind;
+  title: string;
+  description: string;
+  startsAt: ISODate;
+  endsAt: ISODate;
+  bannerUrl?: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface MaintenanceWindow {
+  id: string;
+  appId: string;
+  startsAt: ISODate;
+  endsAt: ISODate;
+  reason: string;
+  affectedRegions: string[];
+  createdAt: ISODate;
+}
+
+// ── Developer Portal: Marketing ────────────────────────────────────────────
+
+export type PromoCampaignStatus = "scheduled" | "active" | "ended";
+
+export interface PromoCampaign {
+  id: string;
+  appId: string;
+  name: string;
+  discountPct: number;
+  startsAt: ISODate;
+  endsAt: ISODate;
+  status: PromoCampaignStatus;
+  createdAt: ISODate;
+}
+
+export type PromoKeyStatus = "issued" | "redeemed" | "revoked";
+
+export interface PromoKey {
+  id: string;
+  appId: string;
+  recipient: string;
+  note?: string;
+  status: PromoKeyStatus;
+  issuedAt: ISODate;
+  redeemedAt?: ISODate;
+}
+
+export type SocialPlatform = "twitter" | "discord" | "bluesky";
+
+export interface SocialDraft {
+  id: string;
+  appId: string;
+  platform: SocialPlatform;
+  body: string;
+  mediaUrls: string[];
+  scheduledFor?: ISODate;
+  createdAt: ISODate;
+}
+
+// ── Developer Portal: Analytics (derived; never persisted) ─────────────────
+
+export interface PortfolioKpis {
+  totalApps: number;
+  totalWishlists: number;
+  totalRevenueCents: number;
+  totalCurrentPlayers: number;
+  avgReviewScore: number;
+}
+
+export interface WishlistTrendPoint {
+  date: ISODate;
+  count: number;
+}
+
+export interface RevenuePoint {
+  date: ISODate;
+  cents: number;
+}
+
+export interface ReviewLabelBreakdown {
+  label: ReviewLabel;
+  count: number;
+  pct: number;
+}
+
+export interface AchievementCompletionRow {
+  id: string;
+  name: string;
+  iconUrl?: string;
+  hidden: boolean;
+  /** null when telemetry has not yet been ingested. */
+  unlockedPct: number | null;
+}

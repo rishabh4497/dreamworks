@@ -74,6 +74,12 @@ export const COLLECTIONS = {
   aiQuotas: "dw_ai_quotas",
   aiUsage: "dw_ai_usage",
   meta: "dw_meta",
+  announcements: "dw_announcements",
+  liveEvents: "dw_live_events",
+  maintenanceWindows: "dw_maintenance_windows",
+  promoCampaigns: "dw_promo_campaigns",
+  promoKeys: "dw_promo_keys",
+  socialDrafts: "dw_social_drafts",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)
