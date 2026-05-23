@@ -8,7 +8,7 @@ use std::{
     sync::Mutex,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tauri::async_runtime::{spawn, JoinHandle};
 use tokio::time::sleep;
 
@@ -622,6 +622,395 @@ struct HardwareInfo {
     storage: String,
 }
 
+// ── Diagnostics: hardware snapshot ─────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CpuInfo {
+    brand: String,
+    vendor_id: String,
+    physical_cores: u32,
+    logical_cores: u32,
+    base_frequency_mhz: u64,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct MemoryInfo {
+    total_bytes: u64,
+    available_bytes: u64,
+    used_bytes: u64,
+    swap_total_bytes: u64,
+    swap_used_bytes: u64,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct DiskInfo {
+    name: String,
+    mount_point: String,
+    total_bytes: u64,
+    available_bytes: u64,
+    file_system: String,
+    is_removable: bool,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct GpuInfo {
+    vendor: String,
+    model: String,
+    vram_bytes: u64,
+    backend: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct OsInfo {
+    name: String,
+    version: String,
+    kernel_version: String,
+    hostname: String,
+    architecture: String,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct NetworkAdapter {
+    interface_name: String,
+    mac_address: String,
+    is_loopback: bool,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct HardwareSnapshot {
+    captured_at: String,
+    schema_version: u32,
+    cpu: CpuInfo,
+    memory: MemoryInfo,
+    disks: Vec<DiskInfo>,
+    gpus: Vec<GpuInfo>,
+    os: OsInfo,
+    network: Vec<NetworkAdapter>,
+}
+
+fn build_hardware_snapshot() -> HardwareSnapshot {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    let cpus = sys.cpus();
+    let (brand, vendor_id, frequency) = cpus
+        .first()
+        .map(|c| (c.brand().to_string(), c.vendor_id().to_string(), c.frequency()))
+        .unwrap_or_else(|| ("Unknown".to_string(), "".to_string(), 0));
+    let logical_cores = cpus.len() as u32;
+    let physical_cores = System::physical_core_count().unwrap_or(logical_cores as usize) as u32;
+
+    let cpu = CpuInfo {
+        brand,
+        vendor_id,
+        physical_cores,
+        logical_cores,
+        base_frequency_mhz: frequency,
+    };
+
+    let memory = MemoryInfo {
+        total_bytes: sys.total_memory(),
+        available_bytes: sys.available_memory(),
+        used_bytes: sys.used_memory(),
+        swap_total_bytes: sys.total_swap(),
+        swap_used_bytes: sys.used_swap(),
+    };
+
+    let disks_list = Disks::new_with_refreshed_list();
+    let disks: Vec<DiskInfo> = disks_list
+        .iter()
+        .filter(|d| d.total_space() > 1_000_000_000) // skip <1GB virtual partitions
+        .map(|d| DiskInfo {
+            name: d.name().to_string_lossy().to_string(),
+            mount_point: d.mount_point().to_string_lossy().to_string(),
+            total_bytes: d.total_space(),
+            available_bytes: d.available_space(),
+            file_system: d.file_system().to_string_lossy().to_string(),
+            is_removable: d.is_removable(),
+        })
+        .collect();
+
+    // GPU enumeration without wgpu — best-effort placeholder. On macOS unified
+    // memory means total system RAM is the GPU pool too. On Windows / Linux
+    // a real backend would query DXGI / Vulkan; we leave a single "Unknown"
+    // entry so the UI surface is present.
+    let gpu_vendor = if cfg!(target_os = "macos") {
+        "Apple"
+    } else if cfg!(target_os = "windows") {
+        "Unknown (DXGI not queried)"
+    } else {
+        "Unknown"
+    };
+    let gpu_backend = if cfg!(target_os = "macos") {
+        "metal"
+    } else if cfg!(target_os = "windows") {
+        "dx12"
+    } else {
+        "vulkan"
+    };
+    let gpus = vec![GpuInfo {
+        vendor: gpu_vendor.to_string(),
+        model: "Integrated graphics (snapshot v1)".to_string(),
+        vram_bytes: if cfg!(target_os = "macos") {
+            sys.total_memory()
+        } else {
+            0
+        },
+        backend: gpu_backend.to_string(),
+    }];
+
+    let os = OsInfo {
+        name: System::name().unwrap_or_else(|| os_name().to_string()),
+        version: System::os_version().unwrap_or_default(),
+        kernel_version: System::kernel_version().unwrap_or_default(),
+        hostname: System::host_name().unwrap_or_default(),
+        architecture: env::consts::ARCH.to_string(),
+    };
+
+    let networks_list = Networks::new_with_refreshed_list();
+    let network: Vec<NetworkAdapter> = networks_list
+        .iter()
+        .map(|(name, data)| NetworkAdapter {
+            interface_name: name.to_string(),
+            mac_address: data.mac_address().to_string(),
+            is_loopback: name == "lo" || name.starts_with("lo0"),
+        })
+        .collect();
+
+    HardwareSnapshot {
+        captured_at: now_stamp(),
+        schema_version: 1,
+        cpu,
+        memory,
+        disks,
+        gpus,
+        os,
+        network,
+    }
+}
+
+#[tauri::command]
+async fn run_hardware_snapshot() -> CommandResult<HardwareSnapshot> {
+    // Run the blocking sysinfo work off the JS thread.
+    match tauri::async_runtime::spawn_blocking(build_hardware_snapshot).await {
+        Ok(snapshot) => ok(snapshot),
+        Err(e) => err("snapshot_join_failed", e.to_string(), true),
+    }
+}
+
+// ── Diagnostics: resource monitor ──────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ProcessSample {
+    pid: u32,
+    name: String,
+    cpu_percent: f32,
+    memory_bytes: u64,
+    parent_pid: Option<u32>,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ResourceMonitorSample {
+    sampled_at: String,
+    cpu_global_percent: f32,
+    memory_used_bytes: u64,
+    memory_total_bytes: u64,
+    top_processes: Vec<ProcessSample>,
+}
+
+#[derive(Default)]
+struct MonitorState {
+    handle: Mutex<Option<JoinHandle<()>>>,
+}
+
+#[tauri::command]
+async fn start_resource_monitor(
+    app: AppHandle,
+    state: tauri::State<'_, MonitorState>,
+) -> CommandResult<()> {
+    {
+        let guard = state.handle.lock().expect("monitor handle poisoned");
+        if guard.is_some() {
+            return err("monitor_running", "Resource monitor is already running.", true);
+        }
+    }
+
+    let app_clone = app.clone();
+    let handle = spawn(async move {
+        let mut sys = System::new_all();
+        let mut first_pass = true;
+        loop {
+            sys.refresh_cpu_all();
+            sys.refresh_memory();
+            sys.refresh_processes_specifics(
+                ProcessesToUpdate::All,
+                true,
+                ProcessRefreshKind::everything(),
+            );
+
+            // The first sample after a fresh refresh shows 0% per-process CPU
+            // — sysinfo computes deltas from refresh to refresh. Skip emit.
+            if first_pass {
+                first_pass = false;
+                sleep(Duration::from_millis(1000)).await;
+                continue;
+            }
+
+            let mut procs: Vec<ProcessSample> = sys
+                .processes()
+                .iter()
+                .map(|(pid, p)| ProcessSample {
+                    pid: pid.as_u32(),
+                    name: p.name().to_string_lossy().to_string(),
+                    cpu_percent: p.cpu_usage(),
+                    memory_bytes: p.memory(),
+                    parent_pid: p.parent().map(|p| p.as_u32()),
+                })
+                .collect();
+            procs.sort_by(|a, b| {
+                b.cpu_percent
+                    .partial_cmp(&a.cpu_percent)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+            procs.truncate(20);
+
+            let cpu_global = sys.global_cpu_usage();
+            let sample = ResourceMonitorSample {
+                sampled_at: now_stamp(),
+                cpu_global_percent: cpu_global,
+                memory_used_bytes: sys.used_memory(),
+                memory_total_bytes: sys.total_memory(),
+                top_processes: procs,
+            };
+            let _ = app_clone.emit("resource_monitor:sample", &sample);
+            sleep(Duration::from_millis(1000)).await;
+        }
+    });
+
+    let mut guard = state.handle.lock().expect("monitor handle poisoned");
+    *guard = Some(handle);
+    ok(())
+}
+
+#[tauri::command]
+async fn stop_resource_monitor(
+    state: tauri::State<'_, MonitorState>,
+) -> CommandResult<()> {
+    let handle = {
+        let mut guard = state.handle.lock().expect("monitor handle poisoned");
+        guard.take()
+    };
+    if let Some(h) = handle {
+        h.abort();
+    }
+    ok(())
+}
+
+// ── Diagnostics: launcher scan report ──────────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LauncherCounts {
+    steam: u32,
+    epic: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OrphanedInstall {
+    path: String,
+    size_bytes: Option<u64>,
+    reason: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LauncherScanReport {
+    games_found: u32,
+    total_install_bytes: u64,
+    by_launcher: LauncherCounts,
+    orphaned_installs: Vec<OrphanedInstall>,
+    scan_duration_ms: u128,
+    paths_read: Vec<String>,
+    generated_at: String,
+}
+
+#[tauri::command]
+fn scan_launchers_report(
+    request: ScanLaunchersRequest,
+) -> CommandResult<LauncherScanReport> {
+    if !request.consent_granted {
+        return err(
+            "consent_required",
+            "Launcher scanning requires explicit local-file consent.",
+            true,
+        );
+    }
+    let started = Instant::now();
+    let mut detected = Vec::new();
+    let mut paths_read = Vec::new();
+    scan_steam(&mut detected, &mut paths_read);
+    scan_epic(&mut detected, &mut paths_read);
+
+    let mut steam_count: u32 = 0;
+    let mut epic_count: u32 = 0;
+    let mut total: u64 = 0;
+    let mut orphans: Vec<OrphanedInstall> = Vec::new();
+
+    for g in &detected {
+        match g.launcher.as_str() {
+            "steam" => steam_count += 1,
+            "epic" => epic_count += 1,
+            _ => {}
+        }
+        if let Some(b) = g.size_bytes {
+            total = total.saturating_add(b);
+        }
+        if let Some(p) = g.install_path.as_deref() {
+            let path = Path::new(p);
+            if !path.exists() {
+                // Walk up: if the parent (e.g. `steamapps/common/`) is missing
+                // too, the whole library is offline — surface a softer reason.
+                let parent_missing = path
+                    .parent()
+                    .map(|parent| !parent.exists())
+                    .unwrap_or(true);
+                orphans.push(OrphanedInstall {
+                    path: p.to_string(),
+                    size_bytes: g.size_bytes,
+                    reason: if parent_missing {
+                        "library_offline".to_string()
+                    } else {
+                        "missing_manifest".to_string()
+                    },
+                });
+            }
+        }
+    }
+
+    ok(LauncherScanReport {
+        games_found: detected.len() as u32,
+        total_install_bytes: total,
+        by_launcher: LauncherCounts {
+            steam: steam_count,
+            epic: epic_count,
+        },
+        orphaned_installs: orphans,
+        scan_duration_ms: started.elapsed().as_millis(),
+        paths_read,
+        generated_at: now_stamp(),
+    })
+}
+
 #[tauri::command]
 fn read_hardware_info() -> CommandResult<HardwareInfo> {
     let mut sys = System::new_all();
@@ -673,6 +1062,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
+        .manage(MonitorState::default())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -695,7 +1085,11 @@ pub fn run() {
             uninstall_game,
             open_install_folder,
             read_system_capabilities,
-            read_hardware_info
+            read_hardware_info,
+            run_hardware_snapshot,
+            start_resource_monitor,
+            stop_resource_monitor,
+            scan_launchers_report
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

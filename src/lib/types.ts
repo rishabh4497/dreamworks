@@ -1262,3 +1262,114 @@ export interface SocialPost {
   repostedByMe?: boolean;
   replies: SocialReply[];
 }
+
+// ── Diagnostics (desktop-only, Rust-backed) ─────────────────────────────────
+export interface CpuInfo {
+  brand: string;
+  vendorId: string;
+  physicalCores: number;
+  logicalCores: number;
+  baseFrequencyMhz: number;
+}
+
+export interface MemoryInfo {
+  totalBytes: number;
+  availableBytes: number;
+  usedBytes: number;
+  swapTotalBytes: number;
+  swapUsedBytes: number;
+}
+
+export interface DiskInfo {
+  name: string;
+  mountPoint: string;
+  totalBytes: number;
+  availableBytes: number;
+  fileSystem: string;
+  isRemovable: boolean;
+}
+
+export interface GpuInfo {
+  vendor: string;
+  model: string;
+  vramBytes: number;
+  backend: string;
+}
+
+export interface OsInfo {
+  name: string;
+  version: string;
+  kernelVersion: string;
+  hostname: string;
+  architecture: string;
+}
+
+export interface NetworkAdapter {
+  interfaceName: string;
+  macAddress: string;
+  isLoopback: boolean;
+}
+
+export interface HardwareSnapshot {
+  capturedAt: string;
+  schemaVersion: number;
+  cpu: CpuInfo;
+  memory: MemoryInfo;
+  disks: DiskInfo[];
+  gpus: GpuInfo[];
+  os: OsInfo;
+  network: NetworkAdapter[];
+}
+
+export interface ProcessSample {
+  pid: number;
+  name: string;
+  cpuPercent: number;
+  memoryBytes: number;
+  parentPid?: number | null;
+}
+
+export interface ResourceMonitorSample {
+  sampledAt: string;
+  cpuGlobalPercent: number;
+  memoryUsedBytes: number;
+  memoryTotalBytes: number;
+  topProcesses: ProcessSample[];
+}
+
+export interface LauncherCounts {
+  steam: number;
+  epic: number;
+}
+
+export interface OrphanedInstall {
+  path: string;
+  sizeBytes?: number | null;
+  reason: "missing_manifest" | "library_offline" | "duplicate" | "unreadable";
+}
+
+export interface LauncherScanReport {
+  gamesFound: number;
+  totalInstallBytes: number;
+  byLauncher: LauncherCounts;
+  orphanedInstalls: OrphanedInstall[];
+  scanDurationMs: number;
+  pathsRead: string[];
+  generatedAt: string;
+}
+
+export interface SystemRequirementScore {
+  cpuScore: number;
+  gpuScore: number;
+  ramGb: number;
+}
+
+export type FpsTier = "unplayable" | "low" | "medium" | "high" | "ultra";
+
+export interface FpsBreakdown {
+  tier: FpsTier;
+  cpuRatio: number;
+  gpuRatio: number;
+  ramRatio: number;
+  bottleneck: "cpu" | "gpu" | "ram";
+}

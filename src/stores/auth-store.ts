@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import type { AuthStateResponse, UserProfile } from "@/lib/types";
+import type { AuthStateResponse, UserProfile, UserRole } from "@/lib/types";
 import { DEFAULT_AVATAR_OPTIONS, type AvatarOptions } from "@/lib/avatar";
 import { getFirebaseAuth, getDb, COLLECTIONS } from "@/lib/firebase";
+import { claimAdminIfAllowlisted } from "@/lib/api/admin";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -95,6 +96,9 @@ async function handleUserAuth(user: User | null) {
           memberSince: data.memberSince || new Date().toISOString(),
           showcaseGameIds: data.showcaseGameIds || [],
           isSubscribed: !!data.isSubscribed,
+          role: ((data.role as UserRole) ?? "user"),
+          permissions: Array.isArray(data.permissions) ? data.permissions : [],
+          suspended: !!data.suspended,
         };
 
         useAuthStore.setState({
@@ -116,6 +120,22 @@ async function handleUserAuth(user: User | null) {
         profile: null
       });
     });
+
+    // Bootstrap: if the user is on the ADMIN_EMAILS allowlist (server-side)
+    // grant the admin custom claim once per session. Idempotent and silent
+    // for non-allowlisted users.
+    try {
+      const tokenResult = await user.getIdTokenResult();
+      if (!tokenResult.claims.admin) {
+        const result = await claimAdminIfAllowlisted();
+        if (result.admin) {
+          await user.getIdToken(true);
+        }
+      }
+    } catch (claimErr) {
+      // Non-fatal: the callable may be unavailable in local-only environments.
+      console.debug("admin claim bootstrap skipped", claimErr);
+    }
   } catch (error: any) {
     console.error("Error loading or creating user profile:", error);
     useAuthStore.setState({
