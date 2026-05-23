@@ -61,6 +61,22 @@ export async function invokeDesktop<T>(
   return invoke<T>(cmd, args);
 }
 
+/**
+ * Subscribe to a Tauri event emitted from the Rust backend (e.g. the live
+ * resource monitor stream). Returns an unlisten function; on web returns a
+ * no-op so callers can use the same effect cleanup shape on both platforms.
+ */
+export type UnlistenFn = () => void;
+
+export async function listenEvent<T>(
+  event: string,
+  cb: (payload: T) => void,
+): Promise<UnlistenFn> {
+  if (!isDesktop()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<T>(event, (e) => cb(e.payload));
+}
+
 // ── Filesystem helpers (desktop-only, NO-OP on web) ─────────────────────────
 //
 // All file/path operations go through these wrappers so the scanner modules

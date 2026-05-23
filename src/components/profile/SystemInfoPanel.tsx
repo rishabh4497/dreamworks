@@ -1,14 +1,17 @@
 import { Cpu, Monitor, Zap, Server, ChevronRight, Edit2, Check, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useLibraryStore } from "@/stores/library-store";
 import { useGames } from "@/hooks/use-games";
 import { useMemo, useState, useEffect } from "react";
 import { useProfileStore, detectSystemRig } from "@/stores/profile-store";
+import { ROUTES } from "@/lib/routes";
 
 export function SystemInfoPanel() {
   const { data: games } = useGames();
   const library = useLibraryStore((s) => s.entries);
   const { systemRig, customFps, setCustomFps, setSystemRig } = useProfileStore();
   const [isEditingFps, setIsEditingFps] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Re-detect on mount to ensure Tauri OS plugins have injected their window variables
@@ -110,7 +113,10 @@ export function SystemInfoPanel() {
             <HardwareCard icon={<Server />} title="Memory & Storage" value1={systemRig.ram} value2={systemRig.storage} />
           </div>
           
-          <button className="text-[12px] font-bold text-cyan hover:text-cyan/80 transition-colors flex items-center gap-1 cursor-pointer">
+          <button
+            onClick={() => navigate(ROUTES.diagnostics)}
+            className="text-[12px] font-bold text-cyan hover:text-cyan/80 transition-colors flex items-center gap-1 cursor-pointer"
+          >
             Run detailed hardware diagnostic <ChevronRight className="h-3 w-3" />
           </button>
         </div>
