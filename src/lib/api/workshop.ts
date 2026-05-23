@@ -1,4 +1,5 @@
-import type { GameId, WorkshopItem } from "../types";
+import type { GameId, WorkshopItem, WorkshopMod } from "../types";
+import { WORKSHOP_MODS } from "../mock/workshop-mods";
 import { wait } from "./_delay";
 
 const STORAGE_KEY = "dreamworks-workshop-items";
@@ -41,6 +42,11 @@ export async function listWorkshopItems(gameId?: GameId): Promise<WorkshopItem[]
   await wait();
   const items = readStored();
   return gameId ? items.filter((item) => item.gameId === gameId) : items;
+}
+
+export async function listWorkshopMods(gameId?: GameId): Promise<WorkshopMod[]> {
+  await wait();
+  return gameId ? WORKSHOP_MODS.filter((mod) => mod.gameId === gameId) : WORKSHOP_MODS;
 }
 
 export async function setWorkshopSubscription(input: {

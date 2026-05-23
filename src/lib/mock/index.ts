@@ -12,3 +12,8 @@ export { buildDepots } from "./depots";
 export { buildPatchNotes } from "./patch-notes";
 export { buildRegionalPrices } from "./regional-prices";
 export { buildReviewsForGame } from "./reviews";
+export { WORKSHOP_MODS } from "./workshop-mods";
+export { SAVE_HISTORY } from "./save-history";
+export { LFG_GROUPS } from "./lfg-groups";
+export { SPEEDRUN_RUNS } from "./speedrun-runs";
+export { FOLLOW_SUGGESTIONS } from "./follow-suggestions";

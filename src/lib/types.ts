@@ -1373,3 +1373,51 @@ export interface FpsBreakdown {
   ramRatio: number;
   bottleneck: "cpu" | "gpu" | "ram";
 }
+
+// ── Workshop mods (storefront-style browser shape, distinct from WorkshopItem) ──
+export interface WorkshopMod {
+  id: string;
+  name: string;
+  gameId: GameId;
+  author: string;
+  downloads: number;
+  rating: number;
+  imgUrl: string;
+}
+
+// ── Cloud save history (Time Machine slot list per game) ──
+export interface SaveHistoryEntry {
+  id: string;
+  date: string;
+  size: string;
+  desc: string;
+}
+
+// ── Looking-for-Group matchmaking lobbies ──
+export type LfgPlaystyle = "Casual" | "Tryhard" | "Achievement Hunter";
+
+export interface LfgGroup {
+  id: number;
+  host: string;
+  playstyle: LfgPlaystyle;
+  needMic: boolean;
+  spots: number;
+  max: number;
+  avatar: string;
+}
+
+// ── Speedrun leaderboard runs ──
+export interface SpeedrunRun {
+  rank: number;
+  player: string;
+  time: string;
+  verified: boolean;
+  avatar: string;
+}
+
+// ── Social: "who to follow" suggestions for the feed sidebar ──
+export interface FollowSuggestion {
+  name: string;
+  handle: string;
+  avatar: string;
+}

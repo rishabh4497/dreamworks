@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/EmptyState";
+import { ImageDropzone } from "@/components/common/ImageDropzone";
 import {
   useAllCreators,
   useSetCreatorVerification,
@@ -310,6 +311,8 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
 
               {editing ? (
                 <EditForm
+                  type={type}
+                  creatorId={selected.id}
                   draft={draft}
                   onChange={setDraft}
                   onChangeSocial={patchSocial}
@@ -458,10 +461,14 @@ function CreatorRow({
 }
 
 function EditForm({
+  type,
+  creatorId,
   draft,
   onChange,
   onChangeSocial,
 }: {
+  type: CreatorSubmissionType;
+  creatorId: string;
   draft: CreatorPatch;
   onChange: (next: CreatorPatch) => void;
   onChangeSocial: (key: keyof CreatorSocialLinks, value: string) => void;
@@ -469,6 +476,12 @@ function EditForm({
   const set = <K extends keyof CreatorPatch>(key: K, value: CreatorPatch[K]) => {
     onChange({ ...draft, [key]: value });
   };
+
+  // Mirror the developer-portal storage convention so admin uploads land in
+  // the same Firebase Storage bucket the public profile pages already read.
+  const collection = type === "publisher" ? "dw_publishers" : "dw_developers";
+  const logoPath = `${collection}/${creatorId}/logo`;
+  const bannerPath = `${collection}/${creatorId}/banner`;
 
   return (
     <div className="mb-4 space-y-4">
@@ -519,24 +532,19 @@ function EditForm({
       </Field>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Logo URL">
-          <input
-            type="url"
-            value={draft.logoUrl ?? ""}
-            onChange={(e) => set("logoUrl", e.target.value)}
-            placeholder="https://…"
-            className={INPUT_CLASS}
-          />
-        </Field>
-        <Field label="Banner URL">
-          <input
-            type="url"
-            value={draft.bannerUrl ?? ""}
-            onChange={(e) => set("bannerUrl", e.target.value)}
-            placeholder="https://…"
-            className={INPUT_CLASS}
-          />
-        </Field>
+        <ImageDropzone
+          label="Logo"
+          value={draft.logoUrl ?? ""}
+          onChange={(url) => set("logoUrl", url)}
+          storagePath={logoPath}
+        />
+        <ImageDropzone
+          label="Banner"
+          value={draft.bannerUrl ?? ""}
+          onChange={(url) => set("bannerUrl", url)}
+          storagePath={bannerPath}
+          maxDim={1600}
+        />
       </div>
 
       <Field label="Website URL">
