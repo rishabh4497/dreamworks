@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { ImageDropzone } from "@/components/common/ImageDropzone";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { toast } from "@/stores/toast-store";
 import {
   useAchievements,
@@ -33,6 +34,7 @@ export function AchievementsManager() {
   const del = useDeleteAchievement(appId);
 
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Achievement | null>(null);
 
   if (isLoading) {
     return <Card className="p-6 text-[13px] text-muted/65">Loading achievements…</Card>;
@@ -132,16 +134,7 @@ export function AchievementsManager() {
                       </button>
                       <button
                         className="text-muted/50 hover:text-red"
-                        onClick={async () => {
-                          if (!confirm(`Delete achievement "${a.name}"?`)) return;
-                          try {
-                            await del.mutateAsync(a.id);
-                            toast.success("Deleted.");
-                          } catch (err: unknown) {
-                            const msg = err instanceof Error ? err.message : "Delete failed.";
-                            toast.error(msg);
-                          }
-                        }}
+                        onClick={() => setPendingDelete(a)}
                         aria-label="Delete"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -215,6 +208,26 @@ export function AchievementsManager() {
           </div>
         )}
       </Modal>
+      <ConfirmModal
+        open={pendingDelete !== null}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (!target) return;
+          try {
+            await del.mutateAsync(target.id);
+            toast.success("Deleted.");
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Delete failed.";
+            toast.error(msg);
+          }
+        }}
+        title="Delete achievement?"
+        description={pendingDelete ? `“${pendingDelete.name}” will be removed permanently.` : undefined}
+        confirmLabel="Delete"
+        destructive
+      />
     </div>
   );
 }

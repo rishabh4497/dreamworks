@@ -28,6 +28,7 @@ import { LfgMatchmaking } from "@/components/store/LfgMatchmaking";
 import { DealForecaster } from "@/components/store/DealForecaster";
 import { MediaPlayer, type MediaItem } from "@/components/store/MediaPlayer";
 import { LazyMount } from "@/components/common/LazyMount";
+import { QueryErrorState } from "@/components/common/QueryErrorState";
 const PriceHistoryChart = lazy(() =>
   import("@/components/db/PriceHistoryChart").then((m) => ({ default: m.PriceHistoryChart })),
 );
@@ -400,15 +401,23 @@ export function GameDetailPage() {
             </p>
           )}
           <div className="space-y-3">
-            {userReview && (
-              <ReviewCard review={userReview} isYours />
+            {reviews.isError ? (
+              <QueryErrorState
+                message="Couldn't load reviews."
+                onRetry={() => void reviews.refetch()}
+                isRetrying={reviews.isFetching}
+              />
+            ) : (
+              <>
+                {userReview && <ReviewCard review={userReview} isYours />}
+                {(reviews.data ?? [])
+                  .filter((r) => r.id !== userReview?.id)
+                  .slice(0, 4)
+                  .map((r) => (
+                    <ReviewCard key={r.id} review={r} />
+                  ))}
+              </>
             )}
-            {(reviews.data ?? [])
-              .filter((r) => r.id !== userReview?.id)
-              .slice(0, 4)
-              .map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
           </div>
         </section>
       </div>

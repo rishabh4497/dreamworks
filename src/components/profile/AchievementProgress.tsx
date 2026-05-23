@@ -5,6 +5,7 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useGames } from "@/hooks/use-games";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import type { GameDetail } from "@/lib/types";
 
 interface AchievementRow {
   gameId: string;
@@ -28,7 +29,9 @@ export function AchievementProgress() {
 
   const rows = useMemo<AchievementRow[]>(() => {
     if (!games) return [];
-    const byId = new Map(games.map((g) => [g.id, g]));
+    // The catalog cache returns full GameDetail records in practice; the Game
+    // type just omits the detail-only fields. Cast on read for the optional ones.
+    const byId = new Map(games.map((g) => [g.id, g as unknown as GameDetail]));
     const candidates: AchievementRow[] = [];
     for (const entry of entries) {
       const game = byId.get(entry.gameId);

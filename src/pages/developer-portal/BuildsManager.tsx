@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { toast } from "@/stores/toast-store";
 import { useApp } from "@/hooks/use-apps";
 import {
@@ -43,6 +44,7 @@ export function BuildsManager() {
   const validator = useValidateBuildClient();
 
   const [showUpload, setShowUpload] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; label: string } | null>(null);
   const [label, setLabel] = useState("");
   const [notes, setNotes] = useState("");
   const [platforms, setPlatforms] = useState<OSPlatform[]>(["windows"]);
@@ -165,16 +167,7 @@ export function BuildsManager() {
                   <td className="px-4 py-2.5">
                     <button
                       className="text-muted/50 hover:text-red"
-                      onClick={async () => {
-                        if (!confirm(`Delete build ${b.buildLabel}?`)) return;
-                        try {
-                          await deleteBuild.mutateAsync(b.id);
-                          toast.success("Build deleted.");
-                        } catch (err: unknown) {
-                          const msg = err instanceof Error ? err.message : "Delete failed.";
-                          toast.error(msg);
-                        }
-                      }}
+                      onClick={() => setPendingDelete({ id: b.id, label: b.buildLabel })}
                       aria-label="Delete build"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -327,6 +320,26 @@ export function BuildsManager() {
           </div>
         </div>
       </Modal>
+      <ConfirmModal
+        open={pendingDelete !== null}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          const target = pendingDelete;
+          setPendingDelete(null);
+          if (!target) return;
+          try {
+            await deleteBuild.mutateAsync(target.id);
+            toast.success("Build deleted.");
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : "Delete failed.";
+            toast.error(msg);
+          }
+        }}
+        title="Delete build?"
+        description={pendingDelete ? `Build ${pendingDelete.label} will be removed.` : undefined}
+        confirmLabel="Delete"
+        destructive
+      />
     </div>
   );
 }

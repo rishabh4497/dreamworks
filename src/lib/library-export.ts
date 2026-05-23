@@ -30,9 +30,9 @@ function toExportRows(entries: LibraryEntry[], games: Game[]): ExportRow[] {
       lastPlayed: e.lastPlayed,
       completionPct: e.completionPct,
       ownedSince: e.ownedSince,
-      sourceLauncher: e.sourceLauncher,
+      sourceLauncher: e.sourceLauncher ?? "dreamworks",
       achievementsUnlocked: e.achievementsUnlocked,
-      drmType: e.drmType,
+      drmType: e.drmType ?? "dreamworks",
       sizeBytes: e.sizeBytes,
     };
   });
