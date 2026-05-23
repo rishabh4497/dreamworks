@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { Check, AlertCircle, Info, X } from "lucide-react";
 import { useToastStore } from "@/stores/toast-store";
+import { cn } from "@/lib/utils";
 
 const icons = { success: Check, error: AlertCircle, info: Info } as const;
 const colors = {
@@ -27,11 +28,24 @@ export function Toaster() {
               transition={{ duration: 0.2 }}
               className="pointer-events-auto flex items-center gap-2.5 rounded-xl border border-separator bg-bg/95 backdrop-blur-lg px-4 py-3 shadow-lg shadow-black/20 min-w-[240px]"
             >
-              <Icon className={`h-4 w-4 shrink-0 ${colors[toast.type]}`} />
-              <span className="text-[13px] text-foreground/80 flex-1">{toast.message}</span>
+              <Icon className={cn("h-4 w-4 shrink-0", colors[toast.type])} />
+              <span className="flex-1 text-[13px] text-foreground/80">{toast.message}</span>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action!.onClick();
+                    removeToast(toast.id);
+                  }}
+                  className="shrink-0 rounded-md bg-acid/15 px-2 py-1 text-[11px] font-semibold text-acid hover:bg-acid/25"
+                >
+                  {toast.action.label}
+                </button>
+              )}
               <button
                 onClick={() => removeToast(toast.id)}
                 className="shrink-0 text-muted/30 hover:text-foreground/50 transition-colors"
+                aria-label="Dismiss"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

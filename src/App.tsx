@@ -70,6 +70,7 @@ const ThreadPage = lazyNamed(() => import("@/pages/ThreadPage"), "ThreadPage");
 const WorkshopHomePage = lazyNamed(() => import("@/pages/workshop/WorkshopHomePage"), "WorkshopHomePage");
 const DreamworksPlusPage = lazyNamed(() => import("@/pages/DreamworksPlusPage"), "DreamworksPlusPage");
 const ProfilePage = lazyNamed(() => import("@/pages/ProfilePage"), "ProfilePage");
+const AvatarCustomizerPage = lazyNamed(() => import("@/pages/AvatarCustomizerPage"), "AvatarCustomizerPage");
 const FriendsPage = lazyNamed(() => import("@/pages/FriendsPage"), "FriendsPage");
 const SettingsPage = lazyNamed(() => import("@/pages/SettingsPage"), "SettingsPage");
 const DiagnosticsPage = lazyNamed(() => import("@/pages/DiagnosticsPage"), "DiagnosticsPage");
@@ -204,6 +205,7 @@ export default function App() {
             <Route path="cart/order/:orderId" element={<OrderConfirmationPage />} />
 
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/avatar" element={<AvatarCustomizerPage />} />
             <Route path="profile/:userId" element={<ProfilePage />} />
             <Route path="friends" element={<FriendsPage />} />
             <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />

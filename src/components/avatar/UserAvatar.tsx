@@ -21,6 +21,9 @@ export function UserAvatar({ options, size, className }: UserAvatarProps) {
     // Stable hash: include every customizable field.
     options.seed,
     options.backgroundColor,
+    options.backgroundType,
+    options.backgroundColor2,
+    options.backgroundRotation,
     options.body,
     options.brows,
     options.eyes,
@@ -29,6 +32,9 @@ export function UserAvatar({ options, size, className }: UserAvatarProps) {
     options.lips,
     options.nose,
     options.gesture,
+    options.beard,
+    options.bodyIcon,
+    options.flip,
   ]);
 
   return (

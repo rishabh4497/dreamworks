@@ -38,6 +38,7 @@ import { UniversalPhotoGallery, LocalCoopMatchmaker, InteractiveDigitalManuals, 
 import { AiDynamicPatchNotes } from "@/components/features/AiFeatures";
 import { LibraryAutoOrganizer } from "@/components/library/LibraryAutoOrganizer";
 import { CrossLauncherSearch } from "@/components/library/CrossLauncherSearch";
+import { LazyMount } from "@/components/common/LazyMount";
 
 const LAUNCHER_LABEL: Record<LauncherSource, string> = {
   dreamworks: "Dreamworks",
@@ -262,19 +263,27 @@ export function LibraryPage() {
       className="space-y-6"
     >
       <CloudSaveConflict />
-      <section className="grid gap-6 md:grid-cols-2">
-        <SaveRollback />
-        <ModManager />
-      </section>
-      <WishlistSync />
-      <CrossLauncherSearch />
-      <LibraryAutoOrganizer
-        onPickCollection={(ids, name) => {
-          setAiCollectionIds(ids);
-          setAiCollectionName(name);
-          setActiveCollection(null);
-        }}
-      />
+      <LazyMount placeholderHeight={200}>
+        <section className="grid gap-6 md:grid-cols-2">
+          <SaveRollback />
+          <ModManager />
+        </section>
+      </LazyMount>
+      <LazyMount placeholderHeight={140}>
+        <WishlistSync />
+      </LazyMount>
+      <LazyMount placeholderHeight={200}>
+        <CrossLauncherSearch />
+      </LazyMount>
+      <LazyMount placeholderHeight={260}>
+        <LibraryAutoOrganizer
+          onPickCollection={(ids, name) => {
+            setAiCollectionIds(ids);
+            setAiCollectionName(name);
+            setActiveCollection(null);
+          }}
+        />
+      </LazyMount>
       {aiCollectionIds && aiCollectionName && (
         <section className="flex items-center justify-between rounded-xl border border-acid/30 bg-acid/5 px-3 py-2">
           <p className="text-[12px] text-foreground/85">
@@ -293,13 +302,15 @@ export function LibraryPage() {
           </button>
         </section>
       )}
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <UniversalPhotoGallery />
-        <LocalCoopMatchmaker />
-        <InteractiveDigitalManuals />
-        <AutomatedModProfiles />
-        <AiDynamicPatchNotes />
-      </section>
+      <LazyMount placeholderHeight={320}>
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <UniversalPhotoGallery />
+          <LocalCoopMatchmaker />
+          <InteractiveDigitalManuals />
+          <AutomatedModProfiles />
+          <AiDynamicPatchNotes />
+        </section>
+      </LazyMount>
 
       {/* 1. Greeting + portfolio hero band */}
       <section

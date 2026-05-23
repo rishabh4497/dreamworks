@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "@/components/common/Toaster";
@@ -18,7 +18,10 @@ export function AppLayout() {
   const { langCode } = useTranslation();
   const mainRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
+  const navigationType = useNavigationType();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const scrollByPath = useRef<Map<string, number>>(new Map());
+  const prevPathname = useRef<string>(pathname);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -32,9 +35,20 @@ export function AppLayout() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, left: 0 });
-  }, [pathname]);
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    // Save the scroll position of the page we're leaving.
+    scrollByPath.current.set(prevPathname.current, main.scrollTop);
+    // On Back navigation, restore the saved position if we have one.
+    if (navigationType === "POP") {
+      const saved = scrollByPath.current.get(pathname) ?? 0;
+      main.scrollTo({ top: saved, left: 0 });
+    } else {
+      main.scrollTo({ top: 0, left: 0 });
+    }
+    prevPathname.current = pathname;
+  }, [pathname, navigationType]);
 
   useEffect(() => {
     if (typeof document !== "undefined") {

@@ -70,7 +70,7 @@ function rankScore(query: string, label: string, keywords: string[] = []): numbe
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { data: games } = useGames();
-  const setTheme = useThemeStore((s) => s.setTheme);
+  const setTheme = useThemeStore((s) => s.setMode);
   const updateSettings = useUiStore((s) => s.updateSettings);
   const settings = useUiStore((s) => s.settings);
 

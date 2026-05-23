@@ -7,10 +7,22 @@ import { cn } from "@/lib/utils";
 export function WishlistButton({ gameId, label }: { gameId: GameId; label?: string }) {
   const has = useWishlistStore((s) => s.has(gameId));
   const toggle = useWishlistStore((s) => s.toggle);
+  const add = useWishlistStore((s) => s.add);
 
   const onClick = async () => {
     const added = await toggle(gameId);
-    toast.success(added ? "Added to wishlist" : "Removed from wishlist");
+    if (added) {
+      toast.success("Added to wishlist");
+    } else {
+      toast.success("Removed from wishlist", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void add(gameId);
+          },
+        },
+      });
+    }
   };
 
   return (

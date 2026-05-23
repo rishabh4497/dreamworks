@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
 import { PriceTag } from "@/components/ui/price-tag";
 import { ChipInGifting } from "@/components/cart/ChipInGifting";
+import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { formatPrice } from "@/lib/utils";
 
@@ -97,7 +98,17 @@ export function CartPage() {
                 </div>
                 <PriceTag price={g.price} size="md" />
                 <button
-                  onClick={() => remove(g.id)}
+                  onClick={() => {
+                    void remove(g.id);
+                    toast.info(`Removed “${g.name}”`, {
+                      action: {
+                        label: "Undo",
+                        onClick: () => {
+                          void useCartStore.getState().add(g.id);
+                        },
+                      },
+                    });
+                  }}
                   className="rounded-md p-2 text-muted/40 hover:bg-input hover:text-red"
                   aria-label={`Remove ${g.name}`}
                 >

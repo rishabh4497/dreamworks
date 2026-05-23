@@ -541,7 +541,7 @@ export function GameDetailPage() {
 // Lightweight chat-style UI. Answers are mock-generated for v1; the seam is
 // here for a future Claude API call (just swap `getMockAnswer` for an SSE
 // stream).
-import { Modal } from "@/components/ui/modal";
+import { SideDrawer } from "@/components/ui/side-drawer";
 import { ChatThread, ChatComposer, type ChatMessage } from "@/components/ui/chat";
 
 const SUGGESTED_QUESTIONS = [
@@ -619,35 +619,47 @@ function AskAIModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="max-w-2xl">
-      <div className="flex h-[72vh] max-h-[680px] flex-col">
-        <header className="mb-3 flex items-center gap-3 border-b border-separator pb-3">
+    <SideDrawer
+      open={open}
+      onClose={onClose}
+      header={
+        <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-acid/10 text-acid">
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[15px] font-semibold text-foreground">
+            <p className="truncate text-[14px] font-semibold text-foreground">
               Ask AI about {gameName}
-            </h2>
-            <p className="text-[11px] text-muted/60">
+            </p>
+            <p className="truncate text-[11px] text-muted/60">
               Blends community discussions, reviews, and patch notes.
             </p>
           </div>
           <span className="rounded-full border border-acid/30 bg-acid/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-widest text-acid">
             Beta
           </span>
-        </header>
-
+        </div>
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         <ChatThread
+          mode="ai"
           messages={messages}
           typing={thinking}
           typingAuthor={`Dreamworks AI · ${gameName}`}
-          className="mb-3"
           empty={
-            <div className="w-full max-w-md space-y-3 px-2">
-              <p className="text-center text-[12px] font-medium text-muted/70">
-                Suggested questions
-              </p>
+            <div className="w-full max-w-md space-y-4 px-2">
+              <div className="text-center">
+                <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-acid/10 text-acid">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <p className="text-[13px] font-medium text-foreground/85">
+                  Ask anything about {gameName}
+                </p>
+                <p className="mt-0.5 text-[11.5px] text-muted/55">
+                  Answers blend community discussions, reviews, and patch notes.
+                </p>
+              </div>
               <div className="space-y-2">
                 {SUGGESTED_QUESTIONS.map((sq) => (
                   <button
@@ -670,9 +682,11 @@ function AskAIModal({
           onSend={() => send(input)}
           placeholder={`Ask anything about ${gameName}…`}
           busy={thinking}
+          autoFocus
+          maxLength={1500}
         />
       </div>
-    </Modal>
+    </SideDrawer>
   );
 }
 

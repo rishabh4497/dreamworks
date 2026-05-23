@@ -260,15 +260,23 @@ export function AiStoreCurator({ candidateGames = DEFAULT_CANDIDATES }: StoreCur
       </header>
 
       <ChatThread
+        mode="ai"
         messages={messages}
         typing={curator.isPending}
         typingAuthor="Store Curator"
         className="mb-3"
         empty={
-          <div className="w-full max-w-sm space-y-3 px-2">
-            <div className="flex items-center justify-center gap-1.5 text-muted/60">
-              <Sparkles className="h-3.5 w-3.5" />
-              <p className="text-[12px] font-medium">Tell me what you're in the mood for</p>
+          <div className="w-full max-w-sm space-y-4 px-2">
+            <div className="text-center">
+              <div className="mx-auto mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-acid/10 text-acid">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <p className="text-[13px] font-medium text-foreground/85">
+                Tell me what you're in the mood for
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-muted/55">
+                I'll dig through the catalog and surface picks.
+              </p>
             </div>
             <div className="space-y-2">
               {CURATOR_PROMPT_SUGGESTIONS.map((p) => (
@@ -292,6 +300,7 @@ export function AiStoreCurator({ candidateGames = DEFAULT_CANDIDATES }: StoreCur
         onSend={() => ask(input)}
         placeholder="Tell me what you want to play…"
         busy={curator.isPending}
+        maxLength={1500}
       />
     </div>
   );

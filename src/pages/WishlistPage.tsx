@@ -192,8 +192,15 @@ export function WishlistPage() {
                 )}
                 <button
                   onClick={() => {
-                    remove(g.id);
-                    toast.info("Removed from wishlist");
+                    void remove(g.id);
+                    toast.info("Removed from wishlist", {
+                      action: {
+                        label: "Undo",
+                        onClick: () => {
+                          void useWishlistStore.getState().add(g.id);
+                        },
+                      },
+                    });
                   }}
                   className="rounded-md border border-separator bg-card px-3 py-1.5 text-[11px] text-muted hover:bg-card-active hover:text-foreground/80"
                 >

@@ -69,6 +69,7 @@ export const ROUTES = {
   order: (id: string) => `/cart/order/${id}`,
 
   profile: "/profile",
+  avatarCustomizer: "/profile/avatar",
   profileOther: (uid: string) => `/profile/${uid}`,
   friends: "/friends",
 
