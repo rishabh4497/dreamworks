@@ -28,6 +28,7 @@ import type {
   AuditEntry,
   AuditTargetType,
   CreatorProfileSubmission,
+  CreatorSocialLinks,
   CreatorSubmissionType,
   CreatorVerificationStatus,
   Developer,
@@ -37,6 +38,17 @@ import type {
 } from "@/lib/types";
 
 export type Creator = (Publisher | Developer) & { creatorType: CreatorSubmissionType };
+
+export type CreatorPatch = Partial<{
+  name: string;
+  tagline: string;
+  about: string;
+  logoUrl: string;
+  bannerUrl: string;
+  brandColor: string;
+  websiteUrl: string;
+  socialLinks: CreatorSocialLinks;
+}>;
 
 // ── App management (admin) ─────────────────────────────────────────────────
 
@@ -348,6 +360,22 @@ export async function setCreatorVerification(input: {
     verificationStatus: input.status,
     updatedAt: new Date().toISOString(),
   });
+}
+
+export async function updateCreator(input: {
+  type: CreatorSubmissionType;
+  id: string;
+  patch: CreatorPatch;
+}): Promise<void> {
+  const ref = doc(
+    getDb(),
+    input.type === "publisher" ? COLLECTIONS.publishers : COLLECTIONS.developers,
+    input.id,
+  );
+  const cleaned = Object.fromEntries(
+    Object.entries(input.patch).filter(([, v]) => v !== undefined),
+  );
+  await updateDoc(ref, { ...cleaned, updatedAt: new Date().toISOString() });
 }
 
 export async function listCreatorSubmissionQueue(

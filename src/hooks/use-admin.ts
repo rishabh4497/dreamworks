@@ -11,6 +11,7 @@ import {
   reviewStudioProfile,
   setCreatorVerification,
   setUserRole,
+  updateCreator,
 } from "@/lib/api/admin";
 import { appKeys } from "@/hooks/use-apps";
 import { invalidateCatalogCache } from "@/lib/api/games";
@@ -50,6 +51,14 @@ export function useSetCreatorVerification() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: setCreatorVerification,
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+  });
+}
+
+export function useUpdateCreator() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: updateCreator,
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
 }

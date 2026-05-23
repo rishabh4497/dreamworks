@@ -6,24 +6,32 @@ import {
   CheckCircle2,
   ExternalLink,
   Globe,
+  Pencil,
   RotateCcw,
+  Save,
   Search,
+  X,
   XCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/EmptyState";
-import { useAllCreators, useSetCreatorVerification } from "@/hooks/use-admin";
+import {
+  useAllCreators,
+  useSetCreatorVerification,
+  useUpdateCreator,
+} from "@/hooks/use-admin";
 import { toast } from "@/stores/toast-store";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { openExternal } from "@/lib/platform";
 import type {
+  CreatorSocialLinks,
   CreatorSubmissionType,
   CreatorVerificationStatus,
 } from "@/lib/types";
-import type { Creator } from "@/lib/api/admin";
+import type { Creator, CreatorPatch } from "@/lib/api/admin";
 
 type VerificationFilter = CreatorVerificationStatus | "all";
 
@@ -65,7 +73,10 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
   const [search, setSearch] = useState("");
   const { data, isLoading, error } = useAllCreators(type, { verification: filter });
   const setVerification = useSetCreatorVerification();
+  const updateMutation = useUpdateCreator();
   const [selectedId, setSelectedId] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<CreatorPatch>({});
 
   useEffect(() => {
     const handle = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), 200);
@@ -93,6 +104,12 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
     }
   }, [filtered, selectedId]);
 
+  // Reset edit mode whenever the selected creator changes.
+  useEffect(() => {
+    setEditing(false);
+    setDraft({});
+  }, [selectedId, type]);
+
   const selected = filtered.find((c) => c.id === selectedId);
 
   const stats = useMemo(() => {
@@ -115,6 +132,45 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Update failed.");
     }
+  };
+
+  const startEdit = () => {
+    if (!selected) return;
+    setDraft({
+      name: selected.name ?? "",
+      tagline: selected.tagline ?? "",
+      about: selected.about ?? "",
+      logoUrl: selected.logoUrl ?? "",
+      bannerUrl: selected.bannerUrl ?? "",
+      brandColor: selected.brandColor ?? "",
+      websiteUrl: selected.websiteUrl ?? "",
+      socialLinks: { ...(selected.socialLinks ?? {}) },
+    });
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setDraft({});
+  };
+
+  const saveEdit = async () => {
+    if (!selected) return;
+    try {
+      await updateMutation.mutateAsync({ type, id: selected.id, patch: draft });
+      toast.success(`${selected.name} updated.`);
+      setEditing(false);
+      setDraft({});
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Save failed.");
+    }
+  };
+
+  const patchSocial = (key: keyof CreatorSocialLinks, value: string) => {
+    setDraft((curr) => ({
+      ...curr,
+      socialLinks: { ...(curr.socialLinks ?? {}), [key]: value },
+    }));
   };
 
   return (
