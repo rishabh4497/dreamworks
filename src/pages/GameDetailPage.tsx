@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { BarChart3, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Send, Sparkles, Tag } from "lucide-react";
+import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Send, ShoppingCart, Sparkles, Tag } from "lucide-react";
 import { useGameDetail } from "@/hooks/use-games";
 import { usePriceHistory, useHistoricalLows } from "@/hooks/use-game-db";
 import { useGameReviews } from "@/hooks/use-reviews";
@@ -30,9 +30,11 @@ import { PriceHistoryChart } from "@/components/db/PriceHistoryChart";
 import { HistoricalLowsTable } from "@/components/db/HistoricalLowsTable";
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
 import { useLibraryStore } from "@/stores/library-store";
+import { useCartStore } from "@/stores/cart-store";
 import { useUserReviewsStore } from "@/stores/user-reviews-store";
 import { useAccentStore } from "@/stores/accent-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
@@ -355,21 +357,12 @@ export function GameDetailPage() {
             <PriceTag price={detail.price} size="lg" />
             {detail.includedInSubscription && (
               <div className="rounded-lg border border-[#a052ff]/30 bg-[#a052ff]/10 px-3 py-2 text-center text-[12px] font-semibold text-[#c99eff]">
-                Included with Dreamworks+
+                <span className="inline-flex items-center gap-1.5">
+                  <Crown className="h-3 w-3" /> Included with Dreamworks+
+                </span>
               </div>
             )}
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                {detail.includedInSubscription && isSubscribed ? (
-                  <Button className="flex-1 bg-[#a052ff] text-white hover:bg-[#b06df5]" onClick={() => toast.success("Launched via Dreamworks+")}>
-                    Play with Dreamworks+
-                  </Button>
-                ) : (
-                  <AddToLibraryButton game={detail} />
-                )}
-                <WishlistButton gameId={detail.id} />
-              </div>
-            </div>
+            <PlusAwareActions detail={detail} isSubscribed={!!isSubscribed} owns={owns} navigate={navigate} />
             {detail.hasDemo && (
               <div className="flex flex-wrap gap-2">
                 <DemoButton />
@@ -683,6 +676,138 @@ function Row({
       )}
       <span className="text-muted/60">{label}</span>
       <span className="ml-auto text-foreground/80 truncate">{value}</span>
+    </div>
+  );
+}
+
+interface PlusAwareActionsProps {
+  detail: GameDetail;
+  isSubscribed: boolean;
+  owns: boolean;
+  navigate: (to: string) => void;
+}
+
+/**
+ * Game-detail action stack that splits Plus benefits from purchase.
+ *
+ * - Subscribed + game-in-Plus → Play with Plus, Play in Cloud (if eligible),
+ *   Install (free with Plus), and Add to Cart for permanent ownership, all
+ *   visible at once.
+ * - Non-subscriber + game-in-Plus → a Plus pitch card next to the standard
+ *   cart flow.
+ * - Otherwise → the standard cart/library button.
+ */
+function PlusAwareActions({ detail, isSubscribed, owns, navigate }: PlusAwareActionsProps) {
+  const cartHas = useCartStore((s) => s.has(detail.id));
+  const addToCart = useCartStore((s) => s.add);
+  const addFromPurchase = useLibraryStore((s) => s.addFromPurchase);
+  const startDownload = useStartDownload();
+
+  const included = !!detail.includedInSubscription;
+  const cloudPlayable = !!detail.cloudPlayable;
+
+  // Subscribed user, game is in Plus, doesn't own it yet.
+  if (included && isSubscribed && !owns) {
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => toast.success(`Launching “${detail.name}” via Dreamworks+`)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110"
+          style={{ background: "#a052ff", boxShadow: "0 8px 24px rgba(160, 82, 255, 0.45)" }}
+        >
+          <Crown className="h-4 w-4" />
+          Play with Dreamworks+
+        </button>
+
+        {cloudPlayable && (
+          <button
+            type="button"
+            onClick={() => toast.success(`Streaming “${detail.name}” to this device`)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan/40 bg-cyan/10 px-4 py-2.5 text-[13px] font-semibold text-cyan transition-all hover:bg-cyan/15"
+          >
+            <Cloud className="h-4 w-4" />
+            Play in Cloud
+          </button>
+        )}
+
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              await addFromPurchase([detail.id], `plus-${detail.id}`);
+              startDownload(detail.id, detail.estimatedSizeBytes || 8_000_000_000, { silent: true });
+              toast.success(`Adding “${detail.name}” to your library`);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-separator bg-card-active px-4 py-2.5 text-[13px] font-semibold text-foreground/85 transition-all hover:bg-card-hover"
+          >
+            <Download className="h-4 w-4" />
+            Add to library
+          </button>
+          <WishlistButton gameId={detail.id} />
+        </div>
+
+        {!detail.price.isFree && (
+          <button
+            type="button"
+            onClick={() => {
+              if (cartHas) {
+                navigate(ROUTES.cart);
+                return;
+              }
+              addToCart(detail.id);
+              toast.success(`Added “${detail.name}” to cart`);
+            }}
+            className={cn(
+              "flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-[12px] font-medium transition-all",
+              cartHas
+                ? "border border-acid/40 bg-acid/10 text-acid hover:bg-acid/15"
+                : "text-muted/80 hover:text-foreground",
+            )}
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+            {cartHas ? "In cart — view" : "Or own it permanently"}
+          </button>
+        )}
+
+        <p className="pt-1 text-center text-[10.5px] text-muted/55">
+          Free with Plus while you're a member. Buy to keep it forever.
+        </p>
+      </div>
+    );
+  }
+
+  // Game is in Plus but user isn't subscribed — surface the upsell next to the standard cart flow.
+  if (included && !isSubscribed && !owns) {
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => navigate(ROUTES.plus)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110"
+          style={{ background: "#a052ff", boxShadow: "0 8px 24px rgba(160, 82, 255, 0.45)" }}
+        >
+          <Crown className="h-4 w-4" />
+          {cloudPlayable ? "Stream free with Plus" : "Get it free with Plus"}
+        </button>
+        <div className="flex gap-2">
+          <AddToLibraryButton game={detail} />
+          <WishlistButton gameId={detail.id} />
+        </div>
+        <p className="pt-1 text-center text-[10.5px] text-muted/55">
+          {cloudPlayable
+            ? "Plus members stream this title in 4K. Try a month free."
+            : "Plus members play this title free."}
+        </p>
+      </div>
+    );
+  }
+
+  // Default / owned path — existing behavior.
+  return (
+    <div className="flex gap-2">
+      <AddToLibraryButton game={detail} />
+      <WishlistButton gameId={detail.id} />
     </div>
   );
 }
