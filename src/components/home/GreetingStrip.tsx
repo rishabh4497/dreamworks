@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "motion/react";
-import { Flame, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLibraryStore } from "@/stores/library-store";
@@ -19,13 +19,13 @@ function greetingFor(now: Date, name: string): string {
 interface Stat {
   label: string;
   value: string;
-  tone: "acid" | "positive" | "cyan" | "orange";
+  tone: "acid" | "positive" | "cyan" | "orange" | "green";
 }
 
 /**
- * Glass strip at the top of the store home. Avatar + time-of-day greeting
- * plus three pulse-stats that swap based on whatever signals are loud right
- * now (week's playtime → wishlist size → friends online → discovery hint).
+ * Slim, vibrant welcome chip. Avatar + time-of-day greeting + three pulse
+ * stats on a single line — sits flush above the cinematic hero so the page
+ * opens warm without eating vertical space.
  */
 export function GreetingStrip() {
   const profile = useAuthStore((s) => s.profile);
@@ -34,7 +34,6 @@ export function GreetingStrip() {
   const { data: friends } = useFriends();
 
   const displayName = profile?.displayName ?? "friend";
-
   const greeting = useMemo(() => greetingFor(new Date(), displayName), [displayName]);
 
   const friendsOnline = useMemo(() => {
@@ -52,39 +51,16 @@ export function GreetingStrip() {
     }, 0);
 
     const out: Stat[] = [];
-
     if (weekMinutes > 0) {
-      out.push({
-        label: "Played this week",
-        value: formatHours(weekMinutes),
-        tone: "acid",
-      });
+      out.push({ label: "This week", value: formatHours(weekMinutes), tone: "cyan" });
     }
-    out.push({
-      label: weekMinutes > 0 ? "In library" : "Games owned",
-      value: `${entries.length}`,
-      tone: "positive",
-    });
+    out.push({ label: "Library", value: `${entries.length}`, tone: "positive" });
     if (wishlistCount > 0) {
-      out.push({
-        label: "On wishlist",
-        value: `${wishlistCount}`,
-        tone: "cyan",
-      });
+      out.push({ label: "Wishlist", value: `${wishlistCount}`, tone: "orange" });
     }
     if (friendsOnline > 0) {
-      out.push({
-        label: "Friends online",
-        value: `${friendsOnline}`,
-        tone: "orange",
-      });
+      out.push({ label: "Online", value: `${friendsOnline}`, tone: "green" });
     }
-
-    // If we ended up with nothing meaningful, surface the discover hint.
-    if (out.length < 2) {
-      out.push({ label: "Today's mood", value: "Discover", tone: "acid" });
-    }
-
     return out.slice(0, 4);
   }, [entries, wishlistCount, friendsOnline]);
 
@@ -93,83 +69,50 @@ export function GreetingStrip() {
     positive: "text-positive",
     cyan: "text-cyan",
     orange: "text-orange",
+    green: "text-green",
   };
-
   const dotBg: Record<Stat["tone"], string> = {
     acid: "bg-acid",
     positive: "bg-positive",
     cyan: "bg-cyan",
     orange: "bg-orange",
+    green: "bg-green",
   };
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="relative mb-6 overflow-hidden rounded-2xl border border-separator bg-card/70 p-4 backdrop-blur-sm md:p-5"
+      transition={{ duration: 0.35 }}
+      className="relative mb-3 flex flex-wrap items-center justify-between gap-3"
     >
-      <div
-        className="pointer-events-none absolute inset-0 -z-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-acid) 12%, transparent), transparent 50%), radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--color-positive) 10%, transparent), transparent 55%)",
-        }}
-      />
-
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          {profile?.avatarOptions ? (
-            <UserAvatar options={profile.avatarOptions} size={44} />
-          ) : (
-            <div className="h-11 w-11 shrink-0 rounded-2xl bg-card-active" />
-          )}
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-acid">
-              <Sparkles className="h-3 w-3" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">
-                Dreamworks
-              </span>
-            </div>
-            <h1 className="text-[20px] font-bold leading-tight tracking-tight text-foreground sm:text-[22px]">
-              {greeting}
-            </h1>
-            {friendsOnline > 0 ? (
-              <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-muted/70">
-                <motion.span
-                  aria-hidden
-                  animate={{ opacity: [1, 0.35, 1] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                  className="block h-1.5 w-1.5 rounded-full bg-green"
-                />
-                {friendsOnline} {friendsOnline === 1 ? "friend" : "friends"} online now
-              </p>
-            ) : (
-              <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-muted/70">
-                <Flame className="h-3 w-3 text-orange" />
-                Fresh picks waiting for you
-              </p>
-            )}
+      <div className="flex items-center gap-2.5">
+        {profile?.avatarOptions ? (
+          <UserAvatar options={profile.avatarOptions} size={32} />
+        ) : (
+          <div className="h-8 w-8 rounded-xl bg-card-active" />
+        )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-1 text-acid">
+            <Sparkles className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.2em]">Dreamworks</span>
           </div>
+          <h1 className="truncate text-[15px] font-bold leading-tight tracking-tight text-foreground">
+            {greeting}
+          </h1>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-5">
-          {stats.map((s) => (
-            <div key={s.label} className="flex items-center gap-2">
-              <span className={`block h-1.5 w-1.5 shrink-0 rounded-full ${dotBg[s.tone]}`} />
-              <div className="min-w-0">
-                <p
-                  className={`font-mono text-[16px] font-bold leading-none tabular-nums ${toneClass[s.tone]}`}
-                >
-                  {s.value}
-                </p>
-                <p className="mt-0.5 truncate text-[10px] uppercase tracking-widest text-muted/60">
-                  {s.label}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="flex items-center gap-4 text-[12px]">
+        {stats.map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5">
+            <span className={`block h-1.5 w-1.5 rounded-full ${dotBg[s.tone]}`} />
+            <span className={`font-mono text-[13px] font-bold tabular-nums leading-none ${toneClass[s.tone]}`}>
+              {s.value}
+            </span>
+            <span className="text-[10px] uppercase tracking-widest text-muted/60">{s.label}</span>
+          </div>
+        ))}
       </div>
     </motion.section>
   );

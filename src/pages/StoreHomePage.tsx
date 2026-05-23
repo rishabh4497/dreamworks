@@ -1,18 +1,17 @@
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "motion/react";
+import { Brain, ChevronRight, Sparkles, Trophy, Users } from "lucide-react";
 import { GameShelf } from "@/components/store/GameShelf";
 import { GreetingStrip } from "@/components/home/GreetingStrip";
 import { FeaturedHeroBanner } from "@/components/home/FeaturedHeroBanner";
+import { LiveEventBanners } from "@/components/home/LiveEventBanners";
+import { TodaysSpotlights } from "@/components/home/TodaysSpotlights";
 import { ContinuePlayingRail } from "@/components/home/ContinuePlayingRail";
 import { FriendsActivityRail } from "@/components/home/FriendsActivityRail";
 import { BentoGrid } from "@/components/home/BentoGrid";
 import { TrendingLive } from "@/components/home/TrendingLive";
 import { MoodExplorer } from "@/components/home/MoodExplorer";
-import { BookClubs } from "@/components/community/BookClubs";
-import { SpeedrunLeaderboards } from "@/components/community/SpeedrunLeaderboards";
-import { LFGBoard } from "@/components/community/LFGBoard";
-import { MiniTournaments } from "@/components/community/MiniTournaments";
-import { GiftCardCreator } from "@/components/store/GiftCardCreator";
 import { CuratorShelves } from "@/components/store/CuratorShelves";
 import {
   useGames,
@@ -21,8 +20,6 @@ import {
 } from "@/hooks/use-games";
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
 import { ROUTES } from "@/lib/routes";
-import { AiStoreCurator, AiReviewSummarizer } from "@/components/features/AiFeatures";
-import { HardwareAwareWarnings } from "@/components/features/UserFeatures";
 
 /** Friendlier copy for the existing shelf IDs. */
 const SHELF_TITLE_OVERRIDES: Record<string, string> = {
@@ -40,7 +37,6 @@ export function StoreHomePage() {
   const allGames = useGames();
   const recentIds = useRecentlyViewedStore((s) => s.ids);
 
-  // Build a "for you" tag pool from recently viewed games (falling back to top sellers).
   const recentGames = allGames.data?.filter((g) => recentIds.includes(g.id)) ?? [];
   const tagPool = Array.from(
     new Set([
@@ -69,28 +65,22 @@ export function StoreHomePage() {
       transition={{ duration: 0.3 }}
       className="space-y-2"
     >
-      {/* 1. Welcome — personalized greeting + live stats */}
+      {/* 1. Slim welcome line — single row, hugging the hero. */}
       <GreetingStrip />
 
-      {/* 2. Cinematic hero — rotating featured games at 480px tall */}
+      {/* 2. Cinematic alive hero — full-bleed, colored glow, particles. */}
       <FeaturedHeroBanner />
 
-      {/* 3. Continue playing — hidden when library is empty */}
+      {/* 3. Festival event banners — four full-stretched colorful tiles. */}
+      <LiveEventBanners />
+
+      {/* 4. Continue playing — hidden when library is empty. */}
       <ContinuePlayingRail />
 
-      {/* 4. Apple Music-style bento (Spotlight / Free this week / Wrapped / Sale / Gem / Trending tag) */}
-      <BentoGrid />
+      {/* 5. Today's spotlights — three big vivid game cards. */}
+      <TodaysSpotlights />
 
-      {/* 5. Discord-style "live right now" with animated counts */}
-      <TrendingLive />
-
-      {/* 6. Friends activity rail */}
-      <FriendsActivityRail />
-
-      {/* 7. Mood explorer — colorful tag-jump tiles */}
-      <MoodExplorer />
-
-      {/* 8. The existing six shelves, with friendlier titles */}
+      {/* 6. Existing six shelves — kept full-strength (this is the storefront). */}
       {shelves
         ? shelves.map((shelf) => (
             <GameShelf
@@ -116,37 +106,100 @@ export function StoreHomePage() {
           </>
         )}
 
-      {/* 9. AI features cluster — moved below the discovery zones so they don't crowd the hero */}
-      <section className="pt-4">
-        <div className="mb-3">
-          <h2 className="text-[16px] font-semibold text-foreground">Dreamworks AI</h2>
-          <p className="mt-0.5 text-[12px] text-muted/70">Cuts through reviews, specs, and noise — so you don't have to.</p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <AiStoreCurator />
-          <div className="flex flex-col gap-4">
-            <AiReviewSummarizer />
-            <HardwareAwareWarnings />
-          </div>
-        </div>
-      </section>
+      {/* 7. Bento grid + Live + Mood — colorful discovery, still game-first. */}
+      <BentoGrid />
+      <TrendingLive />
+      <MoodExplorer />
 
-      {/* 10. Community Hub */}
-      <section className="pt-6">
-        <div className="mb-3">
-          <h2 className="text-[16px] font-semibold text-foreground">Community Hub</h2>
-          <p className="mt-0.5 text-[12px] text-muted/70">Tournaments, clubs, leaderboards, and groups to roll with.</p>
-        </div>
-        <div className="grid gap-6">
-          <MiniTournaments />
-          <BookClubs />
-          <SpeedrunLeaderboards />
-          <LFGBoard />
-        </div>
-      </section>
+      {/* 8. Friends activity rail — compact social signal. */}
+      <FriendsActivityRail />
 
-      <GiftCardCreator />
+      {/* 9. Minimal secondary entries — AI, community, gift cards rolled into
+             a tight three-up so they sit at the floor of the page rather than
+             competing with games for attention. */}
+      <MinimalSecondaryRow />
+
+      {/* 10. Curator shelves — slim editorial footer. */}
       <CuratorShelves />
     </motion.div>
+  );
+}
+
+/**
+ * Three compact entry tiles linking to the heavier secondary surfaces
+ * (AI, community, gift cards). Replaces the full inline sections that
+ * used to crowd the bottom of the home page.
+ */
+function MinimalSecondaryRow() {
+  const items = [
+    {
+      to: ROUTES.storeSearch,
+      icon: Brain,
+      kicker: "AI",
+      title: "Dreamworks AI",
+      subtitle: "Curator, summaries, hardware warnings",
+      accentClass: "text-cyan",
+      dotClass: "bg-cyan",
+      glow: "from-cyan/20 via-positive/10 to-transparent",
+    },
+    {
+      to: ROUTES.forums,
+      icon: Users,
+      kicker: "Community",
+      title: "Tournaments, clubs & LFG",
+      subtitle: "Find a squad and roll out",
+      accentClass: "text-orange",
+      dotClass: "bg-orange",
+      glow: "from-orange/20 via-red/10 to-transparent",
+    },
+    {
+      to: ROUTES.cart,
+      icon: Trophy,
+      kicker: "Gifts",
+      title: "Gift cards & bundles",
+      subtitle: "Send a friend something nice",
+      accentClass: "text-green",
+      dotClass: "bg-green",
+      glow: "from-green/20 via-positive/10 to-transparent",
+    },
+  ] as const;
+
+  return (
+    <section className="pt-4">
+      <div className="mb-2 flex items-center gap-2">
+        <Sparkles className="h-3 w-3 text-acid" />
+        <h2 className="text-[12px] font-bold uppercase tracking-[0.2em] text-muted/70">
+          Also on Dreamworks
+        </h2>
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {items.map((it) => {
+          const Icon = it.icon;
+          return (
+            <Link
+              key={it.title}
+              to={it.to}
+              className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-separator bg-card/60 px-3 py-3 backdrop-blur-sm transition-all hover:border-white/15 hover:bg-card-hover"
+            >
+              <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${it.glow} opacity-70`} />
+              <div className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-card-active">
+                <Icon className={`h-4 w-4 ${it.accentClass}`} />
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className={`block h-1.5 w-1.5 rounded-full ${it.dotClass}`} />
+                  <span className={`text-[9.5px] font-bold uppercase tracking-[0.2em] ${it.accentClass}`}>
+                    {it.kicker}
+                  </span>
+                </div>
+                <p className="truncate text-[13px] font-semibold text-foreground">{it.title}</p>
+                <p className="truncate text-[10.5px] text-muted/70">{it.subtitle}</p>
+              </div>
+              <ChevronRight className="relative h-3.5 w-3.5 shrink-0 text-muted/60 transition-all group-hover:translate-x-0.5 group-hover:text-foreground" />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
