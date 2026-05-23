@@ -1,12 +1,16 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sysinfo::{System, Disks};
+use sysinfo::{Disks, Networks, ProcessRefreshKind, ProcessesToUpdate, System};
 use std::{
     env, fs,
     path::{Path, PathBuf},
     process::Command,
-    time::{Instant, SystemTime, UNIX_EPOCH},
+    sync::Mutex,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+use tauri::{AppHandle, Emitter, Manager};
+use tauri::async_runtime::{spawn, JoinHandle};
+use tokio::time::sleep;
 
 // ... (skip down to the end to add read_hardware_info and add to invoke_handler)
 

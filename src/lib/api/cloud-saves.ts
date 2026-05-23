@@ -1,7 +1,16 @@
 import type { CloudSaveResolution, CloudSaveSlot, GameId } from "../types";
-import { wait } from "./_delay";
+import { getDb } from "../firebase";
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+} from "firebase/firestore";
 
 const STORAGE_KEY = "dreamworks-cloud-save-slots";
+const COLLECTION = "dw_cloud_saves";
 
 const SEED_SLOTS: CloudSaveSlot[] = [
   {
@@ -44,18 +53,46 @@ function writeStored(slots: CloudSaveSlot[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(slots));
 }
 
-function listMergedSlots(): CloudSaveSlot[] {
-  const stored = readStored();
-  const storedIds = new Set(stored.map((slot) => slot.id));
-  return [...stored, ...SEED_SLOTS.filter((slot) => !storedIds.has(slot.id))];
+async function fetchFromFirestore(userId: string): Promise<CloudSaveSlot[]> {
+  try {
+    const q = query(collection(getDb(), COLLECTION), where("userId", "==", userId));
+    const snap = await getDocs(q);
+    const out: CloudSaveSlot[] = [];
+    snap.forEach((d) => out.push(d.data() as CloudSaveSlot));
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function mergeSlots(...sources: CloudSaveSlot[][]): CloudSaveSlot[] {
+  const byId = new Map<string, CloudSaveSlot>();
+  for (const source of sources) {
+    for (const slot of source) {
+      const existing = byId.get(slot.id);
+      if (!existing) {
+        byId.set(slot.id, slot);
+        continue;
+      }
+      // Prefer the entry with the newest local timestamp.
+      const existingTs = existing.localUpdatedAt ?? existing.remoteUpdatedAt ?? "";
+      const incomingTs = slot.localUpdatedAt ?? slot.remoteUpdatedAt ?? "";
+      if (incomingTs > existingTs) byId.set(slot.id, slot);
+    }
+  }
+  return Array.from(byId.values());
 }
 
 export async function listCloudSaveSlots(input: {
   userId: string;
   gameId?: GameId;
 }): Promise<CloudSaveSlot[]> {
-  await wait();
-  return listMergedSlots().filter(
+  const local = readStored();
+  const remote = await fetchFromFirestore(input.userId);
+  const merged = mergeSlots(remote, local, SEED_SLOTS);
+  // Refresh the local cache so subsequent reads start from the merged set.
+  writeStored(merged);
+  return merged.filter(
     (slot) =>
       slot.userId === input.userId &&
       (!input.gameId || slot.gameId === input.gameId),
@@ -63,10 +100,14 @@ export async function listCloudSaveSlots(input: {
 }
 
 export async function upsertCloudSaveSlot(slot: CloudSaveSlot): Promise<CloudSaveSlot> {
-  await wait();
   const existing = readStored();
   const next = [slot, ...existing.filter((candidate) => candidate.id !== slot.id)];
   writeStored(next);
+  try {
+    await setDoc(doc(getDb(), COLLECTION, slot.id), slot);
+  } catch {
+    // Best-effort — local cache already updated, retry will happen on next write.
+  }
   return slot;
 }
 
@@ -93,8 +134,8 @@ export async function resolveCloudSaveConflict(input: {
   slotId: string;
   resolution: CloudSaveResolution;
 }): Promise<CloudSaveSlot> {
-  await wait();
-  const slot = listMergedSlots().find((candidate) => candidate.id === input.slotId);
+  const merged = mergeSlots(readStored(), SEED_SLOTS);
+  const slot = merged.find((candidate) => candidate.id === input.slotId);
   if (!slot) {
     throw new Error(`Cloud save slot not found: ${input.slotId}`);
   }
@@ -114,7 +155,5 @@ export async function resolveCloudSaveConflict(input: {
     remoteUpdatedAt: syncedAt,
     conflictReason: undefined,
   };
-  const existing = readStored();
-  writeStored([updated, ...existing.filter((candidate) => candidate.id !== updated.id)]);
-  return updated;
+  return upsertCloudSaveSlot(updated);
 }

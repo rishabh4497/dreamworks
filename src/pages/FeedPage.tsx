@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -103,6 +103,11 @@ export function FeedPage() {
 
   // Stores and hooks data
   const { posts, createPost, toggleLikePost, toggleRepostPost, addReply } = useFeedStore();
+  const hydrateFeed = useFeedStore((s) => s.hydrate);
+  const feedLoaded = useFeedStore((s) => s.loaded);
+  useEffect(() => {
+    if (!feedLoaded) void hydrateFeed();
+  }, [feedLoaded, hydrateFeed]);
   const { data: games = [] } = useGames();
   const { data: news = [], isLoading: newsLoading } = useNews();
   const { data: threads = [], isLoading: threadsLoading } = useRecentThreads();

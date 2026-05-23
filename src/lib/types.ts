@@ -383,6 +383,8 @@ export interface CreatorSocialLinks {
   twitch?: string;
 }
 
+export type CreatorVerificationStatus = "unverified" | "pending" | "approved" | "rejected";
+
 export interface Developer {
   id: string;                  // slug of name
   name: string;
@@ -396,6 +398,8 @@ export interface Developer {
   socialLinks?: CreatorSocialLinks;
   appIds: string[];            // denormalized list of owned app slugs
   updatedAt: ISODate;
+  verificationStatus?: CreatorVerificationStatus;
+  latestSubmissionId?: string;
 }
 
 export interface Publisher {
@@ -411,6 +415,8 @@ export interface Publisher {
   socialLinks?: CreatorSocialLinks;
   appIds: string[];
   updatedAt: ISODate;
+  verificationStatus?: CreatorVerificationStatus;
+  latestSubmissionId?: string;
 }
 
 export type AppStage = "draft" | "in-review" | "coming-soon" | "released";
@@ -500,10 +506,169 @@ export interface App {
   submittedAt?: ISODate;
   createdAt: ISODate;
   updatedAt: ISODate;
+
+  // ── Submission tracking (denormalized from latest dw_app_submissions doc) ──
+  submissionStatus?: SubmissionStatus | "none";
+  latestSubmissionId?: string;
+  lastReviewedAt?: ISODate;
+  lastReviewerUid?: string;
+}
+
+// ── App submissions (admin review pipeline) ────────────────────────────────
+//
+// Append-only history. One doc per submission attempt. Resubmissions create
+// a new doc with `priorSubmissionId` linking back to the prior attempt. The
+// `dw_apps/{id}.submissionStatus` field is a denormalized pointer to the
+// latest doc's status; the submission record is the source of truth.
+
+export type SubmissionStatus =
+  | "pending"
+  | "in_review"
+  | "changes_requested"
+  | "approved"
+  | "rejected";
+
+export type SubmissionRejectionReason =
+  | "capsule_art_missing"
+  | "capsule_art_low_quality"
+  | "screenshots_insufficient"
+  | "screenshots_misleading"
+  | "description_too_short"
+  | "description_misleading"
+  | "description_prohibited_content"
+  | "age_rating_mismatch"
+  | "tags_misleading"
+  | "trailer_broken"
+  | "trailer_misleading"
+  | "build_missing"
+  | "build_unverified"
+  | "build_crashes"
+  | "pricing_outside_band"
+  | "release_date_invalid"
+  | "policy_violation"
+  | "ip_infringement"
+  | "duplicate_submission"
+  | "metadata_incomplete"
+  | "other";
+
+export type SubmissionAssetField =
+  | "coverUrl"
+  | "capsuleUrl"
+  | "headerUrl"
+  | "screenshots"
+  | "trailers"
+  | "shortDescription"
+  | "longDescription"
+  | "ageRating"
+  | "latestBuildId"
+  | "pricing";
+
+export interface SubmissionAssetComment {
+  field: SubmissionAssetField;
+  index?: number;
+  comment: string;
+}
+
+export interface SubmissionDecision {
+  outcome: "approve" | "request_changes" | "reject";
+  summaryNote: string;
+  reasons: SubmissionRejectionReason[];
+  assetComments: SubmissionAssetComment[];
+}
+
+export interface AppSnapshot {
+  gameTitle: string;
+  shortDescription: string;
+  longDescription: string;
+  genres: string[];
+  tags: string[];
+  languages: string[];
+  ageRating: string;
+  platforms: OSPlatform[];
+  basePriceCents: PriceCents;
+  releaseDate?: ISODate;
+  releaseWindow: ReleaseWindow;
+  coverUrl?: string;
+  capsuleUrl?: string;
+  headerUrl?: string;
+  screenshots: string[];
+  trailers: Trailer[];
+  latestBuildId?: string;
+  checklist: AppChecklist;
+  features: GameFeature[];
+}
+
+export interface AppSubmission {
+  id: string;
+  appId: string;
+  submitterUserId: string;
+  submitterEmail: string;
+  appSnapshot: AppSnapshot;
+  status: SubmissionStatus;
+  submittedAt: ISODate;
+  claimedAt?: ISODate;
+  claimedByUid?: string;
+  decidedAt?: ISODate;
+  decidedByUid?: string;
+  decision?: SubmissionDecision;
+  priorSubmissionId?: string | null;
+}
+
+// ── Creator-profile submissions (publisher/studio onboarding) ──────────────
+export type CreatorSubmissionType = "publisher" | "developer";
+
+export interface CreatorProfileSubmission {
+  id: string;
+  creatorType: CreatorSubmissionType;
+  creatorId: string;
+  submitterUserId: string;
+  submitterEmail: string;
+  profileSnapshot: Publisher | Developer;
+  status: SubmissionStatus;
+  submittedAt: ISODate;
+  claimedAt?: ISODate;
+  claimedByUid?: string;
+  decidedAt?: ISODate;
+  decidedByUid?: string;
+  decision?: SubmissionDecision;
+}
+
+// ── Admin audit log ─────────────────────────────────────────────────────────
+export type AuditAction =
+  | "submission.review"
+  | "submission.submit"
+  | "app.publish"
+  | "user.role_set"
+  | "user.permissions_set"
+  | "publisher.review"
+  | "studio.review"
+  | "moderation.decide";
+
+export type AuditTargetType =
+  | "app"
+  | "submission"
+  | "user"
+  | "publisher"
+  | "developer"
+  | "moderationRecord";
+
+export interface AuditEntry {
+  id: string;
+  actorUid: string;
+  actorEmail: string;
+  action: AuditAction;
+  targetType: AuditTargetType;
+  targetId: string;
+  beforeState?: Record<string, unknown>;
+  afterState?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  ts: ISODate;
 }
 
 // ── User & ownership ───────────────────────────────────────────────────────
 import type { AvatarOptions } from "./avatar";
+
+export type UserRole = "user" | "developer" | "publisher" | "admin";
 
 export interface UserProfile {
   uid: string;
@@ -523,6 +688,21 @@ export interface UserProfile {
   memberSince: ISODate;
   showcaseGameIds: GameId[];
   isSubscribed?: boolean;
+  role: UserRole;
+  permissions: string[];
+  suspended?: boolean;
+}
+
+export interface AdminUserSummary {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: UserRole;
+  permissions: string[];
+  suspended?: boolean;
+  createdAt?: ISODate;
+  lastSignInAt?: ISODate;
 }
 
 /**

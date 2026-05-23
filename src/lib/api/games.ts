@@ -61,17 +61,55 @@ export async function ensureGamesSeeded(): Promise<void> {
 // ── Catalog snapshot cache ────────────────────────────────────────────────
 //
 // Every storefront screen needs the games catalog and most need it sliced
-// many different ways. Without this layer, a single Store Home visit fires
+// many different ways. Without this layer a single Store Home visit fires
 // 8+ full-collection reads against Firestore (one per shelf/list hook).
 //
-// Strategy: one in-memory snapshot, refreshed at most every CATALOG_TTL_MS.
-// All concurrent callers share the same in-flight promise.
+// Strategy:
+//   1. One in-memory snapshot, refreshed at most every CATALOG_TTL_MS.
+//   2. Concurrent callers share the same in-flight promise.
+//   3. Successful loads are mirrored into sessionStorage so a tab reload
+//      (or a new tab in the same session) skips Firestore entirely.
 
-const CATALOG_TTL_MS = 5 * 60 * 1000;
+const CATALOG_TTL_MS = 30 * 60 * 1000;
+const CATALOG_STORAGE_KEY = "dw_catalog_v1";
+
+interface CatalogSnapshot {
+  data: GameDetail[];
+  cachedAt: number;
+}
 
 let catalogCache: GameDetail[] | null = null;
 let catalogCachedAt = 0;
 let catalogInflight: Promise<GameDetail[]> | null = null;
+let hydrationAttempted = false;
+
+function hydrateFromStorage(): void {
+  if (hydrationAttempted) return;
+  hydrationAttempted = true;
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.sessionStorage.getItem(CATALOG_STORAGE_KEY);
+    if (!raw) return;
+    const parsed: CatalogSnapshot = JSON.parse(raw);
+    if (!parsed?.data || typeof parsed.cachedAt !== "number") return;
+    if (Date.now() - parsed.cachedAt >= CATALOG_TTL_MS) return;
+    catalogCache = parsed.data;
+    catalogCachedAt = parsed.cachedAt;
+  } catch {
+    // Corrupt entry or quota issue — ignore and re-fetch.
+  }
+}
+
+function persistToStorage(data: GameDetail[], cachedAt: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    const snap: CatalogSnapshot = { data, cachedAt };
+    window.sessionStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(snap));
+  } catch {
+    // QuotaExceededError or private-mode browser — non-fatal, we just lose
+    // the cross-reload optimization.
+  }
+}
 
 async function loadCatalog(): Promise<GameDetail[]> {
   await ensureGamesSeeded();
@@ -82,6 +120,7 @@ async function loadCatalog(): Promise<GameDetail[]> {
 }
 
 async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
+  if (!force) hydrateFromStorage();
   const now = Date.now();
   if (!force && catalogCache && now - catalogCachedAt < CATALOG_TTL_MS) {
     return catalogCache;
@@ -90,8 +129,10 @@ async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
   catalogInflight = (async () => {
     try {
       const data = await loadCatalog();
+      const cachedAt = Date.now();
       catalogCache = data;
-      catalogCachedAt = Date.now();
+      catalogCachedAt = cachedAt;
+      persistToStorage(data, cachedAt);
       return data;
     } finally {
       catalogInflight = null;
@@ -104,6 +145,13 @@ async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
 export function invalidateCatalogCache(): void {
   catalogCache = null;
   catalogCachedAt = 0;
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.removeItem(CATALOG_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export async function listGames(): Promise<Game[]> {

@@ -12,6 +12,7 @@ import {
   submitAppForReview,
   type AppPatch,
 } from "@/lib/api/apps";
+import { invalidateCatalogCache } from "@/lib/api/games";
 
 export const appKeys = {
   all: ["apps"] as const,
@@ -89,6 +90,7 @@ export function usePublishApp(id: string | undefined) {
       if (!id) return;
       qc.invalidateQueries({ queryKey: appKeys.byId(id) });
       qc.invalidateQueries({ queryKey: appKeys.mine() });
+      invalidateCatalogCache();
       qc.invalidateQueries({ queryKey: ["games"] });
     },
   });

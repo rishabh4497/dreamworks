@@ -2,6 +2,14 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import { SEED_NOTIFICATIONS } from "@/lib/mock/notifications";
+import {
+  clearNotificationsOlderThan,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  pushNotification,
+} from "@/lib/api/notifications";
+import { useAuthStore } from "./auth-store";
 
 /** Max entries retained in the panel before FIFO trimming. */
 const MAX_ENTRIES = 200;
@@ -14,9 +22,10 @@ interface NotificationsStore {
   unreadCount: number;
   /** Internal flag used to seed mock notifications on first hydrate. */
   _seeded: boolean;
-  push: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  hydrate: () => Promise<void>;
+  push: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => Promise<void>;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
   clear: () => void;
   clearOlderThan: (days: number) => void;
   /**
@@ -32,49 +41,89 @@ function recomputeUnread(entries: AppNotification[]): number {
   return count;
 }
 
-function makeId(): string {
-  return `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+function currentUserId(): string | null {
+  return useAuthStore.getState().profile?.uid ?? null;
 }
 
 export const useNotificationsStore = create<NotificationsStore>()(
   persist(
-    (set, _get) => ({
+    (set, get) => ({
       notifications: [],
       unreadCount: 0,
       _seeded: false,
-      push: (n) =>
-        set((s) => {
+      hydrate: async () => {
+        const userId = currentUserId();
+        if (!userId) return;
+        try {
+          const entries = await listNotifications(userId);
+          set({
+            notifications: entries.slice(0, MAX_ENTRIES),
+            unreadCount: recomputeUnread(entries),
+            _seeded: true,
+          });
+        } catch {
+          // Firestore unavailable — leave local cache as-is.
+        }
+      },
+      push: async (n) => {
+        const userId = currentUserId();
+        if (!userId) {
+          // Local-only fallback (e.g. anonymous sessions)
           const entry: AppNotification = {
             ...n,
-            id: makeId(),
+            id: `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
             createdAt: new Date().toISOString(),
             read: false,
           };
-          // Newest first; cap to MAX_ENTRIES (drop oldest).
-          const next = [entry, ...s.notifications].slice(0, MAX_ENTRIES);
-          return { notifications: next, unreadCount: recomputeUnread(next) };
-        }),
-      markRead: (id) =>
-        set((s) => {
-          let changed = false;
-          const next = s.notifications.map((n) => {
-            if (n.id === id && !n.read) {
-              changed = true;
-              return { ...n, read: true };
-            }
-            return n;
+          set((s) => {
+            const next = [entry, ...s.notifications].slice(0, MAX_ENTRIES);
+            return { notifications: next, unreadCount: recomputeUnread(next) };
           });
-          if (!changed) return s;
-          return { notifications: next, unreadCount: recomputeUnread(next) };
-        }),
-      markAllRead: () =>
-        set((s) => {
-          if (s.unreadCount === 0) return s;
-          const next = s.notifications.map((n) => (n.read ? n : { ...n, read: true }));
-          return { notifications: next, unreadCount: 0 };
-        }),
+          return;
+        }
+        try {
+          const entry = await pushNotification(userId, n);
+          set((s) => {
+            const next = [entry, ...s.notifications].slice(0, MAX_ENTRIES);
+            return { notifications: next, unreadCount: recomputeUnread(next) };
+          });
+        } catch {
+          // ignore; bell stays as-is
+        }
+      },
+      markRead: async (id) => {
+        const before = get().notifications;
+        let changed = false;
+        const next = before.map((n) => {
+          if (n.id === id && !n.read) {
+            changed = true;
+            return { ...n, read: true };
+          }
+          return n;
+        });
+        if (!changed) return;
+        set({ notifications: next, unreadCount: recomputeUnread(next) });
+        try {
+          await markNotificationRead(id);
+        } catch {
+          // best-effort
+        }
+      },
+      markAllRead: async () => {
+        const userId = currentUserId();
+        if (get().unreadCount === 0) return;
+        const next = get().notifications.map((n) => (n.read ? n : { ...n, read: true }));
+        set({ notifications: next, unreadCount: 0 });
+        if (!userId) return;
+        try {
+          await markAllNotificationsRead(userId);
+        } catch {
+          // best-effort
+        }
+      },
       clear: () => set({ notifications: [], unreadCount: 0 }),
-      clearOlderThan: (days) =>
+      clearOlderThan: (days) => {
+        const userId = currentUserId();
         set((s) => {
           if (s.notifications.length === 0) return s;
           const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
@@ -84,7 +133,11 @@ export const useNotificationsStore = create<NotificationsStore>()(
           });
           if (next.length === s.notifications.length) return s;
           return { notifications: next, unreadCount: recomputeUnread(next) };
-        }),
+        });
+        if (userId) {
+          void clearNotificationsOlderThan(userId, days).catch(() => {});
+        }
+      },
       _hydrateSeed: (entries) =>
         set(() => ({
           notifications: entries.slice(0, MAX_ENTRIES),
@@ -112,6 +165,9 @@ export const useNotificationsStore = create<NotificationsStore>()(
           // Recompute unread count just in case the persisted value drifted.
           state.unreadCount = recomputeUnread(state.notifications);
         }
+        // Best-effort: refresh from Firestore so the user sees server-side
+        // notifications (price drops, system events) once authenticated.
+        void state.hydrate();
       },
     },
   ),

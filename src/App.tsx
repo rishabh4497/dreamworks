@@ -139,10 +139,16 @@ export default function App() {
           <Route path="workshop" element={<WorkshopHomePage />} />
           <Route path="workshop/:gameId" element={<WorkshopHomePage />} />
 
-          <Route path="library" element={<LibraryPage />} />
-          <Route path="library/collection/:collectionId" element={<LibraryCollectionPage />} />
-          <Route path="library/:gameId" element={<LibraryGamePage />} />
-          <Route path="downloads" element={<DownloadsPage />} />
+          <Route path="library" element={<DesktopOnly><LibraryPage /></DesktopOnly>} />
+          <Route
+            path="library/collection/:collectionId"
+            element={<DesktopOnly><LibraryCollectionPage /></DesktopOnly>}
+          />
+          <Route
+            path="library/:gameId"
+            element={<DesktopOnly><LibraryGamePage /></DesktopOnly>}
+          />
+          <Route path="downloads" element={<DesktopOnly><DownloadsPage /></DesktopOnly>} />
           <Route path="wishlist" element={<WishlistPage />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="cart/checkout" element={<CheckoutPage />} />
@@ -151,7 +157,11 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/:userId" element={<ProfilePage />} />
           <Route path="friends" element={<FriendsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />
+          <Route
+            path="diagnostics"
+            element={<DesktopOnly><DiagnosticsPage /></DesktopOnly>}
+          />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>

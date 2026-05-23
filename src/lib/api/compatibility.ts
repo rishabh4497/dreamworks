@@ -1,5 +1,6 @@
 import type { GameId } from "../types";
-import { wait } from "./_delay";
+import { getDb } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export type CompatibilityRating = "verified" | "playable" | "tweaks" | "unsupported" | "unknown";
 
@@ -22,6 +23,7 @@ export interface CompatibilityRecord {
 }
 
 const PREF_KEY = "dreamworks-compatibility-prefs";
+const COLLECTION = "dw_compatibility";
 
 const DEFAULT_RUNTIMES: RuntimeOption[] = [
   { id: "native", label: "Native runtime" },
@@ -97,14 +99,67 @@ function seedFor(gameId: GameId): Omit<CompatibilityRecord, "selectedRuntime" | 
   );
 }
 
+async function currentUserId(): Promise<string | null> {
+  // Lazy import keeps this module free of a store dependency at evaluation time.
+  const { useAuthStore } = await import("@/stores/auth-store");
+  return useAuthStore.getState().profile?.uid ?? null;
+}
+
+function docKey(userId: string, gameId: GameId): string {
+  return `${userId}_${gameId}`;
+}
+
+async function fetchRemotePref(gameId: GameId): Promise<StoredPreference | null> {
+  const uid = await currentUserId();
+  if (!uid) return null;
+  try {
+    const snap = await getDoc(doc(getDb(), COLLECTION, docKey(uid, gameId)));
+    if (!snap.exists()) return null;
+    const data = snap.data() as StoredPreference & { userId: string };
+    return {
+      gameId: data.gameId,
+      selectedRuntime: data.selectedRuntime,
+      launchOptions: data.launchOptions,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function writeRemotePref(pref: StoredPreference): Promise<void> {
+  const uid = await currentUserId();
+  if (!uid) return;
+  try {
+    await setDoc(doc(getDb(), COLLECTION, docKey(uid, pref.gameId)), {
+      ...pref,
+      userId: uid,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {
+    // Best-effort — local cache stays authoritative.
+  }
+}
+
 export async function getCompatibility(gameId: GameId): Promise<CompatibilityRecord> {
-  await wait();
   const seed = seedFor(gameId);
-  const pref = readPrefs().find((item) => item.gameId === gameId);
+  const localPref = readPrefs().find((item) => item.gameId === gameId);
+  const remotePref = await fetchRemotePref(gameId);
+  // Prefer remote (cross-device) over local cache; fall back to seed defaults.
+  const merged: StoredPreference = {
+    gameId,
+    selectedRuntime:
+      remotePref?.selectedRuntime ?? localPref?.selectedRuntime ?? seed.defaultRuntime,
+    launchOptions: remotePref?.launchOptions ?? localPref?.launchOptions ?? "",
+  };
+  if (remotePref) {
+    // Keep local cache aligned.
+    const others = readPrefs().filter((p) => p.gameId !== gameId);
+    writePrefs([merged, ...others]);
+  }
   return {
     ...seed,
-    selectedRuntime: pref?.selectedRuntime ?? seed.defaultRuntime,
-    launchOptions: pref?.launchOptions ?? "",
+    selectedRuntime: merged.selectedRuntime ?? seed.defaultRuntime,
+    launchOptions: merged.launchOptions ?? "",
   };
 }
 
@@ -113,7 +168,6 @@ export async function updateCompatibilityPreference(input: {
   selectedRuntime?: string;
   launchOptions?: string;
 }): Promise<CompatibilityRecord> {
-  await wait();
   const existing = readPrefs();
   const current = existing.find((item) => item.gameId === input.gameId) ?? {
     gameId: input.gameId,
@@ -124,5 +178,6 @@ export async function updateCompatibilityPreference(input: {
     launchOptions: input.launchOptions ?? current.launchOptions,
   };
   writePrefs([next, ...existing.filter((item) => item.gameId !== input.gameId)]);
+  void writeRemotePref(next);
   return getCompatibility(input.gameId);
 }

@@ -1,20 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getGameDetail,
-  listComingSoon,
   listGames,
-  listGamesByCategory,
-  listGamesByDeveloper,
-  listGamesByPublisher,
-  listGamesByTag,
-  listGamesWithDemos,
-  listHiddenGems,
-  listNewReleases,
-  listRecommended,
   listShelvesForHome,
-  listSpecials,
-  listTopSellers,
-  searchGames,
   type SearchFilters,
 } from "@/lib/api/games";
 import type { Game, GameDetail, GameId } from "@/lib/types";
