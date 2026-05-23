@@ -30,7 +30,7 @@ export function ReviewPollModal({ game, open, onClose }: ReviewPollModalProps) {
         className="w-full max-w-sm overflow-hidden rounded-2xl border border-separator bg-card shadow-2xl"
       >
         <div className="relative h-24 w-full">
-          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={game.headerUrl} alt="" className="h-full w-full object-cover opacity-50" />
+          <img loading="lazy" decoding="async" src={game.headerUrl} alt="" className="h-full w-full object-cover opacity-50" />
           <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
           <button onClick={onClose} className="absolute right-3 top-3 rounded-md p-1 bg-black/40 text-white hover:bg-black/60">
             <X className="h-4 w-4" />

@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { doc, onSnapshot } from "firebase/firestore";
-import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { attachUserDocSync } from "@/lib/store-factory";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   addRecipient,
@@ -28,34 +27,8 @@ export const useGiftRecipientsStore = create<GiftRecipientsStore>(() => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribe: (() => void) | null = null;
-
-function sync(state: ReturnType<typeof useAuthStore.getState>) {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-
-  if (!uid) {
-    useGiftRecipientsStore.setState({ recipients: [] });
-    return;
-  }
-
-  const ref = doc(getDb(), COLLECTIONS.userGiftRecipients, uid);
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      useGiftRecipientsStore.setState({ recipients: [] });
-      return;
-    }
-    const data = snap.data() as UserGiftRecipientsDoc;
-    useGiftRecipientsStore.setState({ recipients: data.recipients ?? [] });
-  });
-}
-
-useAuthStore.subscribe(sync);
-sync(useAuthStore.getState());
+attachUserDocSync<GiftRecipientsStore, UserGiftRecipientsDoc>(useGiftRecipientsStore, {
+  collectionKey: "userGiftRecipients",
+  mapDoc: (data) => ({ recipients: data?.recipients ?? [] }),
+  empty: { recipients: [] },
+});

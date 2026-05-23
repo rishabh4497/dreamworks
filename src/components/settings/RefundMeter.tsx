@@ -54,7 +54,7 @@ export function RefundMeter() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     {game?.coverUrl ? (
-                      <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={game.coverUrl} alt="" className="w-12 h-12 rounded object-cover" />
+                      <img loading="lazy" decoding="async" src={game.coverUrl} alt="" className="w-12 h-12 rounded object-cover" />
                     ) : (
                       <div className="w-12 h-12 rounded bg-card flex items-center justify-center border border-separator">
                         <span className="text-[10px] text-muted">Art</span>

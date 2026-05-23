@@ -84,7 +84,7 @@ export function CartPage() {
               className="rounded-xl border border-separator bg-card p-3"
             >
               <div className="flex items-center gap-4">
-                <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={g.capsuleUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-32 rounded-md object-cover" />
+                <img loading="lazy" decoding="async" src={g.capsuleUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-32 rounded-md object-cover" />
                 <div className="flex-1 min-w-0">
                   {g.id === "plus-sub" ? (
                     <p className="text-[13px] font-semibold text-[#a052ff] truncate">{g.name}</p>

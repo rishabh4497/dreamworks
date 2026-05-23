@@ -101,7 +101,7 @@ export function AchievementsManager() {
                   <td className="px-4 py-2.5">
                     <div className="h-9 w-9 overflow-hidden rounded-md border border-separator bg-card-active">
                       {a.iconUrl ? (
-                        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={a.iconUrl} alt="" className="h-full w-full object-cover" />
+                        <img loading="lazy" decoding="async" src={a.iconUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <Trophy className="m-2 h-5 w-5 text-muted/40" />
                       )}

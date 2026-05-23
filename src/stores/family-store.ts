@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { doc, onSnapshot } from "firebase/firestore";
-import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { attachUserDocSync } from "@/lib/store-factory";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   addFamilyMember,
@@ -36,34 +35,8 @@ export const useFamilyStore = create<FamilyStore>(() => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribe: (() => void) | null = null;
-
-function sync(state: ReturnType<typeof useAuthStore.getState>) {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-
-  if (!uid) {
-    useFamilyStore.setState({ members: [] });
-    return;
-  }
-
-  const ref = doc(getDb(), COLLECTIONS.userFamily, uid);
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      useFamilyStore.setState({ members: [] });
-      return;
-    }
-    const data = snap.data() as UserFamilyDoc;
-    useFamilyStore.setState({ members: data.members ?? [] });
-  });
-}
-
-useAuthStore.subscribe(sync);
-sync(useAuthStore.getState());
+attachUserDocSync<FamilyStore, UserFamilyDoc>(useFamilyStore, {
+  collectionKey: "userFamily",
+  mapDoc: (data) => ({ members: data?.members ?? [] }),
+  empty: { members: [] },
+});

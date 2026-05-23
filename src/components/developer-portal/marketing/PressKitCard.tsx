@@ -109,7 +109,7 @@ export function PressKitCard({ appId }: { appId: string }) {
                 onClick={() => void openExternal(url)}
                 className="aspect-video overflow-hidden rounded-md border border-separator/60"
               >
-                <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={url} alt={`Screenshot ${i + 1}`} className="h-full w-full object-cover" />
+                <img loading="lazy" decoding="async" src={url} alt={`Screenshot ${i + 1}`} className="h-full w-full object-cover" />
               </button>
             ))}
             {screenshots.length === 0 && (

@@ -135,10 +135,10 @@ export function Topbar() {
                 className="rounded-full"
               />
             ) : (
-              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={profile.avatarUrl} className="h-6 w-6 rounded-full" alt="" />
+              <img loading="lazy" decoding="async" src={profile.avatarUrl} className="h-6 w-6 rounded-full" alt="" />
             )}
             <span className="text-[12px] font-medium text-foreground/80 hidden sm:block">
-              {profile.displayName}
+              {profile.displayName.split(" ")[0]}
             </span>
           </button>
         )}

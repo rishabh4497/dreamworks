@@ -26,7 +26,7 @@ export function LFGBoard() {
         {posts.map(post => (
           <div key={post.id} className="p-4 hover:bg-card-hover transition-colors flex items-center justify-between group">
             <div className="flex gap-4 items-start">
-              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={`https://api.dicebear.com/7.x/bottts/svg?seed=${post.user}`} alt={post.user} className="h-10 w-10 rounded-lg bg-input border border-separator" />
+              <img loading="lazy" decoding="async" src={`https://api.dicebear.com/7.x/bottts/svg?seed=${post.user}`} alt={post.user} className="h-10 w-10 rounded-lg bg-input border border-separator" />
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[13px] font-bold text-foreground">{post.user}</span>

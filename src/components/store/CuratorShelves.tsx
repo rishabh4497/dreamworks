@@ -12,7 +12,7 @@ export function CuratorShelves() {
 
       <div className="rounded-xl border border-separator bg-card p-4">
         <div className="flex items-center gap-3 mb-4 pb-4 border-b border-separator/50">
-          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Reviewer" alt="Curator" className="h-12 w-12 rounded-full border-2 border-cyan/50 bg-input" />
+          <img loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Reviewer" alt="Curator" className="h-12 w-12 rounded-full border-2 border-cyan/50 bg-input" />
           <div>
             <h3 className="text-[14px] font-bold text-foreground flex items-center gap-1">IGN Verified <Verified className="h-4 w-4 text-cyan" /></h3>
             <p className="text-[11px] text-muted">"Our top picks for the week across all genres."</p>

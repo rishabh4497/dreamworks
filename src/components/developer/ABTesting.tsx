@@ -25,7 +25,7 @@ export function ABTesting() {
           <div className="space-y-3">
             <p className="text-[12px] font-semibold text-foreground flex justify-between">Variant A (Control) <span className="text-muted">50% Traffic</span></p>
             <div className="aspect-[460/215] bg-input rounded-lg flex items-center justify-center border border-separator shadow-inner relative overflow-hidden">
-               <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=460&h=215" alt="A" className="object-cover w-full h-full opacity-60" />
+               <img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=460&h=215" alt="A" className="object-cover w-full h-full opacity-60" />
             </div>
             <div className="flex justify-between items-center bg-card-active rounded-md p-2">
               <span className="text-[11px] text-muted/70">Conversion Rate</span>
@@ -36,7 +36,7 @@ export function ABTesting() {
           <div className="space-y-3">
             <p className="text-[12px] font-semibold text-foreground flex justify-between text-green">Variant B (New Logo) <span className="text-muted">50% Traffic</span></p>
             <div className="aspect-[460/215] bg-input rounded-lg flex items-center justify-center border-2 border-green shadow-[0_0_15px_rgba(var(--color-green-rgb),0.2)] relative overflow-hidden">
-               <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?auto=format&fit=crop&q=80&w=460&h=215" alt="B" className="object-cover w-full h-full opacity-80" />
+               <img loading="lazy" decoding="async" src="https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?auto=format&fit=crop&q=80&w=460&h=215" alt="B" className="object-cover w-full h-full opacity-80" />
                <div className="absolute top-2 right-2 bg-green text-black text-[10px] font-bold px-2 py-0.5 rounded-sm">WINNING</div>
             </div>
             <div className="flex justify-between items-center bg-green/10 rounded-md p-2 border border-green/20">

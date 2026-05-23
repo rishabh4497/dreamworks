@@ -22,7 +22,7 @@ export function SpeedrunLeaderboards() {
           <div key={i} className="flex items-center justify-between p-4 border-b border-separator/50 last:border-0 hover:bg-card-hover transition-colors">
             <div className="flex items-center gap-4">
               <div className="w-8 text-center text-[18px] font-black text-muted/50">{run.rank}</div>
-              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={run.avatar} alt="Avatar" className="h-8 w-8 rounded-full border border-separator" />
+              <img loading="lazy" decoding="async" src={run.avatar} alt="Avatar" className="h-8 w-8 rounded-full border border-separator" />
               <div className="flex items-center gap-2">
                 <span className="text-[14px] font-bold text-foreground">{run.player}</span>
                 {run.verified && (

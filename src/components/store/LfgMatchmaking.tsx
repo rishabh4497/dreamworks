@@ -26,7 +26,7 @@ export function LfgMatchmaking({ gameId }: LfgMatchmakingProps) {
         {groups.map((group) => (
           <div key={group.id} className="flex items-center justify-between rounded-xl border border-separator/50 bg-card-active p-3 transition-colors hover:border-acid/30">
             <div className="flex items-center gap-3">
-              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={group.avatar} alt={group.host} className="h-8 w-8 rounded-full border border-separator bg-black/20" />
+              <img loading="lazy" decoding="async" src={group.avatar} alt={group.host} className="h-8 w-8 rounded-full border border-separator bg-black/20" />
               <div>
                 <p className="text-[12px] font-medium text-foreground">{group.host}'s Lobby</p>
                 <div className="flex items-center gap-2 text-[10px] text-muted/70">

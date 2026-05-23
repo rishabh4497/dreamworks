@@ -55,7 +55,7 @@ export function AuthHelperPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#09090b] px-6 text-foreground">
       <div className="w-full max-w-[420px] rounded-2xl border border-neutral-800 bg-[#121214] p-8 text-center shadow-xl">
         <div className="mb-6 flex justify-center">
-          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="/logo.png" alt="Dreamworks" className="h-16 w-16 rounded-2xl" />
+          <img loading="lazy" decoding="async" src="/logo.png" alt="Dreamworks" className="h-16 w-16 rounded-2xl" />
         </div>
 
         <h1 className="text-xl font-bold tracking-tight text-white">

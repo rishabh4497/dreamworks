@@ -13,7 +13,7 @@ export function RemotePlayModal() {
       <div className="p-6 grid gap-4">
         <div className="flex items-center justify-between p-3 rounded-lg border border-separator bg-input">
           <div className="flex items-center gap-3">
-            <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Alex" alt="Alex" className="h-10 w-10 rounded-full border border-separator/50 bg-background" />
+            <img loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Alex" alt="Alex" className="h-10 w-10 rounded-full border border-separator/50 bg-background" />
             <div>
               <p className="text-[13px] font-bold text-foreground">Alex_Tryhard</p>
               <p className="text-[11px] text-green flex items-center gap-1"><Wifi className="h-3 w-3" /> 24ms Ping • Ready</p>

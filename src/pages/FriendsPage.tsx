@@ -90,7 +90,7 @@ export function FriendsPage() {
                   className="flex items-center gap-3 rounded-lg border border-separator bg-card p-3"
                 >
                   <div className="relative">
-                    <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={f.avatarUrl} className="h-9 w-9 rounded-full" alt="" />
+                    <img loading="lazy" decoding="async" src={f.avatarUrl} className="h-9 w-9 rounded-full" alt="" />
                     <span
                       className={cn(
                         "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background",
@@ -125,7 +125,7 @@ export function FriendsPage() {
               return (
                 <div key={i} className="flex items-center gap-3 p-3">
                   {friend && (
-                    <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={friend.avatarUrl} alt="" className="h-7 w-7 rounded-full" />
+                    <img loading="lazy" decoding="async" src={friend.avatarUrl} alt="" className="h-7 w-7 rounded-full" />
                   )}
                   <div className="flex-1 min-w-0 text-[12px]">
                     <p className="text-foreground/80 truncate">
