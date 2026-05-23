@@ -8,10 +8,16 @@ import { createQueryClient } from "@/lib/query-client";
 import { useThemeStore } from "@/stores/theme-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { isDesktop, openExternal } from "@/lib/platform";
+import { initTelemetry } from "@/lib/telemetry-init";
 
 // Side-effect: ensure theme store & auth store initialize
 useThemeStore.getState();
 useAuthStore.getState().initialize();
+
+// Boot the in-house telemetry collector. Listens for auth and starts a
+// session once the user is authenticated; wires up global error handlers
+// and PerformanceObservers. Admin Console reads from these collections.
+initTelemetry();
 
 // Hydrate the system rig once on startup. detectSystemRig() runs synchronously
 // (browser APIs only), then on desktop we async-merge in the exact CPU/RAM/

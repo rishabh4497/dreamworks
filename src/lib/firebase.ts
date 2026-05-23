@@ -134,6 +134,8 @@ export const COLLECTIONS = {
   telemetryErrors: "dw_telemetry_errors",
   telemetryPerf: "dw_telemetry_perf",
   telemetryDevices: "dw_telemetry_devices",
+  // Privacy: scheduled deletion queue. Cloud Function picks up + processes.
+  deletionRequests: "dw_deletion_requests",
 } as const;
 
 // Per-user subcollection paths under `dw_users/{uid}/...`.
@@ -141,6 +143,7 @@ export const USER_SUBCOLLECTIONS = {
   saveHistory: "save_history",
   preferences: "preferences",
   recentlyViewed: "recently_viewed",
+  scanHistory: "scan_history",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

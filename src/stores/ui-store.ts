@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: ClientSettings = {
   playNotificationSound: true,
   friendOnlineNotify: true,
   friendStartGameNotify: true,
+  friendsListAutoSignIn: true,
   chatProfanityFilter: true,
   playChatSound: true,
   cloudSavesEnabled: true,

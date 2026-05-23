@@ -5,6 +5,7 @@ import { getDb } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthStore } from "./auth-store";
 import { cleanForFirestore } from "@/lib/firestore-clean";
+import { track } from "@/lib/telemetry";
 
 interface CartStore {
   items: CartItem[];
@@ -51,6 +52,7 @@ export const useCartStore = create<CartStore>()(
           if (s.items.some((i) => i.gameId === id)) return s;
           const next = [...s.items, { gameId: id, asGift, addedAt: new Date().toISOString() }];
           syncToFirestore(next);
+          track("cart_add", { gameId: id, asGift });
           return { items: next };
         }),
       remove: (id) =>
@@ -58,6 +60,7 @@ export const useCartStore = create<CartStore>()(
           const next = s.items.filter((x) => x.gameId !== id);
           if (next.length === s.items.length) return s;
           syncToFirestore(next);
+          track("cart_remove", { gameId: id });
           return { items: next };
         }),
       updateGift: (id, gift) =>

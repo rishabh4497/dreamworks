@@ -1,5 +1,7 @@
 import type { LauncherSource } from "@/lib/types";
 import { scanLaunchersNative } from "@/lib/native-launcher";
+import { useAuthStore } from "@/stores/auth-store";
+import { recordScanRun } from "@/lib/api/scan-history";
 import { scanEpic } from "./epic";
 import { matchToCatalog } from "./match";
 import { scanSteam } from "./steam";
@@ -92,6 +94,23 @@ export async function scanAllLaunchers(): Promise<ScanResult> {
 
   const matched = await matchToCatalog(detected);
   const durationMs = Math.round(performance.now() - started);
+  const result: ScanResult = { detected: matched, errors, durationMs, pathsRead };
 
-  return { detected: matched, errors, durationMs, pathsRead };
+  // Persist a scan_history record for the signed-in user. Fire-and-forget so a
+  // Firestore hiccup never aborts the scan. Skipped when the user has set
+  // retention to 0 days (the pruner will wipe immediately anyway) — saves a
+  // round-trip in the common "don't keep" case.
+  void (async () => {
+    try {
+      const profile = useAuthStore.getState().profile;
+      if (!profile?.uid) return;
+      const { useUiStore } = await import("@/stores/ui-store");
+      if (useUiStore.getState().settings.scanHistoryRetentionDays === 0) return;
+      await recordScanRun(profile.uid, result);
+    } catch {
+      // best effort
+    }
+  })();
+
+  return result;
 }

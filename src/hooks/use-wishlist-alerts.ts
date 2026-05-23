@@ -3,10 +3,8 @@ import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { getGameDetail } from "@/lib/api/games";
 import { gameKeys } from "@/hooks/use-games";
 import { useWishlistStore } from "@/stores/wishlist-store";
-import { useNotificationsStore } from "@/stores/notifications-store";
-import { notificationPrefEnabled } from "@/stores/ui-store";
-import { toast } from "@/stores/toast-store";
-import { notify } from "@/lib/platform";
+import { useUiStore } from "@/stores/ui-store";
+import { dispatchAppNotification } from "@/lib/notify-dispatch";
 import { ROUTES } from "@/lib/routes";
 import { formatPrice } from "@/lib/utils";
 import type { GameDetail, GameId, WishlistEntry } from "@/lib/types";
@@ -115,20 +113,14 @@ async function runEvaluationOnce(
     const result = evaluateAlert(fresh, detail);
     if (!result) continue;
 
-    toast.success(result.title);
-    void notify(result.title, result.body);
-    // Also drop the alert into the in-app notification panel — gated by the
-    // user's preference so the bell stays silent if they've muted this kind
-    // (transient toast + OS notify are intentionally unaffected).
-    if (notificationPrefEnabled("wishlist-alert")) {
-      useNotificationsStore.getState().push({
-        kind: "wishlist-alert",
-        title: result.title,
-        body: result.body,
-        gameId: entry.gameId,
-        href: ROUTES.gameDetail(entry.gameId),
-      });
-    }
+    const { emailOnSale } = useUiStore.getState().settings;
+    dispatchAppNotification({
+      kind: "wishlist-alert",
+      title: result.title,
+      body: emailOnSale ? `${result.body} (via email + in-app)` : result.body,
+      gameId: entry.gameId,
+      href: ROUTES.gameDetail(entry.gameId),
+    });
     updateEntry(entry.gameId, { lastAlertedAt: new Date().toISOString() });
   }
 }

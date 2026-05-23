@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 import { attachUserQuerySync } from "@/lib/store-factory";
+import { track } from "@/lib/telemetry";
 
 interface WishlistStore {
   entries: WishlistEntry[];
@@ -36,12 +37,14 @@ export const useWishlistStore = create<WishlistStore>((_set, get) => ({
       priority: 0,
       notifyOnSale: true,
     });
+    track("wishlist_add", { gameId: id });
   },
   remove: async (id) => {
     const profile = useAuthStore.getState().profile;
     if (!profile) return;
     const docRef = doc(getDb(), COLLECTIONS.wishlist, `${profile.uid}_${id}`);
     await deleteDoc(docRef);
+    track("wishlist_remove", { gameId: id });
   },
   toggle: async (id) => {
     const profile = useAuthStore.getState().profile;
@@ -50,6 +53,7 @@ export const useWishlistStore = create<WishlistStore>((_set, get) => ({
     const docRef = doc(getDb(), COLLECTIONS.wishlist, `${profile.uid}_${id}`);
     if (exists) {
       await deleteDoc(docRef);
+      track("wishlist_remove", { gameId: id });
       return false;
     } else {
       await setDoc(docRef, {
@@ -59,6 +63,7 @@ export const useWishlistStore = create<WishlistStore>((_set, get) => ({
         priority: 0,
         notifyOnSale: true,
       });
+      track("wishlist_add", { gameId: id });
       return true;
     }
   },

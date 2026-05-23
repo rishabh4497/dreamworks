@@ -11,6 +11,9 @@ import {
 import { useFriendActivity, useFriends } from "@/hooks/use-friends";
 import { useGames } from "@/hooks/use-games";
 import { useAuthStore } from "@/stores/auth-store";
+import { useUiStore } from "@/stores/ui-store";
+import { playChatPing } from "@/lib/notify-dispatch";
+import { WifiOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/lib/routes";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
@@ -46,6 +49,8 @@ export function FriendsPage() {
   const activity = useFriendActivity();
   const games = useGames();
   const profile = useAuthStore((s) => s.profile);
+  const friendsListAutoSignIn = useUiStore((s) => s.settings.friendsListAutoSignIn);
+  const updateSettings = useUiStore((s) => s.updateSettings);
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [addFriendInput, setAddFriendInput] = useState("");
@@ -150,6 +155,9 @@ export function FriendsPage() {
         [fid]: [...(prev[fid] ?? []), replyMsg],
       }));
       setTyping((prev) => ({ ...prev, [fid]: false }));
+      if (useUiStore.getState().settings.playChatSound) {
+        playChatPing();
+      }
     }, 1600);
   };
 
@@ -160,6 +168,33 @@ export function FriendsPage() {
     setAddFriendInput("");
     setAddFriendOpen(false);
   };
+
+  if (!friendsListAutoSignIn) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex h-[calc(100vh-7rem)] min-h-[560px] flex-col items-center justify-center"
+      >
+        <div className="max-w-md rounded-2xl border border-separator bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-input">
+            <WifiOff className="h-7 w-7 text-muted" />
+          </div>
+          <h1 className="text-[18px] font-semibold text-foreground">You're offline</h1>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted/70">
+            Friends list and chat are hidden because "Sign in to friends list on startup" is turned off in Settings.
+          </p>
+          <button
+            type="button"
+            onClick={() => updateSettings({ friendsListAutoSignIn: true })}
+            className="mt-5 rounded-xl bg-acid px-4 py-2 text-[13px] font-semibold text-background hover:brightness-110"
+          >
+            Go online
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

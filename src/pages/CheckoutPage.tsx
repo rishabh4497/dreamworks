@@ -251,6 +251,13 @@ export function CheckoutPage() {
       return;
     }
     setLoading(true);
+    void import("@/lib/telemetry").then((m) =>
+      m.track("checkout_start", {
+        itemCount: itemsForOrder().length,
+        country: form.country,
+        hasSubscription,
+      }),
+    );
     try {
       const orderedItems = itemsForOrder();
       const result = await placeMockOrder({
@@ -284,6 +291,14 @@ export function CheckoutPage() {
         }
       }
       clear();
+      void import("@/lib/telemetry").then((m) =>
+        m.track("checkout_complete", {
+          orderId: result.order.id,
+          totalCents: result.order.totalCents,
+          itemCount: orderedItems.length,
+          hasSubscription,
+        }),
+      );
       toast.success(
         hasSubscription
           ? `Welcome to Dreamworks+! Receipt ${result.order.receiptNumber}`

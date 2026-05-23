@@ -56,6 +56,7 @@ const PublisherReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewP
 const StudioReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "StudioReviewPage");
 const AuditLogPage = lazyNamed(() => import("@/pages/admin/AuditLogPage"), "AuditLogPage");
 const CdnAdminPage = lazyNamed(() => import("@/pages/admin/CdnAdminPage"), "CdnAdminPage");
+const ConsolePage = lazyNamed(() => import("@/pages/console/ConsolePage"), "ConsolePage");
 const LibraryPage = lazyNamed(() => import("@/pages/LibraryPage"), "LibraryPage");
 const LibraryGamePage = lazyNamed(() => import("@/pages/LibraryGamePage"), "LibraryGamePage");
 const LibraryCollectionPage = lazyNamed(() => import("@/pages/LibraryCollectionPage"), "LibraryCollectionPage");
@@ -166,6 +167,15 @@ export default function App() {
               <Route path="audit-log" element={<AuditLogPage />} />
               <Route path="cdn" element={<CdnAdminPage />} />
             </Route>
+
+            <Route
+              path="console"
+              element={
+                <RoleGuard roles={["admin"]}>
+                  <ConsolePage />
+                </RoleGuard>
+              }
+            />
 
             <Route path="db" element={<DbHomePage />} />
             <Route path="db/game/:gameId" element={<GameDbPage />} />

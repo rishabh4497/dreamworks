@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
+import { trackError } from "@/lib/telemetry";
 
 interface State { hasError: boolean; error: Error | null; }
 interface Props { children: ReactNode; }
@@ -11,8 +12,12 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, info: { componentStack?: string }) {
     console.error("[Dreamworks ErrorBoundary]", error);
+    trackError(error, {
+      source: "boundary",
+      context: { componentStack: info.componentStack },
+    });
   }
 
   render() {

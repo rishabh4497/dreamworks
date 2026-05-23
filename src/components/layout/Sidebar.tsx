@@ -5,6 +5,7 @@ import {
   Globe,
   Home,
   Library,
+  LineChart,
   LogOut,
   Search,
   Settings,
@@ -66,6 +67,7 @@ export function Sidebar() {
   const isAdmin = profile?.role === "admin";
   const adminNav: NavItem[] = [
     { to: ROUTES.admin, label: t("Admin Panel"), icon: ShieldCheck },
+    { to: ROUTES.console, label: t("Console"), icon: LineChart },
   ];
 
   // Library lives in the sidebar (desktop-only); downloads/wishlist/cart/profile

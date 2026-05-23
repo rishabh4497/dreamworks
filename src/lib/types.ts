@@ -1251,6 +1251,8 @@ export interface ClientSettings {
   playNotificationSound: boolean;
   friendOnlineNotify: boolean;
   friendStartGameNotify: boolean;
+  /** When true, the Friends panel loads presence data and chat at startup. */
+  friendsListAutoSignIn: boolean;
   chatProfanityFilter: boolean;
   playChatSound: boolean;
   cloudSavesEnabled: boolean;

@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
 import { useAuthStore } from "@/stores/auth-store";
+import { useUiStore } from "@/stores/ui-store";
 import { isDesktop, invokeDesktop } from "@/lib/platform";
 import type {
   DeviceSnapshot,
@@ -366,8 +367,25 @@ export function endSession(): void {
   session = null;
 }
 
+function usageEnabled(): boolean {
+  try {
+    return useUiStore.getState().settings.usageDiagnosticsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
+function crashEnabled(): boolean {
+  try {
+    return useUiStore.getState().settings.crashReportsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
+
 export function trackPageView(path: string, title?: string): void {
   if (!session) return;
+  if (!usageEnabled()) return;
   session.lastRoute = path;
   session.pageViews += 1;
   enqueue({
@@ -389,6 +407,7 @@ export function track(
   payload?: Record<string, unknown>,
 ): void {
   if (!session) return;
+  if (!usageEnabled()) return;
   enqueue({
     kind: "event",
     id: randomId(),
@@ -411,6 +430,7 @@ export function trackError(
   },
 ): void {
   if (!session) return;
+  if (!crashEnabled()) return;
   const error = normalizeError(err);
   session.errorCount += 1;
   const errorId = randomId();
@@ -464,6 +484,7 @@ export function trackPerf(
 ): void {
   if (!session) return;
   if (!Number.isFinite(ms)) return;
+  if (!usageEnabled()) return;
   enqueue({
     kind: "perf",
     id: randomId(),

@@ -11,9 +11,10 @@ import {
   resumeDownload,
   startInstall,
 } from "@/lib/api/downloads";
-import { notify } from "@/lib/platform";
-import { notificationPrefEnabled, useUiStore } from "@/stores/ui-store";
+import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
+import { dispatchAppNotification } from "@/lib/notify-dispatch";
+import { trackUsage } from "@/lib/telemetry-client";
 import { bytesPerSecondForLimit } from "@/lib/utils";
 
 const MAX_CONCURRENT = 2;
@@ -425,17 +426,27 @@ export const useDownloadStore = create<DownloadStore>()(
           queueMicrotask(() => startProgression(id)),
         );
 
-        if (finished && notificationPrefEnabled("system")) {
+        if (finished) {
           const name = String(finished.gameId);
+          const gameId = finished.gameId;
           queueMicrotask(() => {
             if (status === "complete") {
-              void notify("Download complete", `${name} is ready to play`);
-              toast.success(`${name} ready`);
+              dispatchAppNotification({
+                kind: "system",
+                title: "Download complete",
+                body: `${name} is ready to play`,
+                gameId,
+                critical: true,
+              });
+              trackUsage("download.complete", { gameId: String(gameId) });
             } else if (status === "error") {
-              void notify(
-                "Download failed",
-                `${name} hit an error and will retry`,
-              );
+              dispatchAppNotification({
+                kind: "system",
+                title: "Download failed",
+                body: `${name} hit an error and will retry`,
+                gameId,
+                critical: true,
+              });
               toast.error(`${name} failed — retrying`);
             }
           });

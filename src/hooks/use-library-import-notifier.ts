@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLibraryStore } from "@/stores/library-store";
-import { useNotificationsStore } from "@/stores/notifications-store";
-import { notificationPrefEnabled } from "@/stores/ui-store";
+import { dispatchAppNotification } from "@/lib/notify-dispatch";
 
 /**
  * Watches the library store and pushes a "library-import" notification any
@@ -26,8 +25,7 @@ export function useLibraryImportNotifier(): void {
       prevCountRef.current = next;
       if (next <= prev) return;
       const delta = next - prev;
-      if (!notificationPrefEnabled("library-import")) return;
-      useNotificationsStore.getState().push({
+      dispatchAppNotification({
         kind: "library-import",
         title: delta === 1 ? "Imported 1 game" : `Imported ${delta} games`,
         body:

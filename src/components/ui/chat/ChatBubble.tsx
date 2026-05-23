@@ -4,6 +4,8 @@ import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { renderMarkdown } from "./markdown";
 import { ChatStatus } from "./ChatStatus";
+import { useUiStore } from "@/stores/ui-store";
+import { censorText } from "@/lib/profanity";
 import type { ChatMessage, ChatMode } from "./types";
 
 interface ChatBubbleProps {
@@ -39,11 +41,13 @@ export function ChatBubble({
   const isUser = message.role === "user";
   const isLast = groupPosition === "single" || groupPosition === "last";
   const isFirst = groupPosition === "single" || groupPosition === "first";
+  const profanityFilter = useUiStore((s) => s.settings.chatProfanityFilter);
+  const displayText = censorText(message.text, profanityFilter);
 
   // AI mode peer messages render as full-width prose blocks. User messages
   // stay as bubbles even in AI mode — keeps the "your turn" visual clear.
   if (mode === "ai" && !isUser) {
-    return <AiPeerMessage message={message} isFirst={isFirst} showTime={showTime} />;
+    return <AiPeerMessage message={message} isFirst={isFirst} showTime={showTime} text={displayText} />;
   }
 
   const cornerClasses = bubbleCorners(isUser, groupPosition);
@@ -80,7 +84,7 @@ export function ChatBubble({
           )}
         >
           {message.replyTo && <ReplyQuote replyTo={message.replyTo} inverted={isUser} />}
-          <p className="whitespace-pre-wrap break-words">{message.text}</p>
+          <p className="whitespace-pre-wrap break-words">{displayText}</p>
           {message.attachment && (
             <div
               className={cn(
@@ -123,15 +127,17 @@ function AiPeerMessage({
   message,
   isFirst,
   showTime,
+  text,
 }: {
   message: ChatMessage;
   isFirst: boolean;
   showTime: boolean;
+  text: string;
 }) {
   const [copied, setCopied] = useState(false);
   const onCopy = () => {
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
-    navigator.clipboard.writeText(message.text).then(() => {
+    navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
     });
@@ -160,7 +166,7 @@ function AiPeerMessage({
 
         <div className="rounded-2xl border border-separator/60 bg-card-active/30 px-4 py-3 text-[13.5px] text-foreground/92">
           {message.replyTo && <ReplyQuote replyTo={message.replyTo} inverted={false} />}
-          <div className="prose-chat">{renderMarkdown(message.text)}</div>
+          <div className="prose-chat">{renderMarkdown(text)}</div>
           {message.attachment && (
             <div className="mt-3 border-t border-separator/60 pt-3">{message.attachment}</div>
           )}

@@ -113,7 +113,10 @@ export function GameDetailPage() {
   );
 
   useEffect(() => {
-    if (gameId) pushRecent(gameId);
+    if (gameId) {
+      pushRecent(gameId);
+      void import("@/lib/telemetry").then((m) => m.track("game_view", { gameId }));
+    }
   }, [gameId, pushRecent]);
 
   const setAccent = useAccentStore((s) => s.setAccent);

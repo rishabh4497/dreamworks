@@ -254,5 +254,21 @@ service cloud.firestore {
       allow write: if isOwner(uid)
                    && request.resource.data.uid == request.auth.uid;
     }
+
+    // ── Privacy: per-user launcher scan history ─────────────────────────
+    // Subcollection under the user doc. Self read/write only — never exposed
+    // to other users, never readable by admin via security rules (only via
+    // server-side admin SDK).
+    match /users/{uid}/scan_history/{docId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Privacy: account deletion queue ─────────────────────────────────
+    // User schedules deletion by writing their own uid-keyed doc. A Cloud
+    // Function (or admin) consumes the queue and performs the actual purge
+    // with elevated privileges. Clients cannot read other users' requests.
+    match /dw_deletion_requests/{uid} {
+      allow read, write: if isOwner(uid);
+    }
   }
 }

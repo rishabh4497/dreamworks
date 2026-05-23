@@ -8,6 +8,9 @@ import { FpsOverlay } from "@/components/common/FpsOverlay";
 import { VoiceWidget } from "@/components/voice/VoiceWidget";
 import { useWishlistAlerts } from "@/hooks/use-wishlist-alerts";
 import { useLibraryImportNotifier } from "@/hooks/use-library-import-notifier";
+import { useFriendPresenceNotifier } from "@/hooks/use-friend-presence-notifier";
+import { usePageViewTelemetry } from "@/hooks/use-page-view-telemetry";
+import { useScanHistoryPruner } from "@/hooks/use-scan-history-pruner";
 import { useAccentStore } from "@/stores/accent-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useProfileStore } from "@/stores/profile-store";
@@ -23,6 +26,9 @@ import {
 export function AppLayout() {
   useWishlistAlerts();
   useLibraryImportNotifier();
+  useFriendPresenceNotifier();
+  useScanHistoryPruner();
+  usePageViewTelemetry();
   const accent = useAccentStore((s) => s.accent);
   const dynamicBackgrounds = useUiStore((s) => s.settings.dynamicStoreBackgroundsEnabled);
   const screenshotKey = useUiStore((s) => s.settings.screenshotKey);

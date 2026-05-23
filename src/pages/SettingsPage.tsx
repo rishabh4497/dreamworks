@@ -33,6 +33,14 @@ import { pickFolder } from "@/lib/platform";
 import { useTranslation } from "@/lib/i18n";
 import { useCloudSaveSlots } from "@/hooks/use-cloud-saves";
 import { formatBytes, relativeTime } from "@/lib/utils";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
+import {
+  clearScanHistory,
+  listScanRuns,
+  type ScanHistoryRecord,
+} from "@/lib/api/scan-history";
+import { exportUserBundle } from "@/lib/api/user-export";
+import { requestAccountDeletion } from "@/lib/api/deletion-requests";
 import { usePaymentMethodsStore } from "@/stores/payment-methods-store";
 import { useFamilyStore } from "@/stores/family-store";
 import {
@@ -107,9 +115,30 @@ export function SettingsPage() {
   const { settings, updateSettings, notificationPrefs, setNotificationPref } = useUiStore();
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [customKeyBinding, setCustomKeyBinding] = useState(false);
+  const [scanRecords, setScanRecords] = useState<ScanHistoryRecord[]>([]);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmClearHistoryOpen, setConfirmClearHistoryOpen] = useState(false);
   const { data: cloudSaveSlots = [] } = useCloudSaveSlots(profile?.uid);
   const { data: notificationKinds = [] } = useNotificationKinds();
   const { data: languages = [] } = useLanguages();
+
+  useEffect(() => {
+    if (!profile?.uid) {
+      setScanRecords([]);
+      return;
+    }
+    let cancelled = false;
+    listScanRuns(profile.uid)
+      .then((rows) => {
+        if (!cancelled) setScanRecords(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setScanRecords([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.uid, settings.scanHistoryRetentionDays]);
 
   // Self-heal a stale `settings.language` left behind from when the dropdown
   // exposed unsupported locales — without this the select silently shows the
@@ -183,18 +212,60 @@ export function SettingsPage() {
     }
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
+    if (!profile?.uid) {
+      toast.error("Sign in to export your data");
+      return;
+    }
     updateSettings({ privacyDataExportStatus: "preparing" });
     toast.info("Preparing privacy export");
-    window.setTimeout(() => {
+    try {
+      await exportUserBundle(profile.uid);
       updateSettings({ privacyDataExportStatus: "ready" });
-      toast.success("Privacy export is ready");
-    }, 900);
+      toast.success("Privacy export downloaded");
+    } catch {
+      updateSettings({ privacyDataExportStatus: "idle" });
+      toast.error("Couldn't generate export");
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    setConfirmDeleteOpen(false);
+    if (!profile?.uid) {
+      toast.error("Sign in to request deletion");
+      return;
+    }
+    try {
+      await requestAccountDeletion(profile.uid);
+      updateSettings({ privacyDeleteRequestStatus: "scheduled" });
+      toast.success("Account deletion scheduled");
+    } catch {
+      toast.error("Couldn't schedule deletion");
+    }
   };
 
   const handleDeleteData = () => {
-    updateSettings({ privacyDeleteRequestStatus: "scheduled" });
-    toast.info("Account data deletion request scheduled");
+    if (settings.privacyDeleteRequestStatus === "scheduled") {
+      toast.info("Deletion already scheduled");
+      return;
+    }
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmClearScanHistory = async () => {
+    setConfirmClearHistoryOpen(false);
+    if (!profile?.uid) return;
+    try {
+      const count = await clearScanHistory(profile.uid);
+      setScanRecords([]);
+      toast.success(
+        count === 0
+          ? "Scan history was already empty"
+          : `Cleared ${count} scan record${count === 1 ? "" : "s"}`,
+      );
+    } catch {
+      toast.error("Couldn't clear scan history");
+    }
   };
 
   const offlineCacheUpdated = settings.offlineCacheUpdatedAt
@@ -855,8 +926,8 @@ export function SettingsPage() {
                 <ToggleRow
                   label="Sign in to friends list on startup"
                   description="Go online immediately when launcher starts"
-                  checked={settings.friendOnlineNotify}
-                  onCheckedChange={(next) => updateSettings({ friendOnlineNotify: next })}
+                  checked={settings.friendsListAutoSignIn}
+                  onCheckedChange={(next) => updateSettings({ friendsListAutoSignIn: next })}
                 />
                 <ToggleRow
                   label="Enable chat profanity filtering"
@@ -928,6 +999,21 @@ export function SettingsPage() {
                   <option value={365}>1 year</option>
                 </select>
               </div>
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-separator bg-card px-3 py-2 text-[12px]">
+                <div className="text-muted/65">
+                  {scanRecords.length === 0
+                    ? "No scan records on file."
+                    : `${scanRecords.length} record${scanRecords.length === 1 ? "" : "s"} on file · last scan ${relativeTime(scanRecords[0].completedAt, t)}`}
+                </div>
+                <button
+                  type="button"
+                  disabled={scanRecords.length === 0}
+                  onClick={() => setConfirmClearHistoryOpen(true)}
+                  className="rounded-lg border border-separator bg-input px-3 py-1 text-foreground/80 hover:bg-card-active disabled:opacity-40"
+                >
+                  Clear scan history
+                </button>
+              </div>
             </Section>
 
             <Section title="Your data">
@@ -979,6 +1065,25 @@ export function SettingsPage() {
         )}
 
       </motion.div>
+
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => void confirmDeleteAccount()}
+        title="Delete account data?"
+        description="This schedules profile data, telemetry, scan history, and cloud preferences for deletion. Reviewers will process the request within a few business days."
+        confirmLabel="Schedule deletion"
+        destructive
+      />
+      <ConfirmModal
+        open={confirmClearHistoryOpen}
+        onCancel={() => setConfirmClearHistoryOpen(false)}
+        onConfirm={() => void confirmClearScanHistory()}
+        title="Clear scan history?"
+        description="This removes every stored launcher scan record from your account. New scans will start fresh."
+        confirmLabel="Clear records"
+        destructive
+      />
     </motion.div>
   );
 }

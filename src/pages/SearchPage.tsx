@@ -42,11 +42,32 @@ export function SearchPage() {
     () => ({ q, genres, tags, platforms, onSaleOnly, freeOnly }),
     [q, genres, tags, platforms, onSaleOnly, freeOnly],
   );
-  
+
   // Only search if there's actually a query or filters active
   const hasActiveFilters = q || genres.length > 0 || tags.length > 0 || platforms.length > 0 || onSaleOnly || freeOnly;
-  
+
   const { data, isLoading } = useSearch(filters);
+
+  // Debounced search-query telemetry — only after the query stabilizes
+  // and yielded a result count, so we can compute zero-results %.
+  useEffect(() => {
+    if (!q || q.length < 2) return;
+    const timer = setTimeout(() => {
+      void import("@/lib/telemetry").then((m) =>
+        m.track("search_query", {
+          term: q.trim().toLowerCase(),
+          zeroResults: !data || data.length === 0,
+          filterCount:
+            genres.length +
+            tags.length +
+            platforms.length +
+            (onSaleOnly ? 1 : 0) +
+            (freeOnly ? 1 : 0),
+        }),
+      );
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [q, data, genres.length, tags.length, platforms.length, onSaleOnly, freeOnly]);
   const cats = useCategories();
   const allTags = useTags();
 
