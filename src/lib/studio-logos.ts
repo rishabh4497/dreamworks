@@ -2,7 +2,7 @@ import { slugify } from "@/lib/utils";
 
 export interface StudioBrand {
   /** URL to the studio's logo (SVG/PNG). White-on-dark tile renders it on a
-   *  padded white background; falls back to initials on `<img onError>`. */
+   *  padded white background; falls back to initials on `<img loading="lazy" decoding="async" onError>`. */
   logoUrl: string;
   /** Hex brand color used to drive the Spotify-style hero wash. */
   brandColor: string;

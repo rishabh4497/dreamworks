@@ -102,7 +102,7 @@ export function DreamworksWrapped({ open, onClose }: DreamworksWrappedProps) {
           animate={{ y: 0, opacity: 1 }}
           className="mt-8 flex flex-col items-center"
         >
-          <img src={topGame.capsuleUrl} alt={topGame.name} className="w-48 rounded-xl shadow-2xl shadow-orange/20" />
+          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={topGame.capsuleUrl} alt={topGame.name} className="w-48 rounded-xl shadow-2xl shadow-orange/20" />
           <h4 className="mt-6 text-[28px] font-bold text-foreground">{topGame.name}</h4>
           <p className="mt-2 text-[16px] text-orange font-medium">
             {formatHours(library.find(e => e.gameId === topGame.id)?.playMinutes ?? 0)} logged

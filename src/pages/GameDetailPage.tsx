@@ -163,7 +163,7 @@ export function GameDetailPage() {
               }`}
               title="Double-click to enlarge"
             >
-              <img src={s.thumbUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={s.thumbUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
             </button>
           ))}
         </div>
@@ -346,7 +346,7 @@ export function GameDetailPage() {
       {/* Right rail */}
       <aside className="space-y-4">
         <div className="rounded-2xl border border-separator bg-card overflow-hidden">
-          <img src={detail.headerUrl} alt="" className="aspect-[460/215] w-full object-cover" referrerPolicy="no-referrer" />
+          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={detail.headerUrl} alt="" className="aspect-[460/215] w-full object-cover" referrerPolicy="no-referrer" />
           <div className="p-4 space-y-3">
             {owns && (
               <Link
@@ -638,7 +638,7 @@ function ReviewCard({ review: r, isYours }: { review: Review; isYours?: boolean 
         </p>
       )}
       <div className="mb-2 flex items-center gap-2">
-        <img src={r.authorAvatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={r.authorAvatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
         <div className="flex-1">
           <p className="text-[12px] font-medium text-foreground/80">{r.authorName}</p>
           <p className="text-[10px] text-muted/50">

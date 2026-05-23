@@ -21,7 +21,7 @@ export function LendingLibrary() {
         <div className="col-span-2 grid grid-cols-2 gap-4">
           {singlePlayerGames.map(game => (
             <div key={game.id} className="rounded-xl border border-separator bg-card overflow-hidden flex flex-col">
-              <img src={game.headerUrl} alt={game.name} className="h-32 object-cover w-full" />
+              <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={game.headerUrl} alt={game.name} className="h-32 object-cover w-full" />
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h3 className="text-[14px] font-bold text-foreground line-clamp-1">{game.name}</h3>

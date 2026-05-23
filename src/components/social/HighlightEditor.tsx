@@ -8,7 +8,7 @@ export function HighlightEditor() {
       </h3>
       <div className="grid grid-cols-[1fr_200px] gap-6">
         <div className="relative aspect-video rounded-lg overflow-hidden border border-separator/50 bg-black flex items-center justify-center group cursor-pointer">
-          <img src="https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc8f29.jpg" alt="Preview" className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
+          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://images.igdb.com/igdb/image/upload/t_screenshot_big/sc8f29.jpg" alt="Preview" className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity" />
           <PlayCircle className="absolute h-12 w-12 text-white/80 group-hover:scale-110 transition-transform" />
           
           <div className="absolute bottom-4 left-4 right-4 h-2 bg-white/20 rounded-full overflow-hidden">

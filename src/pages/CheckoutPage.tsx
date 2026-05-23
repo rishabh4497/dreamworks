@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { CheckCircle2, Clock3, Gift, Loader2, ShieldCheck, UsersRound, XCircle } from "lucide-react";
@@ -37,38 +37,54 @@ export function CheckoutPage() {
   const profile = useAuthStore((s) => s.profile);
   const { data: games } = useGames();
   
-  const hasSubscription = items.some(i => i.gameId === "plus-sub");
-  
-  const baseList = (games ?? [])
-    .map((g) => {
-      const cartItem = items.find((i) => i.gameId === g.id);
-      if (!cartItem) return null;
-      return {
-        id: g.id,
-        name: g.name,
-        price: g.price,
-        cartItem,
-      };
-    })
-    .filter((g): g is NonNullable<typeof g> => Boolean(g));
+  const hasSubscription = useMemo(() => items.some((i) => i.gameId === "plus-sub"), [items]);
 
-  const list = hasSubscription 
-    ? [
-        ...baseList,
-        {
-          id: "plus-sub",
-          name: "Dreamworks+ (1 Month)",
-          price: { final: 1499 },
-          cartItem: items.find((i) => i.gameId === "plus-sub"),
-        },
-      ]
-    : baseList;
-    
-  const subtotal = list.reduce((acc, g) => acc + g.price.final, 0);
-  const tax = Math.round(subtotal * 0.08);
-  const total = subtotal + tax;
-  const giftItems = baseList.filter((item) => item.cartItem.asGift);
-  const approvalItems = baseList.filter((item) => item.cartItem.familyApproval?.required);
+  const baseList = useMemo(
+    () =>
+      (games ?? [])
+        .map((g) => {
+          const cartItem = items.find((i) => i.gameId === g.id);
+          if (!cartItem) return null;
+          return {
+            id: g.id,
+            name: g.name,
+            price: g.price,
+            cartItem,
+          };
+        })
+        .filter((g): g is NonNullable<typeof g> => Boolean(g)),
+    [games, items],
+  );
+
+  const list = useMemo(
+    () =>
+      hasSubscription
+        ? [
+            ...baseList,
+            {
+              id: "plus-sub",
+              name: "Dreamworks+ (1 Month)",
+              price: { final: 1499 },
+              cartItem: items.find((i) => i.gameId === "plus-sub"),
+            },
+          ]
+        : baseList,
+    [hasSubscription, baseList, items],
+  );
+
+  const { subtotal, tax, total } = useMemo(() => {
+    const sub = list.reduce((acc, g) => acc + g.price.final, 0);
+    const t = Math.round(sub * 0.08);
+    return { subtotal: sub, tax: t, total: sub + t };
+  }, [list]);
+  const giftItems = useMemo(
+    () => baseList.filter((item) => item.cartItem.asGift),
+    [baseList],
+  );
+  const approvalItems = useMemo(
+    () => baseList.filter((item) => item.cartItem.familyApproval?.required),
+    [baseList],
+  );
 
   const countries = useCountries();
   const [form, setForm] = useState<Form>({

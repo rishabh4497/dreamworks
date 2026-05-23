@@ -31,7 +31,7 @@ export function AvatarWardrobe() {
             animate={{ y: [0, -5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             className="w-24 h-32 bg-foreground/10 rounded-full blur-md absolute bottom-4" 
           />
-          <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix" alt="Avatar" className="h-32 w-32 relative z-10" />
+          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Felix" alt="Avatar" className="h-32 w-32 relative z-10" />
           {equipped.length > 0 && (
             <div className="absolute top-4 right-4 bg-acid/20 text-acid px-2 py-1 rounded-md text-[10px] font-bold border border-acid/20 backdrop-blur-md">
               <Sparkles className="h-3 w-3 inline mr-1" /> Customized

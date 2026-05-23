@@ -59,7 +59,7 @@ export function SalesTrackerPage() {
                   <tr key={row.gameId} className="border-b border-separator last:border-0 hover:bg-card-hover">
                     <td className="px-4 py-2">
                       <Link to={ROUTES.gameDetail(g.id)} className="flex items-center gap-3 hover:underline">
-                        <img src={g.capsuleUrl} alt="" className="h-8 w-16 rounded object-cover" />
+                        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={g.capsuleUrl} alt="" className="h-8 w-16 rounded object-cover" />
                         <span className="text-foreground/85">{g.name}</span>
                       </Link>
                     </td>

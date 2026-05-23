@@ -18,7 +18,7 @@ export function FamilyTimeProfiles() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="bg-input rounded-xl border border-separator p-4 relative overflow-hidden group cursor-pointer hover:border-indigo-500/50 transition-colors">
           <div className="flex items-center gap-3 mb-3">
-            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Timmy" alt="Timmy" className="h-10 w-10 rounded-full bg-card border border-separator" />
+            <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://api.dicebear.com/7.x/bottts/svg?seed=Timmy" alt="Timmy" className="h-10 w-10 rounded-full bg-card border border-separator" />
             <div>
               <p className="text-[14px] font-bold text-foreground">Timmy's Account</p>
               <p className="text-[11px] text-muted flex items-center gap-1"><Shield className="h-3 w-3" /> E for Everyone</p>

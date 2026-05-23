@@ -136,7 +136,7 @@ export function WishlistPage() {
               )}
             >
               <Link to={ROUTES.gameDetail(g.id)} className="shrink-0">
-                <img src={g.capsuleUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-32 rounded-md object-cover" />
+                <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={g.capsuleUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-32 rounded-md object-cover" />
               </Link>
               <div className="flex-1 min-w-0">
                 <Link to={ROUTES.gameDetail(g.id)} className="hover:underline">

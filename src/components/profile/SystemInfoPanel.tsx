@@ -156,7 +156,7 @@ export function SystemInfoPanel() {
               <div key={rec.gameId} className="flex items-center justify-between group">
                 <div className="flex items-center gap-3 w-full pr-2">
                   <div className="shrink-0 w-8 h-8 rounded overflow-hidden border border-separator/30">
-                    <img src={rec.gameIconUrl} alt={rec.gameName} className="w-full h-full object-cover" />
+                    <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={rec.gameIconUrl} alt={rec.gameName} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-bold text-foreground group-hover:text-cyan transition-colors cursor-pointer truncate">

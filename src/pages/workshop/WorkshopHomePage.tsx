@@ -107,7 +107,7 @@ export function WorkshopHomePage() {
                 to={ROUTES.workshopGame(game.id)}
                 className="group relative h-20 w-40 shrink-0 overflow-hidden rounded-xl border border-separator transition-colors hover:border-acid/40"
               >
-                <img src={game.headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={game.headerUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
                 <div className="absolute inset-x-0 bottom-2 px-2 text-center text-[11px] font-semibold text-foreground">
                   {game.name}
@@ -143,7 +143,7 @@ export function WorkshopHomePage() {
               return (
                 <div key={mod.id} className="group relative overflow-hidden rounded-xl border border-separator bg-card transition-colors hover:bg-card-hover hover:border-acid/30">
                   <div className="aspect-[460/215] w-full overflow-hidden">
-                    <img src={mod.imgUrl} alt={mod.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={mod.imgUrl} alt={mod.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   </div>
                   <div className="p-4">
                     <h3 className="text-[15px] font-semibold text-foreground truncate">{mod.name}</h3>

@@ -111,7 +111,7 @@ export function Sidebar() {
           compactMode ? "justify-center px-2 pt-6 pb-5" : "px-5 pt-6 pb-5",
         )}
       >
-        <img src={logoSrc} alt="Dreamworks" className="h-7 w-7 rounded-lg" />
+        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={logoSrc} alt="Dreamworks" className="h-7 w-7 rounded-lg" />
         {!compactMode && (
           <span className="text-[13px] font-semibold text-foreground/90 tracking-tight">
             Dreamworks

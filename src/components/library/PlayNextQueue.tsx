@@ -33,7 +33,7 @@ export function PlayNextQueue() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {backlog.map((game) => (
           <div key={game.id} className="group relative overflow-hidden rounded-xl border border-separator bg-card transition-all hover:border-acid/30 hover:shadow-lg hover:shadow-acid/5">
-            <img src={game.capsuleUrl} alt="" className="aspect-[460/215] w-full object-cover transition-transform duration-500 group-hover:scale-105 group-hover:opacity-60" />
+            <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={game.capsuleUrl} alt="" className="aspect-[460/215] w-full object-cover transition-transform duration-500 group-hover:scale-105 group-hover:opacity-60" />
             
             <div className="absolute inset-0 flex flex-col justify-between p-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-t from-background/90 via-background/50 to-transparent">
               <div className="flex justify-end">

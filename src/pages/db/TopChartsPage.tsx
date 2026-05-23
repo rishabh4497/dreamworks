@@ -72,7 +72,7 @@ export function TopChartsPage() {
                     <td className="px-4 py-2 text-muted/60 font-mono">{entry.rank}</td>
                     <td className="px-4 py-2">
                       <Link to={ROUTES.gameDetail(g.id)} className="flex items-center gap-3 hover:underline">
-                        <img src={g.capsuleUrl} alt="" className="h-8 w-16 rounded object-cover" />
+                        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={g.capsuleUrl} alt="" className="h-8 w-16 rounded object-cover" />
                         <span className="text-foreground/85">{g.name}</span>
                       </Link>
                     </td>

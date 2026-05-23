@@ -153,7 +153,7 @@ export function ImageDropzone({
 
       {value ? (
         <div className="group relative flex h-28 items-center justify-center overflow-hidden rounded-xl border border-separator bg-card-active/40">
-          <img src={value} alt={label} className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" loading="lazy" decoding="async" src={value} alt={label} className="h-full w-full object-cover" />
           {status === "uploading" && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60">
               <Loader2 className="h-5 w-5 animate-spin text-acid" />

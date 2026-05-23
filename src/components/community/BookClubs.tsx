@@ -7,7 +7,7 @@ export function BookClubs() {
       <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
       
       <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-        <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co67w0.jpg" alt="Celeste" className="w-48 rounded-xl shadow-2xl border border-separator rotate-[-2deg]" />
+        <img loading="lazy" decoding="async" loading="lazy" decoding="async" src="https://images.igdb.com/igdb/image/upload/t_cover_big/co67w0.jpg" alt="Celeste" className="w-48 rounded-xl shadow-2xl border border-separator rotate-[-2deg]" />
         
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-3">
