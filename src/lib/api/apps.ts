@@ -101,6 +101,7 @@ export async function createApp(input: CreateAppInput): Promise<App> {
       cloudSaves: false,
       achievements: false,
       newsPost: false,
+      sdkIntegration: false,
     },
     createdAt: now(),
     updatedAt: now(),

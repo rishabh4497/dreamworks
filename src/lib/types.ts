@@ -440,6 +440,37 @@ export interface AppBuild {
   platforms: OSPlatform[];
   assetUrl?: string;           // Firebase Storage URL or local desktop path
   status: "uploaded" | "processing" | "ready";
+  validation?: BuildValidation;
+  lastHandshakeAt?: ISODate;
+}
+
+// ── SDK build validation ────────────────────────────────────────────────────
+export type ValidationStatus = "pass" | "fail" | "warn" | "pending" | "skipped";
+
+export interface BuildValidationCheck {
+  status: ValidationStatus;
+  message: string;
+  details?: string[];
+}
+
+export interface BuildValidation {
+  schemaVersion: 1;
+  checkedAt: ISODate;
+  source: "client" | "tauri" | "cloud";
+  manifest: BuildValidationCheck;
+  binary: BuildValidationCheck;
+  handshake: BuildValidationCheck;
+  overall: ValidationStatus;
+}
+
+export interface DreamworksManifest {
+  schemaVersion: 1;
+  appId: string;
+  sdkVersion: string;
+  buildLabel: string;
+  achievements: string[];
+  platforms: OSPlatform[];
+  executable: string;
 }
 
 export interface AppBranch {
@@ -456,6 +487,7 @@ export interface AppChecklist {
   cloudSaves: boolean;
   achievements: boolean;
   newsPost: boolean;
+  sdkIntegration: boolean;
 }
 
 export interface App {

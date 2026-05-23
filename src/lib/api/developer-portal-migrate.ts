@@ -150,6 +150,7 @@ function draftToApp(draft: LegacyDraft, userId: string, devId: string, pubId: st
       cloudSaves: false,
       achievements: false,
       newsPost: false,
+      sdkIntegration: false,
     },
 
     createdAt: draft.updatedAt || now(),

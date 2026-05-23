@@ -430,75 +430,114 @@ export async function reviewStudioProfile(input: {
 // ── KPIs (small dashboard reads) ───────────────────────────────────────────
 
 export interface AdminKpis {
+  // Operational queues (need admin attention)
   pendingSubmissions: number;
   inReviewSubmissions: number;
+  publishersAwaitingVerification: number;
+  developersAwaitingVerification: number;
+  openModerationCount: number;
+  // This week
   approvedThisWeek: number;
   rejectedThisWeek: number;
-  pendingPublisherClaims: number;
-  pendingStudioClaims: number;
   newUsers7d: number;
+  // Platform totals
+  totalApps: number;
+  draftApps: number;
+  releasedGames: number;
+  totalPublishers: number;
+  approvedPublishers: number;
+  totalDevelopers: number;
+  approvedDevelopers: number;
+  totalUsers: number;
+  adminCount: number;
+}
+
+async function safeSize<T>(promise: Promise<{ size: number; docs: T[] }>): Promise<{ size: number; docs: T[] }> {
+  try {
+    return await promise;
+  } catch {
+    return { size: 0, docs: [] as T[] };
+  }
 }
 
 export async function getAdminKpis(): Promise<AdminKpis> {
   const db = getDb();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [pendingSubs, inReviewSubs, recentDecided, pendingPub, pendingDev, recentUsers] =
-    await Promise.all([
+  const [
+    pendingSubs,
+    inReviewSubs,
+    recentDecided,
+    allApps,
+    allGames,
+    allPublishers,
+    allDevelopers,
+    allUsers,
+    recentUsers,
+    openModeration,
+  ] = await Promise.all([
+    safeSize(getDocs(query(collection(db, COLLECTIONS.appSubmissions), where("status", "==", "pending")))),
+    safeSize(getDocs(query(collection(db, COLLECTIONS.appSubmissions), where("status", "==", "in_review")))),
+    safeSize(getDocs(query(collection(db, COLLECTIONS.appSubmissions), where("decidedAt", ">=", weekAgo)))),
+    safeSize(getDocs(collection(db, COLLECTIONS.apps))),
+    safeSize(getDocs(collection(db, COLLECTIONS.games))),
+    safeSize(getDocs(collection(db, COLLECTIONS.publishers))),
+    safeSize(getDocs(collection(db, COLLECTIONS.developers))),
+    safeSize(getDocs(collection(db, COLLECTIONS.users))),
+    safeSize(getDocs(query(collection(db, COLLECTIONS.users), where("memberSince", ">=", weekAgo)))),
+    safeSize(
       getDocs(
-        query(
-          collection(db, COLLECTIONS.appSubmissions),
-          where("status", "==", "pending"),
-        ),
+        query(collection(db, COLLECTIONS.moderationRecords), where("status", "in", ["open", "triaged"])),
       ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.appSubmissions),
-          where("status", "==", "in_review"),
-        ),
-      ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.appSubmissions),
-          where("decidedAt", ">=", weekAgo),
-          orderBy("decidedAt", "desc"),
-        ),
-      ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.publisherSubmissions),
-          where("status", "==", "pending"),
-        ),
-      ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.developerSubmissions),
-          where("status", "==", "pending"),
-        ),
-      ),
-      getDocs(
-        query(
-          collection(db, COLLECTIONS.users),
-          where("memberSince", ">=", weekAgo),
-        ),
-      ),
-    ]);
+    ),
+  ]);
 
   let approvedThisWeek = 0;
   let rejectedThisWeek = 0;
-  recentDecided.forEach((d) => {
-    const s = (d.data() as any).status;
+  recentDecided.docs.forEach((d: any) => {
+    const s = d.data?.()?.status ?? d.data?.status;
     if (s === "approved") approvedThisWeek += 1;
     else if (s === "rejected") rejectedThisWeek += 1;
   });
 
+  const countVerification = (docs: any[], match: (status: string) => boolean) =>
+    docs.filter((d) => {
+      const v = (d.data?.()?.verificationStatus ?? d.data?.verificationStatus ?? "unverified") as string;
+      return match(v);
+    }).length;
+
+  const publishersAwaitingVerification = countVerification(
+    allPublishers.docs,
+    (v) => v === "unverified" || v === "pending",
+  );
+  const developersAwaitingVerification = countVerification(
+    allDevelopers.docs,
+    (v) => v === "unverified" || v === "pending",
+  );
+  const approvedPublishers = countVerification(allPublishers.docs, (v) => v === "approved");
+  const approvedDevelopers = countVerification(allDevelopers.docs, (v) => v === "approved");
+
+  const draftApps = allApps.docs.filter((d: any) => (d.data?.()?.stage ?? d.data?.stage) === "draft").length;
+
+  const adminCount = allUsers.docs.filter((d: any) => (d.data?.()?.role ?? d.data?.role) === "admin").length;
+
   return {
     pendingSubmissions: pendingSubs.size,
     inReviewSubmissions: inReviewSubs.size,
+    publishersAwaitingVerification,
+    developersAwaitingVerification,
+    openModerationCount: openModeration.size,
     approvedThisWeek,
     rejectedThisWeek,
-    pendingPublisherClaims: pendingPub.size,
-    pendingStudioClaims: pendingDev.size,
     newUsers7d: recentUsers.size,
+    totalApps: allApps.size,
+    draftApps,
+    releasedGames: allGames.size,
+    totalPublishers: allPublishers.size,
+    approvedPublishers,
+    totalDevelopers: allDevelopers.size,
+    approvedDevelopers,
+    totalUsers: allUsers.size,
+    adminCount,
   };
 }
