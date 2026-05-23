@@ -24,11 +24,9 @@ import { PricingManager } from "@/pages/developer-portal/PricingManager";
 import { PublishPage } from "@/pages/developer-portal/PublishPage";
 import { StudioProfileEditor } from "@/pages/developer-portal/StudioProfileEditor";
 import { PublisherProfileEditor } from "@/pages/developer-portal/PublisherProfileEditor";
-import {
-  AnalyticsPanel,
-  MarketingPanel,
-  OpsPanel,
-} from "@/pages/developer-portal/LegacyPanels";
+import { AnalyticsPage } from "@/pages/developer-portal/AnalyticsPage";
+import { MarketingPage } from "@/pages/developer-portal/MarketingPage";
+import { LiveOpsPage } from "@/pages/developer-portal/LiveOpsPage";
 import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
 import { RoleGuard } from "@/components/common/RoleGuard";
 import { AdminPortalPage } from "@/pages/admin/AdminPortalPage";
@@ -119,9 +117,9 @@ export default function App() {
             </Route>
             <Route path="studio" element={<StudioProfileEditor />} />
             <Route path="publisher" element={<PublisherProfileEditor />} />
-            <Route path="analytics" element={<AnalyticsPanel />} />
-            <Route path="marketing" element={<MarketingPanel />} />
-            <Route path="ops" element={<OpsPanel />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="marketing" element={<MarketingPage />} />
+            <Route path="ops" element={<LiveOpsPage />} />
           </Route>
 
           <Route
