@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
 import { getDb, COLLECTIONS, SUBCOLLECTIONS, getFirebaseAuth } from "../firebase";
-import type { AppBuild, AppBranch, OSPlatform } from "../types";
+import type { AppBuild, AppBranch, BuildValidation, OSPlatform } from "../types";
 import { uploadAsset } from "../platform";
 import { getApp, saveApp } from "./apps";
 
@@ -32,6 +32,7 @@ export interface CreateBuildInput {
   notes: string;
   platforms: OSPlatform[];
   file?: File | Blob;
+  validation?: BuildValidation;
 }
 
 export async function createBuild(input: CreateBuildInput): Promise<AppBuild> {
@@ -59,12 +60,22 @@ export async function createBuild(input: CreateBuildInput): Promise<AppBuild> {
     platforms: input.platforms,
     assetUrl,
     status: "ready",
+    validation: input.validation,
   }) as AppBuild;
 
   const ref = doc(getDb(), COLLECTIONS.apps, input.appId, SUBCOLLECTIONS.appBuilds, id);
   await setDoc(ref, build);
   await saveApp(input.appId, { latestBuildId: id });
   return build;
+}
+
+export async function saveBuildValidation(
+  appId: string,
+  buildId: string,
+  validation: BuildValidation,
+): Promise<void> {
+  const ref = doc(getDb(), COLLECTIONS.apps, appId, SUBCOLLECTIONS.appBuilds, buildId);
+  await setDoc(ref, { validation }, { merge: true });
 }
 
 export async function setBranchLive(
