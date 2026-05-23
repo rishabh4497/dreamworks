@@ -1,13 +1,19 @@
 import { motion } from "motion/react";
 import { useState } from "react";
-import { Send, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { useFriendActivity, useFriends } from "@/hooks/use-friends";
 import { useGames } from "@/hooks/use-games";
+import { useAuthStore } from "@/stores/auth-store";
 import { Link } from "react-router-dom";
 import { ROUTES } from "@/lib/routes";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
+import {
+  ChatThread,
+  ChatComposer,
+  type ChatMessage,
+} from "@/components/ui/chat";
 import { toast } from "@/stores/toast-store";
 import { relativeDate, cn } from "@/lib/utils";
 import type { Friend } from "@/lib/types";
@@ -19,42 +25,61 @@ const STATUS_COLOR = {
   offline: "bg-muted/40",
 } as const;
 
-interface ChatLine {
-  fromMe: boolean;
-  text: string;
-  at: string;
-}
+const STATUS_LABEL = {
+  online: "Online",
+  "in-game": "In-game",
+  away: "Away",
+  offline: "Offline",
+} as const;
 
 export function FriendsPage() {
   const friends = useFriends();
   const activity = useFriendActivity();
   const games = useGames();
+  const profile = useAuthStore((s) => s.profile);
   const [chatFriend, setChatFriend] = useState<Friend | null>(null);
   const [addFriendOpen, setAddFriendOpen] = useState(false);
   const [addFriendInput, setAddFriendInput] = useState("");
-  const [chatLines, setChatLines] = useState<Record<string, ChatLine[]>>({});
+  const [chatLines, setChatLines] = useState<Record<string, ChatMessage[]>>({});
   const [draft, setDraft] = useState("");
+  const [typing, setTyping] = useState<Record<string, boolean>>({});
 
   if (friends.isLoading || activity.isLoading) return <LoadingSpinner />;
 
   const sendMessage = () => {
     if (!chatFriend || !draft.trim()) return;
-    const line: ChatLine = { fromMe: true, text: draft.trim(), at: new Date().toISOString() };
+    const fid = chatFriend.uid;
+    const now = new Date().toISOString();
+    const userMsg: ChatMessage = {
+      id: `${fid}-${Date.now()}-me`,
+      role: "user",
+      text: draft.trim(),
+      at: now,
+      avatarUrl: profile?.avatarUrl,
+      authorName: profile?.displayName ?? "You",
+    };
     setChatLines((prev) => ({
       ...prev,
-      [chatFriend.uid]: [...(prev[chatFriend.uid] ?? []), line],
+      [fid]: [...(prev[fid] ?? []), userMsg],
     }));
     setDraft("");
-    // Mock reply
-    const replyText = "Got it.";
-    setTimeout(() => {
+    setTyping((prev) => ({ ...prev, [fid]: true }));
+
+    // Mock reply — kept short while the real messaging backend is being wired.
+    window.setTimeout(() => {
+      const replyMsg: ChatMessage = {
+        id: `${fid}-${Date.now()}-peer`,
+        role: "peer",
+        text: pickMockReply(),
+        at: new Date().toISOString(),
+        avatarUrl: chatFriend.avatarUrl,
+        authorName: chatFriend.displayName,
+      };
       setChatLines((prev) => ({
         ...prev,
-        [chatFriend.uid]: [
-          ...(prev[chatFriend.uid] ?? []),
-          { fromMe: false, text: replyText, at: new Date().toISOString() },
-        ],
+        [fid]: [...(prev[fid] ?? []), replyMsg],
       }));
+      setTyping((prev) => ({ ...prev, [fid]: false }));
     }, 900);
   };
 
@@ -151,55 +176,63 @@ export function FriendsPage() {
       <Modal
         open={!!chatFriend}
         onClose={() => setChatFriend(null)}
-        title={chatFriend ? `Chat with ${chatFriend.displayName}` : ""}
+        maxWidth="max-w-xl"
+        title=""
       >
         {chatFriend && (
-          <div className="space-y-3">
-            <div className="h-64 overflow-y-auto rounded-xl border border-separator bg-bg p-3 space-y-2">
-              {(chatLines[chatFriend.uid] ?? []).length === 0 ? (
-                <p className="text-center text-[12px] text-muted/50 mt-20">
-                  Say hi — this is a mock chat, replies come from a friendly bot.
+          <div className="flex h-[70vh] max-h-[640px] flex-col">
+            <header className="mb-3 flex items-center gap-3 border-b border-separator pb-3">
+              <div className="relative">
+                <img
+                  src={chatFriend.avatarUrl}
+                  alt=""
+                  loading="lazy"
+                  className="h-10 w-10 rounded-full border border-separator object-cover"
+                />
+                <span
+                  className={cn(
+                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
+                    STATUS_COLOR[chatFriend.status],
+                  )}
+                  aria-hidden
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-semibold text-foreground">
+                  {chatFriend.displayName}
                 </p>
-              ) : (
-                (chatLines[chatFriend.uid] ?? []).map((line, i) => (
-                  <div
-                    key={i}
-                    className={cn("flex", line.fromMe ? "justify-end" : "justify-start")}
-                  >
-                    <div
-                      className={cn(
-                        "max-w-[75%] rounded-2xl px-3 py-1.5 text-[12px]",
-                        line.fromMe
-                          ? "bg-acid text-background"
-                          : "bg-card-active text-foreground/85",
-                      )}
-                    >
-                      {line.text}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                sendMessage();
-              }}
-              className="flex gap-2"
-            >
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={`Message ${chatFriend.displayName}…`}
-              />
-              <button
-                type="submit"
-                disabled={!draft.trim()}
-                className="rounded-xl bg-acid px-3 py-2 text-[12px] font-semibold text-background disabled:opacity-40"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
-            </form>
+                <p className="text-[11px] text-muted/65">
+                  {chatFriend.status === "in-game"
+                    ? `Playing ${(games.data ?? []).find((g) => g.id === chatFriend.currentGameId)?.name ?? "a game"}`
+                    : STATUS_LABEL[chatFriend.status]}
+                </p>
+              </div>
+            </header>
+
+            <ChatThread
+              messages={chatLines[chatFriend.uid] ?? []}
+              typing={typing[chatFriend.uid]}
+              typingAuthor={chatFriend.displayName}
+              className="mb-3"
+              empty={
+                <div className="px-4 text-center">
+                  <p className="text-[13px] font-medium text-foreground/80">
+                    Say hi to {chatFriend.displayName}
+                  </p>
+                  <p className="mt-1 text-[11.5px] text-muted/55">
+                    Messages are local previews while the chat backend rolls out.
+                  </p>
+                </div>
+              }
+            />
+
+            <ChatComposer
+              value={draft}
+              onChange={setDraft}
+              onSend={sendMessage}
+              placeholder={`Message ${chatFriend.displayName}…`}
+              busy={typing[chatFriend.uid]}
+            />
           </div>
         )}
       </Modal>
@@ -241,4 +274,21 @@ export function FriendsPage() {
       </Modal>
     </motion.div>
   );
+}
+
+/**
+ * Local preview replies — varies per call so the modal doesn't always echo the
+ * exact same string. Replaced by the real messaging service when it lands.
+ */
+const MOCK_REPLIES = [
+  "Got it.",
+  "Sounds good — squad up later?",
+  "Lol nice.",
+  "I'm down. Give me ten.",
+  "Yeah, I just saw the patch notes.",
+  "Sending an invite now.",
+];
+
+function pickMockReply(): string {
+  return MOCK_REPLIES[Math.floor(Math.random() * MOCK_REPLIES.length)];
 }

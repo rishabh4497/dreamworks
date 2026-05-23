@@ -7,8 +7,8 @@ import {
   Loader2,
   MessageSquarePlus,
   Mic,
-  Send,
   Settings,
+  Sparkles,
   Store,
   Video,
   Wrench,
@@ -29,6 +29,11 @@ import { useProfileStore } from "@/stores/profile-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/stores/toast-store";
+import {
+  ChatThread,
+  ChatComposer,
+  type ChatMessage,
+} from "@/components/ui/chat";
 import { cn } from "@/lib/utils";
 
 /** Parse "32 GB RAM" / "16 GB DDR5" / "16" → 16. Falls back to 16 GB if blank. */
@@ -171,54 +176,123 @@ const DEFAULT_CANDIDATES = [
   },
 ];
 
+const CURATOR_PROMPT_SUGGESTIONS = [
+  "I want a relaxing farming game but in space.",
+  "Co-op for two; nothing too sweaty.",
+  "Something like Hades but easier.",
+  "Recommend a chill 1-hour-a-night game.",
+];
+
 export function AiStoreCurator({ candidateGames = DEFAULT_CANDIDATES }: StoreCuratorProps) {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const curator = useAIStoreCurator();
 
-  const onAsk = () => {
-    if (!input.trim()) return;
-    curator.mutate({ userMessage: input, candidateGames });
+  const ask = (text: string) => {
+    const q = text.trim();
+    if (!q || curator.isPending) return;
+    const now = new Date().toISOString();
+    const userMsg: ChatMessage = {
+      id: `curator-q-${Date.now()}`,
+      role: "user",
+      text: q,
+      at: now,
+      authorName: "You",
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+
+    curator.mutate(
+      { userMessage: q, candidateGames },
+      {
+        onSuccess: (result) => {
+          const reply: ChatMessage = {
+            id: `curator-a-${Date.now()}`,
+            role: "peer",
+            text: result.reply,
+            at: new Date().toISOString(),
+            authorName: "Store Curator",
+            attachment:
+              result.suggestedGameIds.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.suggestedGameIds.map((id) => (
+                    <span
+                      key={id}
+                      className="rounded-full border border-acid/30 bg-acid/5 px-2 py-[1px] text-[10px] font-medium text-acid"
+                    >
+                      {id}
+                    </span>
+                  ))}
+                </div>
+              ) : undefined,
+          };
+          setMessages((prev) => [...prev, reply]);
+        },
+        onError: () => {
+          const errMsg: ChatMessage = {
+            id: `curator-err-${Date.now()}`,
+            role: "peer",
+            text: "Couldn't reach the curator. Try again in a moment.",
+            at: new Date().toISOString(),
+            authorName: "Store Curator",
+          };
+          setMessages((prev) => [...prev, errMsg]);
+        },
+      },
+    );
   };
 
   return (
-    <div className="rounded-xl border border-separator bg-card p-5 hover:border-acid/50 transition-colors">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-2 rounded-lg bg-acid/10 text-acid">
+    <div className="flex h-[520px] flex-col rounded-xl border border-separator bg-card p-5">
+      <header className="mb-3 flex items-center gap-3 border-b border-separator pb-3">
+        <div className="rounded-lg bg-acid/10 p-2 text-acid">
           <Store className="h-5 w-5" />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">AI Store Curator</h3>
-      </div>
-      <p className="text-xs text-muted/70 leading-relaxed mb-4">
-        A conversational bot. Try saying: "I want a relaxing farming game but in space."
-      </p>
-      <div className="flex bg-input rounded-lg border border-separator p-1">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onAsk()}
-          placeholder="Tell AI what you want to play..."
-          className="bg-transparent flex-1 text-xs px-2 focus:outline-none"
-        />
-        <button
-          onClick={onAsk}
-          disabled={curator.isPending || !input.trim()}
-          className="bg-card-active rounded px-3 py-1 text-xs hover:bg-card-hover border border-separator disabled:opacity-50 flex items-center gap-1"
-        >
-          {curator.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-          Ask
-        </button>
-      </div>
-      {curator.data && (
-        <div className="mt-3 rounded-lg bg-acid/5 border border-acid/20 p-3 text-[12px] text-foreground/80">
-          <p>{curator.data.reply}</p>
-          {curator.data.suggestedGameIds.length > 0 && (
-            <p className="mt-1.5 text-[11px] text-muted">
-              Picks: {curator.data.suggestedGameIds.join(", ")}
-            </p>
-          )}
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[14px] font-semibold text-foreground">AI Store Curator</h3>
+          <p className="text-[11px] text-muted/65">
+            A conversational bot trained on the Dreamworks catalog.
+          </p>
         </div>
-      )}
+        <span className="rounded-full border border-acid/30 bg-acid/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-widest text-acid">
+          Beta
+        </span>
+      </header>
+
+      <ChatThread
+        messages={messages}
+        typing={curator.isPending}
+        typingAuthor="Store Curator"
+        className="mb-3"
+        empty={
+          <div className="w-full max-w-sm space-y-3 px-2">
+            <div className="flex items-center justify-center gap-1.5 text-muted/60">
+              <Sparkles className="h-3.5 w-3.5" />
+              <p className="text-[12px] font-medium">Tell me what you're in the mood for</p>
+            </div>
+            <div className="space-y-2">
+              {CURATOR_PROMPT_SUGGESTIONS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => ask(p)}
+                  className="block w-full rounded-xl border border-separator bg-card-active/30 px-3 py-2 text-left text-[12.5px] text-foreground/80 transition-colors hover:border-acid/40 hover:bg-acid/10 hover:text-acid"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        }
+      />
+
+      <ChatComposer
+        value={input}
+        onChange={setInput}
+        onSend={() => ask(input)}
+        placeholder="Tell me what you want to play…"
+        busy={curator.isPending}
+      />
     </div>
   );
 }

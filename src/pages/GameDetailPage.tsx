@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Send, ShoppingCart, Sparkles, Tag } from "lucide-react";
+import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, ShoppingCart, Sparkles, Tag } from "lucide-react";
 import { useGameDetail } from "@/hooks/use-games";
 import { usePriceHistory, useHistoricalLows } from "@/hooks/use-game-db";
 import { useGameReviews } from "@/hooks/use-reviews";
@@ -466,11 +466,7 @@ export function GameDetailPage() {
 // here for a future Claude API call (just swap `getMockAnswer` for an SSE
 // stream).
 import { Modal } from "@/components/ui/modal";
-
-interface ChatMsg {
-  role: "user" | "ai";
-  text: string;
-}
+import { ChatThread, ChatComposer, type ChatMessage } from "@/components/ui/chat";
 
 const SUGGESTED_QUESTIONS = [
   "Is this beginner-friendly?",
@@ -508,7 +504,7 @@ function AskAIModal({
   onClose: () => void;
   gameName: string;
 }) {
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
@@ -523,102 +519,82 @@ function AskAIModal({
   const send = (text: string) => {
     const q = text.trim();
     if (!q || thinking) return;
-    setMessages((prev) => [...prev, { role: "user", text: q }]);
+    const userMsg: ChatMessage = {
+      id: `q-${Date.now()}`,
+      role: "user",
+      text: q,
+      at: new Date().toISOString(),
+      authorName: "You",
+    };
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setThinking(true);
-    // Simulate model latency.
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "ai", text: getMockAnswer(q, gameName) }]);
+    window.setTimeout(() => {
+      const aiMsg: ChatMessage = {
+        id: `a-${Date.now()}`,
+        role: "peer",
+        text: getMockAnswer(q, gameName),
+        at: new Date().toISOString(),
+        authorName: `Dreamworks AI · ${gameName}`,
+      };
+      setMessages((prev) => [...prev, aiMsg]);
       setThinking(false);
     }, 650);
   };
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="max-w-2xl">
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-acid" />
-          <h2 className="text-[16px] font-semibold text-foreground">
-            Ask AI about {gameName}
-          </h2>
-          <span className="ml-auto rounded-full border border-acid/30 bg-acid/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-widest text-acid">
+      <div className="flex h-[72vh] max-h-[680px] flex-col">
+        <header className="mb-3 flex items-center gap-3 border-b border-separator pb-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-acid/10 text-acid">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[15px] font-semibold text-foreground">
+              Ask AI about {gameName}
+            </h2>
+            <p className="text-[11px] text-muted/60">
+              Blends community discussions, reviews, and patch notes.
+            </p>
+          </div>
+          <span className="rounded-full border border-acid/30 bg-acid/10 px-1.5 py-[1px] text-[9px] font-bold uppercase tracking-widest text-acid">
             Beta
           </span>
-        </div>
-        <p className="text-[11.5px] text-muted/60">
-          Answers blend community discussions, reviews, and patch notes. Not a replacement for the developer's official docs.
-        </p>
+        </header>
 
-        <div className="max-h-[420px] min-h-[200px] space-y-3 overflow-y-auto rounded-xl border border-separator bg-card-active/30 p-4">
-          {messages.length === 0 ? (
-            <div className="space-y-2">
-              <p className="text-[12px] text-muted/70">Try one of these:</p>
-              {SUGGESTED_QUESTIONS.map((sq) => (
-                <button
-                  key={sq}
-                  type="button"
-                  onClick={() => send(sq)}
-                  className="block w-full rounded-lg border border-separator bg-card px-3 py-2 text-left text-[12.5px] text-foreground/80 transition-colors hover:border-acid/30 hover:bg-acid/10 hover:text-acid"
-                >
-                  {sq}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "flex",
-                    m.role === "user" ? "justify-end" : "justify-start",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed",
-                      m.role === "user"
-                        ? "bg-acid text-background"
-                        : "bg-card border border-separator text-foreground/85",
-                    )}
+        <ChatThread
+          messages={messages}
+          typing={thinking}
+          typingAuthor={`Dreamworks AI · ${gameName}`}
+          className="mb-3"
+          empty={
+            <div className="w-full max-w-md space-y-3 px-2">
+              <p className="text-center text-[12px] font-medium text-muted/70">
+                Suggested questions
+              </p>
+              <div className="space-y-2">
+                {SUGGESTED_QUESTIONS.map((sq) => (
+                  <button
+                    key={sq}
+                    type="button"
+                    onClick={() => send(sq)}
+                    className="block w-full rounded-xl border border-separator bg-card px-3 py-2 text-left text-[12.5px] text-foreground/80 transition-colors hover:border-acid/40 hover:bg-acid/10 hover:text-acid"
                   >
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {thinking && (
-                <div className="flex justify-start">
-                  <div className="rounded-2xl border border-separator bg-card px-3.5 py-2.5 text-[12px] italic text-muted/60">
-                    Thinking…
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                    {sq}
+                  </button>
+                ))}
+              </div>
+            </div>
+          }
+        />
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            send(input);
-          }}
-          className="flex gap-2"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={`Ask anything about ${gameName}…`}
-            className="flex-1 rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || thinking}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-acid px-4 py-2 text-[12px] font-semibold text-background disabled:opacity-40 hover:brightness-110 transition-all"
-          >
-            <Send className="h-3.5 w-3.5" />
-            Ask
-          </button>
-        </form>
+        <ChatComposer
+          value={input}
+          onChange={setInput}
+          onSend={() => send(input)}
+          placeholder={`Ask anything about ${gameName}…`}
+          busy={thinking}
+        />
       </div>
     </Modal>
   );

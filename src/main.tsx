@@ -58,6 +58,13 @@ if (typeof document !== "undefined") {
       void openExternal(href);
     }
   });
+
+  // On desktop, suppress the webview's native right-click context menu so the
+  // app feels like a native client rather than a browser. Web build keeps the
+  // browser's default menu.
+  if (isDesktop()) {
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
 }
 
 const queryClient = createQueryClient();
