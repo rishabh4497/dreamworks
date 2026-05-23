@@ -2,16 +2,8 @@ import { create } from "zustand";
 import type { GameId, WishlistEntry } from "@/lib/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
-import {
-  doc,
-  setDoc,
-  deleteDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  onSnapshot
-} from "firebase/firestore";
+import { doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+import { attachUserQuerySync } from "@/lib/store-factory";
 
 interface WishlistStore {
   entries: WishlistEntry[];
@@ -91,40 +83,21 @@ export const useWishlistStore = create<WishlistStore>((_set, get) => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribeWishlist: (() => void) | null = null;
-
-useAuthStore.subscribe((state) => {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribeWishlist) {
-    unsubscribeWishlist();
-    unsubscribeWishlist = null;
-  }
-
-  if (!uid) {
-    useWishlistStore.setState({ entries: [], ids: [] });
-    return;
-  }
-
-  const q = query(collection(getDb(), COLLECTIONS.wishlist), where("userId", "==", uid));
-  unsubscribeWishlist = onSnapshot(q, (snap) => {
-    const entries: WishlistEntry[] = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      entries.push({
-        gameId: data.gameId,
-        addedAt: data.addedAt,
-        priority: data.priority || 0,
-        notifyOnSale: data.notifyOnSale !== false,
-        priceCeilingCents: data.priceCeilingCents,
-        notifyOnlyAtATL: !!data.notifyOnlyAtATL,
-        lastAlertedAt: data.lastAlertedAt,
-      });
-    });
-    useWishlistStore.setState({ entries, ids: deriveIds(entries) });
-  });
+attachUserQuerySync<WishlistStore, WishlistEntry & { userId?: string }>(useWishlistStore, {
+  collectionKey: "wishlist",
+  field: "userId",
+  mapDocs: (rows) => {
+    const entries: WishlistEntry[] = rows.map((data) => ({
+      gameId: data.gameId,
+      addedAt: data.addedAt,
+      priority: data.priority || 0,
+      notifyOnSale: data.notifyOnSale !== false,
+      priceCeilingCents: data.priceCeilingCents,
+      notifyOnlyAtATL: !!data.notifyOnlyAtATL,
+      lastAlertedAt: data.lastAlertedAt,
+    }));
+    return { entries, ids: deriveIds(entries) };
+  },
+  empty: { entries: [], ids: [] },
 });
 

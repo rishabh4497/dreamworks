@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { doc, onSnapshot } from "firebase/firestore";
-import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { attachUserDocSync } from "@/lib/store-factory";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   pauseSubscription,
@@ -38,43 +37,11 @@ export const useSubscriptionStore = create<SubscriptionStore>(() => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribe: (() => void) | null = null;
-
-function sync(state: ReturnType<typeof useAuthStore.getState>) {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-
-  if (!uid) {
-    useSubscriptionStore.setState({
-      subscription: { ...DEFAULT_SUBSCRIPTION },
-      loaded: false,
-    });
-    return;
-  }
-
-  const ref = doc(getDb(), COLLECTIONS.userBilling, uid);
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      useSubscriptionStore.setState({
-        subscription: { ...DEFAULT_SUBSCRIPTION },
-        loaded: true,
-      });
-      return;
-    }
-    const data = snap.data() as UserBillingDoc;
-    useSubscriptionStore.setState({
-      subscription: { ...DEFAULT_SUBSCRIPTION, ...data.subscription },
-      loaded: true,
-    });
-  });
-}
-
-useAuthStore.subscribe(sync);
-sync(useAuthStore.getState());
+attachUserDocSync<SubscriptionStore, UserBillingDoc>(useSubscriptionStore, {
+  collectionKey: "userBilling",
+  mapDoc: (data) => ({
+    subscription: { ...DEFAULT_SUBSCRIPTION, ...(data?.subscription ?? {}) },
+    loaded: true,
+  }),
+  empty: { subscription: { ...DEFAULT_SUBSCRIPTION }, loaded: false },
+});

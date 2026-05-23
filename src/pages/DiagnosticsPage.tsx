@@ -33,8 +33,7 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import { useGames } from "@/hooks/use-games";
 import { useLibraryStore } from "@/stores/library-store";
-import { getDb } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { saveHardwareSnapshot } from "@/lib/api/user-hardware";
 import type {
   FpsBreakdown,
   HardwareSnapshot,
@@ -102,9 +101,7 @@ function HardwareSnapshotCard() {
     // Best-effort cache to Firestore so the same hardware shows on other
     // surfaces without re-running the snapshot every time.
     if (profile?.uid) {
-      void setDoc(doc(getDb(), "dw_user_hardware", profile.uid), result).catch(
-        () => {},
-      );
+      void saveHardwareSnapshot(profile.uid, result).catch(() => {});
     }
   };
 

@@ -5,17 +5,8 @@ import { computeRefundWindow, isRefundEligible } from "@/lib/refund";
 import { defaultCloudSaveStatus } from "@/lib/native-launcher";
 import { useAuthStore } from "@/stores/auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
-import {
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  collection,
-  query,
-  where,
-  onSnapshot,
-  writeBatch
-} from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
+import { attachUserQuerySync } from "@/lib/store-factory";
 
 interface AddExternalOptions {
   installed?: boolean;
@@ -175,54 +166,34 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribeLibrary: (() => void) | null = null;
-
-useAuthStore.subscribe((state) => {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribeLibrary) {
-    unsubscribeLibrary();
-    unsubscribeLibrary = null;
-  }
-
-  if (!uid) {
-    useLibraryStore.setState({ entries: [] });
-    return;
-  }
-
-  const q = query(collection(getDb(), COLLECTIONS.library), where("userId", "==", uid));
-  unsubscribeLibrary = onSnapshot(q, (snap) => {
-    const entries: LibraryEntry[] = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      entries.push({
-        gameId: data.gameId,
-        ownedSince: data.ownedSince,
-        installed: !!data.installed,
-        sizeBytes: data.sizeBytes || 0,
-        playMinutes: data.playMinutes || 0,
-        lastPlayed: data.lastPlayed || null,
-        collectionIds: data.collectionIds || [],
-        achievementsUnlocked: data.achievementsUnlocked || 0,
-        completionPct: data.completionPct || 0,
-        refundWindow: data.refundWindow || null,
-        orderId: data.orderId,
-        sourceLauncher: data.sourceLauncher || "dreamworks",
-        externalId: data.externalId,
-        installPath: data.installPath,
-        launchCommand: data.launchCommand,
-        installedVersion: data.installedVersion,
-        lastVerifiedAt: data.lastVerifiedAt || null,
-        cloudSaveStatus: data.cloudSaveStatus || "synced",
-        drmType: data.drmType || "dreamworks",
-        canLaunchOffline: data.canLaunchOffline !== false,
-        sources: data.sources || [],
-      });
-    });
-    useLibraryStore.setState({ entries });
-  });
+attachUserQuerySync<LibraryStore, LibraryEntry & Record<string, unknown>>(useLibraryStore, {
+  collectionKey: "library",
+  field: "userId",
+  mapDocs: (rows) => ({
+    entries: rows.map((data) => ({
+      gameId: data.gameId,
+      ownedSince: data.ownedSince,
+      installed: !!data.installed,
+      sizeBytes: (data.sizeBytes as number) || 0,
+      playMinutes: (data.playMinutes as number) || 0,
+      lastPlayed: data.lastPlayed || null,
+      collectionIds: (data.collectionIds as string[]) || [],
+      achievementsUnlocked: (data.achievementsUnlocked as number) || 0,
+      completionPct: (data.completionPct as number) || 0,
+      refundWindow: data.refundWindow || null,
+      orderId: data.orderId as string | undefined,
+      sourceLauncher: (data.sourceLauncher as LauncherSource) || "dreamworks",
+      externalId: data.externalId as string | undefined,
+      installPath: data.installPath as string | undefined,
+      launchCommand: data.launchCommand as string | undefined,
+      installedVersion: data.installedVersion as string | undefined,
+      lastVerifiedAt: data.lastVerifiedAt || null,
+      cloudSaveStatus: (data.cloudSaveStatus as LibraryEntry["cloudSaveStatus"]) || "synced",
+      drmType: (data.drmType as DrmType) || "dreamworks",
+      canLaunchOffline: data.canLaunchOffline !== false,
+      sources: (data.sources as LibrarySourceCopy[]) || [],
+    })) as LibraryEntry[],
+  }),
+  empty: { entries: [] },
 });
 

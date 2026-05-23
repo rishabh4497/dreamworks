@@ -2,15 +2,8 @@ import { create } from "zustand";
 import type { GameId, Review, ReviewFacets } from "@/lib/types";
 import { useAuthStore } from "./auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
-import {
-  doc,
-  setDoc,
-  deleteDoc,
-  collection,
-  query,
-  where,
-  onSnapshot,
-} from "firebase/firestore";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
+import { attachUserQuerySync } from "@/lib/store-factory";
 
 interface UserReviewPayload {
   recommended: boolean;
@@ -68,35 +61,13 @@ export const useUserReviewsStore = create<UserReviewsStore>((_set, get) => ({
   get: (gameId) => get().byGame[gameId],
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribeReviews: (() => void) | null = null;
-
-useAuthStore.subscribe((state) => {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribeReviews) {
-    unsubscribeReviews();
-    unsubscribeReviews = null;
-  }
-
-  if (!uid) {
-    useUserReviewsStore.setState({ byGame: {} });
-    return;
-  }
-
-  const q = query(
-    collection(getDb(), COLLECTIONS.reviews),
-    where("userId", "==", uid)
-  );
-
-  unsubscribeReviews = onSnapshot(q, (snap) => {
+attachUserQuerySync<UserReviewsStore, Review>(useUserReviewsStore, {
+  collectionKey: "reviews",
+  field: "userId",
+  mapDocs: (rows) => {
     const byGame: Record<GameId, Review> = {};
-    snap.forEach((d) => {
-      const data = d.data() as Review;
-      byGame[data.gameId] = data;
-    });
-    useUserReviewsStore.setState({ byGame });
-  });
+    for (const data of rows) byGame[data.gameId] = data;
+    return { byGame };
+  },
+  empty: { byGame: {} },
 });

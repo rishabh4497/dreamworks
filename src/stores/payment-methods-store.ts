@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { doc, onSnapshot } from "firebase/firestore";
-import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { attachUserDocSync } from "@/lib/store-factory";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   addPaymentMethod,
@@ -39,34 +38,8 @@ export const usePaymentMethodsStore = create<PaymentMethodsStore>(() => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribe: (() => void) | null = null;
-
-function sync(state: ReturnType<typeof useAuthStore.getState>) {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-
-  if (!uid) {
-    usePaymentMethodsStore.setState({ cards: [] });
-    return;
-  }
-
-  const ref = doc(getDb(), COLLECTIONS.userBilling, uid);
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      usePaymentMethodsStore.setState({ cards: [] });
-      return;
-    }
-    const data = snap.data() as UserBillingDoc;
-    usePaymentMethodsStore.setState({ cards: data.paymentMethods ?? [] });
-  });
-}
-
-useAuthStore.subscribe(sync);
-sync(useAuthStore.getState());
+attachUserDocSync<PaymentMethodsStore, UserBillingDoc>(usePaymentMethodsStore, {
+  collectionKey: "userBilling",
+  mapDoc: (data) => ({ cards: data?.paymentMethods ?? [] }),
+  empty: { cards: [] },
+});

@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { doc, onSnapshot } from "firebase/firestore";
-import { COLLECTIONS, getDb } from "@/lib/firebase";
+import { attachUserDocSync } from "@/lib/store-factory";
 import { useAuthStore } from "@/stores/auth-store";
 import {
   connectPlatform,
@@ -42,36 +41,10 @@ export const useLinkedPlatformsStore = create<LinkedPlatformsStore>(() => ({
   },
 }));
 
-let lastUid: string | undefined = undefined;
-let unsubscribe: (() => void) | null = null;
-
-function sync(state: ReturnType<typeof useAuthStore.getState>) {
-  const uid = state.profile?.uid;
-  if (uid === lastUid) return;
-  lastUid = uid;
-
-  if (unsubscribe) {
-    unsubscribe();
-    unsubscribe = null;
-  }
-
-  if (!uid) {
-    useLinkedPlatformsStore.setState({ platforms: { ...INITIAL_PLATFORMS } });
-    return;
-  }
-
-  const ref = doc(getDb(), COLLECTIONS.userPlatforms, uid);
-  unsubscribe = onSnapshot(ref, (snap) => {
-    if (!snap.exists()) {
-      useLinkedPlatformsStore.setState({ platforms: { ...INITIAL_PLATFORMS } });
-      return;
-    }
-    const data = snap.data() as UserPlatformsDoc;
-    useLinkedPlatformsStore.setState({
-      platforms: { ...INITIAL_PLATFORMS, ...data.platforms },
-    });
-  });
-}
-
-useAuthStore.subscribe(sync);
-sync(useAuthStore.getState());
+attachUserDocSync<LinkedPlatformsStore, UserPlatformsDoc>(useLinkedPlatformsStore, {
+  collectionKey: "userPlatforms",
+  mapDoc: (data) => ({
+    platforms: { ...INITIAL_PLATFORMS, ...(data?.platforms ?? {}) },
+  }),
+  empty: { platforms: { ...INITIAL_PLATFORMS } },
+});

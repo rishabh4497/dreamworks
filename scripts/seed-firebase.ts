@@ -645,7 +645,7 @@ async function main() {
   // Pre-populates the developer portal (and the public Game Detail page) with
   // realistic announcements, live events, and a handful of promo campaigns so
   // the new Analytics/Marketing/Live Ops tabs aren't empty on first load.
-  await seedLiveOpsAndMarketing();
+  await seedLiveOpsAndMarketing(studios);
 
   // ── Phase 6d: dw_config (admin-tunable enums) ────────────────────────────
   // Countries, languages, payment brands, family relationships, … — every
@@ -719,7 +719,10 @@ function daysFromNowIso(days: number): string {
   return new Date(Date.now() + days * DAY_MS).toISOString();
 }
 
-async function seedLiveOpsAndMarketing(): Promise<void> {
+async function seedLiveOpsAndMarketing(
+  studios: Map<string, StudioIdentity>,
+): Promise<void> {
+  const db = getFirestore();
   const annTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
   const evtTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
   const promoTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
@@ -727,9 +730,9 @@ async function seedLiveOpsAndMarketing(): Promise<void> {
   let promoCount = 0;
   for (let i = 0; i < GAME_SEEDS.length; i++) {
     const seed = GAME_SEEDS[i];
-    const appId = slugify(seed.title);
+    const appId = seed.id;
     const ownerSlug = slugify(seed.developer);
-    const studio = [...studios.values()].find((s) => s.devSlug === ownerSlug);
+    const studio = studios.get(ownerSlug);
     const ownerUserId = studio?.uid ?? "system-seed";
 
     // 3 announcements per app: launch news, two patches.
@@ -737,8 +740,8 @@ async function seedLiveOpsAndMarketing(): Promise<void> {
       {
         id: `${appId}-launch`,
         category: "news" as const,
-        title: `${seed.title} is now available`,
-        body: `Years in the making — ${seed.title} is live worldwide today. Thanks to everyone who wishlisted, played the demo, and shared feedback in our Discord. See you in-game.`,
+        title: `${seed.name} is now available`,
+        body: `Years in the making — ${seed.name} is live worldwide today. Thanks to everyone who wishlisted, played the demo, and shared feedback in our Discord. See you in-game.`,
         publishedAt: daysAgoIso(85),
       },
       {
@@ -787,7 +790,7 @@ async function seedLiveOpsAndMarketing(): Promise<void> {
         id: `${appId}-event-free-weekend`,
         kind: "free-weekend" as const,
         title: "Free Weekend",
-        description: `Play ${seed.title} free for 72 hours. Progress carries over to a full purchase.`,
+        description: `Play ${seed.name} free for 72 hours. Progress carries over to a full purchase.`,
         startsAt: daysAgoIso(7),
         endsAt: daysAgoIso(4),
       },

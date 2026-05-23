@@ -1,5 +1,4 @@
 import type { GameId, WorkshopMod } from "../types";
-import { WORKSHOP_MODS } from "../mock/workshop-mods";
 import { COLLECTIONS, getDb } from "../firebase";
 import {
   collection,
@@ -9,27 +8,9 @@ import {
   query,
   setDoc,
   where,
-  writeBatch,
 } from "firebase/firestore";
 
-let modsSeedingPromise: Promise<void> | null = null;
-
-async function ensureWorkshopModsSeeded(): Promise<void> {
-  if (modsSeedingPromise) return modsSeedingPromise;
-  modsSeedingPromise = (async () => {
-    const snap = await getDocs(collection(getDb(), COLLECTIONS.workshopMods));
-    if (!snap.empty) return;
-    const batch = writeBatch(getDb());
-    for (const mod of WORKSHOP_MODS) {
-      batch.set(doc(getDb(), COLLECTIONS.workshopMods, mod.id), mod);
-    }
-    await batch.commit();
-  })();
-  return modsSeedingPromise;
-}
-
 export async function listWorkshopMods(gameId?: GameId): Promise<WorkshopMod[]> {
-  await ensureWorkshopModsSeeded();
   const colRef = collection(getDb(), COLLECTIONS.workshopMods);
   const snap = gameId
     ? await getDocs(query(colRef, where("gameId", "==", gameId)))
