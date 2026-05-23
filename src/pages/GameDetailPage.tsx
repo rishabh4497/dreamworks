@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
-import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, ShoppingCart, Sparkles, Tag } from "lucide-react";
+import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Play, ShoppingCart, Sparkles, Tag } from "lucide-react";
 import { useGameDetail } from "@/hooks/use-games";
 import { usePriceHistory, useHistoricalLows } from "@/hooks/use-game-db";
 import { useGameReviews } from "@/hooks/use-reviews";
@@ -41,7 +41,18 @@ import { GameMaintenanceBanner } from "@/components/store/GameMaintenanceBanner"
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
 import { studioBrand } from "@/lib/studio-logos";
-import type { FacetAverages, Review, GameDetail } from "@/lib/types";
+import type { FacetAverages, Review, GameDetail, Screenshot, Trailer } from "@/lib/types";
+
+type MediaItem =
+  | { kind: "video"; trailer: Trailer }
+  | { kind: "image"; screenshot: Screenshot };
+
+function trailerThumb(t: Trailer, fallback: string): string {
+  if (t.provider === "youtube" && t.id) {
+    return `https://img.youtube.com/vi/${t.id}/mqdefault.jpg`;
+  }
+  return t.posterUrl || fallback;
+}
 import { cn, compactNumber, formatBytes, formatDate, formatHours, slugify } from "@/lib/utils";
 
 function computeFacetAverages(reviews: Review[]): FacetAverages {
@@ -89,7 +100,7 @@ export function GameDetailPage() {
   const owns = useLibraryStore((s) => s.has(gameId));
   const userReview = useUserReviewsStore((s) => s.byGame[gameId]);
   const isSubscribed = useAuthStore((s) => s.profile?.isSubscribed);
-  const [activeShot, setActiveShot] = useState(0);
+  const [activeMedia, setActiveMedia] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -128,7 +139,12 @@ export function GameDetailPage() {
     );
   }
 
-  const heroImage = detail.screenshots[activeShot]?.url ?? detail.headerUrl;
+  const mediaItems: MediaItem[] = [
+    ...detail.trailers.map((trailer) => ({ kind: "video" as const, trailer })),
+    ...detail.screenshots.map((screenshot) => ({ kind: "image" as const, screenshot })),
+  ];
+  const activeItem = mediaItems[activeMedia];
+  const heroFallbackImage = detail.screenshots[0]?.url ?? detail.headerUrl;
 
   return (
     <motion.div
@@ -139,33 +155,95 @@ export function GameDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <div className="min-w-0">
         <GameMaintenanceBanner appId={detail.id} />
-        {/* Hero / screenshots */}
+        {/* Hero / media */}
         <div
-          className="overflow-hidden rounded-2xl border border-separator bg-card mb-4 cursor-zoom-in"
-          onDoubleClick={() => setLightboxUrl(heroImage)}
-          title="Double-click to enlarge"
+          className={cn(
+            "overflow-hidden rounded-2xl border border-separator bg-card mb-4",
+            activeItem?.kind !== "video" && "cursor-zoom-in",
+          )}
+          onDoubleClick={() => {
+            if (!activeItem || activeItem.kind === "image") {
+              setLightboxUrl(
+                activeItem?.kind === "image" ? activeItem.screenshot.url : heroFallbackImage,
+              );
+            }
+          }}
+          title={activeItem?.kind === "video" ? undefined : "Double-click to enlarge"}
         >
-          <img
-            src={heroImage}
-            alt={detail.name}
-            className="aspect-[16/9] w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
+          {activeItem?.kind === "video" ? (
+            activeItem.trailer.provider === "youtube" && activeItem.trailer.id ? (
+              <iframe
+                key={activeItem.trailer.id}
+                src={`https://www.youtube-nocookie.com/embed/${activeItem.trailer.id}?autoplay=1&mute=1&rel=0&playsinline=1`}
+                title={`${detail.name} trailer`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="aspect-[16/9] w-full"
+              />
+            ) : (
+              <video
+                key={activeItem.trailer.url}
+                src={activeItem.trailer.url}
+                poster={activeItem.trailer.posterUrl || heroFallbackImage}
+                controls
+                autoPlay
+                muted
+                playsInline
+                className="aspect-[16/9] w-full bg-black object-contain"
+              />
+            )
+          ) : (
+            <img
+              src={activeItem?.kind === "image" ? activeItem.screenshot.url : heroFallbackImage}
+              alt={detail.name}
+              className="aspect-[16/9] w-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          )}
         </div>
         <div className="mb-6 flex gap-2 overflow-x-auto shelf-scroll">
-          {detail.screenshots.map((s, i) => (
-            <button
-              key={s.url}
-              onClick={() => setActiveShot(i)}
-              onDoubleClick={() => setLightboxUrl(s.url)}
-              className={`h-16 w-28 shrink-0 overflow-hidden rounded-md border cursor-zoom-in ${
-                i === activeShot ? "border-acid" : "border-separator opacity-70 hover:opacity-100"
-              }`}
-              title="Double-click to enlarge"
-            >
-              <img loading="lazy" decoding="async" src={s.thumbUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-            </button>
-          ))}
+          {mediaItems.map((item, i) => {
+            const isActive = i === activeMedia;
+            const key =
+              item.kind === "video" ? `v:${item.trailer.url}` : `i:${item.screenshot.url}`;
+            const thumb =
+              item.kind === "video"
+                ? trailerThumb(item.trailer, heroFallbackImage)
+                : item.screenshot.thumbUrl;
+            return (
+              <button
+                key={key}
+                onClick={() => setActiveMedia(i)}
+                onDoubleClick={() => {
+                  if (item.kind === "image") setLightboxUrl(item.screenshot.url);
+                }}
+                className={cn(
+                  "relative h-16 w-28 shrink-0 overflow-hidden rounded-md border",
+                  item.kind === "image" && "cursor-zoom-in",
+                  isActive ? "border-acid" : "border-separator opacity-70 hover:opacity-100",
+                )}
+                title={item.kind === "image" ? "Double-click to enlarge" : "Play video"}
+              >
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  src={thumb}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.src !== heroFallbackImage) img.src = heroFallbackImage;
+                  }}
+                />
+                {item.kind === "video" && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play className="h-5 w-5 fill-white text-white" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mb-2 flex items-center gap-2">
