@@ -57,16 +57,21 @@ export const useCartStore = create<CartStore>()(
         }),
       updateGift: (id, gift) =>
         set((s) => {
-          const next = s.items.map((item) =>
-            item.gameId === id
-              ? {
-                  ...item,
-                  asGift: gift.asGift,
-                  giftRecipient: gift.asGift ? gift.recipient : undefined,
-                  scheduledDeliveryAt: gift.asGift ? gift.scheduledDeliveryAt : undefined,
-                }
-              : item,
-          );
+          const next = s.items.map((item) => {
+            if (item.gameId !== id) return item;
+            // Keep the recipient + scheduled date hanging around even when
+            // toggling gift mode off — that way the user doesn't lose what they
+            // typed if they accidentally untoggle. Only the `asGift` flag
+            // controls whether checkout treats it as a gift.
+            const nextRecipient = gift.recipient ?? item.giftRecipient;
+            const nextSchedule = gift.scheduledDeliveryAt ?? item.scheduledDeliveryAt;
+            return {
+              ...item,
+              asGift: gift.asGift,
+              giftRecipient: nextRecipient,
+              scheduledDeliveryAt: nextSchedule,
+            };
+          });
           syncToFirestore(next);
           return { items: next };
         }),

@@ -26,7 +26,7 @@ interface LazyMountProps {
 export function LazyMount({
   children,
   placeholderHeight = 200,
-  rootMargin = "240px",
+  rootMargin = "1200px",
   once = true,
   className,
 }: LazyMountProps) {

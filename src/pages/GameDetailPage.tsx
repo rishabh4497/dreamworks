@@ -27,7 +27,6 @@ import { FacetBars } from "@/components/store/FacetBars";
 import { LfgMatchmaking } from "@/components/store/LfgMatchmaking";
 import { DealForecaster } from "@/components/store/DealForecaster";
 import { MediaPlayer, type MediaItem } from "@/components/store/MediaPlayer";
-import { LazyMount } from "@/components/common/LazyMount";
 import { QueryErrorState } from "@/components/common/QueryErrorState";
 const PriceHistoryChart = lazy(() =>
   import("@/components/db/PriceHistoryChart").then((m) => ({ default: m.PriceHistoryChart })),
@@ -284,53 +283,47 @@ export function GameDetailPage() {
           </div>
         </div>
 
-        {/* Price history (SteamDB inline) — deferred until scrolled into view */}
-        <LazyMount placeholderHeight={520}>
-          <section className="mt-10">
-            <header className="mb-3 flex items-baseline justify-between">
-              <div>
-                <h2 className="text-[16px] font-semibold text-foreground">Price history</h2>
-                <p className="text-[12px] text-muted/60">Last 365 days · USD</p>
-              </div>
-              <button
-                onClick={() => navigate(ROUTES.gameDb(detail.id))}
-                className="inline-flex items-center gap-1 text-[12px] text-muted/70 hover:text-foreground/80"
-              >
-                <BarChart3 className="h-3.5 w-3.5" /> View on Dreamworks DB
-              </button>
-            </header>
-            <div className="mb-4">
-              <DealForecaster gameId={detail.id} />
+        {/* Price history (SteamDB inline) */}
+        <section className="mt-10">
+          <header className="mb-3 flex items-baseline justify-between">
+            <div>
+              <h2 className="text-[16px] font-semibold text-foreground">Price history</h2>
+              <p className="text-[12px] text-muted/60">Last 365 days · USD</p>
             </div>
-            {priceHistory && (
-              <Suspense fallback={<div className="h-[240px] rounded-xl border border-separator bg-card" />}>
-                <PriceHistoryChart data={priceHistory} />
-              </Suspense>
-            )}
-            {lows && (
-              <div className="mt-4">
-                <Suspense fallback={null}>
-                  <HistoricalLowsTable lows={lows} />
-                </Suspense>
-              </div>
-            )}
-          </section>
-        </LazyMount>
-
-        <LazyMount placeholderHeight={260}>
-          <AIGameOverview gameDetail={detail} />
-        </LazyMount>
-
-        <LazyMount placeholderHeight={200}>
-          <div className="mt-6 space-y-4">
-            {detail.developer && (
-              <AIStudioOverview kind="Developer" name={detail.developer} variant="compact" />
-            )}
-            {detail.publisher && detail.publisher !== detail.developer && (
-              <AIStudioOverview kind="Publisher" name={detail.publisher} variant="compact" />
-            )}
+            <button
+              onClick={() => navigate(ROUTES.gameDb(detail.id))}
+              className="inline-flex items-center gap-1 text-[12px] text-muted/70 hover:text-foreground/80"
+            >
+              <BarChart3 className="h-3.5 w-3.5" /> View on Dreamworks DB
+            </button>
+          </header>
+          <div className="mb-4">
+            <DealForecaster gameId={detail.id} />
           </div>
-        </LazyMount>
+          {priceHistory && (
+            <Suspense fallback={<div className="h-[240px] rounded-xl border border-separator bg-card" />}>
+              <PriceHistoryChart data={priceHistory} />
+            </Suspense>
+          )}
+          {lows && (
+            <div className="mt-4">
+              <Suspense fallback={null}>
+                <HistoricalLowsTable lows={lows} />
+              </Suspense>
+            </div>
+          )}
+        </section>
+
+        <AIGameOverview gameDetail={detail} />
+
+        <div className="mt-6 space-y-4">
+          {detail.developer && (
+            <AIStudioOverview kind="Developer" name={detail.developer} variant="compact" />
+          )}
+          {detail.publisher && detail.publisher !== detail.developer && (
+            <AIStudioOverview kind="Publisher" name={detail.publisher} variant="compact" />
+          )}
+        </div>
 
         {/* About */}
         <section className="mt-10">
@@ -366,18 +359,16 @@ export function GameDetailPage() {
 
         {/* Review breakdown (facet radar) */}
         {facetAverages.ratedCount > 0 && (
-          <LazyMount placeholderHeight={300}>
-            <section className="mt-10">
-              <h2 className="text-[16px] font-semibold text-foreground mb-3">Review breakdown</h2>
-              <div className="rounded-2xl border border-separator bg-card p-4">
-                <FacetRadar averages={facetAverages} />
-                <p className="mt-2 text-center text-[11px] text-muted/60">
-                  Based on {compactNumber(facetAverages.ratedCount)} rated review
-                  {facetAverages.ratedCount === 1 ? "" : "s"}
-                </p>
-              </div>
-            </section>
-          </LazyMount>
+          <section className="mt-10">
+            <h2 className="text-[16px] font-semibold text-foreground mb-3">Review breakdown</h2>
+            <div className="rounded-2xl border border-separator bg-card p-4">
+              <FacetRadar averages={facetAverages} />
+              <p className="mt-2 text-center text-[11px] text-muted/60">
+                Based on {compactNumber(facetAverages.ratedCount)} rated review
+                {facetAverages.ratedCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </section>
         )}
 
         {/* Reviews preview */}
@@ -482,9 +473,7 @@ export function GameDetailPage() {
 
         <PlaytimeBadge playtime={detail.playtime} />
 
-        <LazyMount placeholderHeight={160}>
-          <CompatibilityPanel gameId={detail.id} />
-        </LazyMount>
+        <CompatibilityPanel gameId={detail.id} />
 
         <div className="rounded-2xl border border-separator bg-card p-4 space-y-3 text-[12px]">
           <Row icon={Tag} label="Genres" value={detail.genres.join(", ")} />
@@ -521,12 +510,8 @@ export function GameDetailPage() {
           Discussions
         </button>
 
-        <LazyMount placeholderHeight={120}>
-          <FriendsWhoOwn gameId={detail.id} />
-        </LazyMount>
-        <LazyMount placeholderHeight={200}>
-          <LfgMatchmaking gameId={detail.id} />
-        </LazyMount>
+        <FriendsWhoOwn gameId={detail.id} />
+        <LfgMatchmaking gameId={detail.id} />
       </aside>
       </div>
 

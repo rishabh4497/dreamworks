@@ -10,7 +10,7 @@ import { ChipInGifting } from "@/components/cart/ChipInGifting";
 import { SavedCarts } from "@/components/cart/SavedCarts";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 export function CartPage() {
   const items = useCartStore((s) => s.items);
@@ -121,23 +121,36 @@ export function CartPage() {
                   <div className="space-y-2">
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        const wasGift = Boolean(g.cartItem?.asGift);
+                        const nextAsGift = !wasGift;
                         updateGift(g.id, {
-                          asGift: !g.cartItem?.asGift,
-                          recipient: g.cartItem?.giftRecipient,
-                          scheduledDeliveryAt: g.cartItem?.scheduledDeliveryAt,
-                        })
-                      }
-                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-[12px] ${
+                          asGift: nextAsGift,
+                          recipient: nextAsGift ? g.cartItem?.giftRecipient : undefined,
+                          scheduledDeliveryAt: nextAsGift
+                            ? g.cartItem?.scheduledDeliveryAt
+                            : undefined,
+                        });
+                        toast.success(
+                          nextAsGift
+                            ? `Marked “${g.name}” as a gift`
+                            : `“${g.name}” is no longer a gift`,
+                        );
+                      }}
+                      aria-pressed={Boolean(g.cartItem.asGift)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-[12px] transition-colors",
                         g.cartItem.asGift
-                          ? "border-acid/40 bg-acid/10 text-foreground"
-                          : "border-separator bg-input/50 text-muted/70"
-                      }`}
+                          ? "border-acid/40 bg-acid/10 text-foreground hover:bg-acid/15"
+                          : "border-separator bg-input/50 text-muted/70 hover:bg-input hover:text-foreground/80",
+                      )}
                     >
                       <span className="inline-flex items-center gap-2">
                         <Gift className="h-3.5 w-3.5" /> Send as gift
                       </span>
-                      <span>{g.cartItem.asGift ? "On" : "Off"}</span>
+                      <span className="font-semibold">
+                        {g.cartItem.asGift ? "On" : "Off"}
+                      </span>
                     </button>
                     <button
                       type="button"

@@ -273,7 +273,9 @@ export function CheckoutPage() {
 
       const gameIds = buyerLibraryIdsFrom(orderedItems);
       if (gameIds.length > 0) {
-        await addToLibrary(gameIds, result.order.id);
+        // Fire-and-forget so a Firestore hiccup doesn't fail the checkout —
+        // the order is already paid by the time we get here.
+        void addToLibrary(gameIds, result.order.id).catch(() => {});
         if (autoInstallOnPurchase) {
           for (const id of gameIds) {
             startDownload(id, 8_000_000_000, { silent: true });
