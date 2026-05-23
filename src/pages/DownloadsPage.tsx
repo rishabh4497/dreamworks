@@ -370,7 +370,7 @@ export function DownloadsPage() {
       entry.installPath,
       settings.installPath,
     );
-    const toPath = buildMovedInstallPath(entry.gameId, targetDriveId);
+    const toPath = buildMovedInstallPath(entry.gameId, targetDriveId, drives);
     if (fromPath === toPath) return;
 
     setMoveProgress((current) => ({ ...current, [entry.gameId]: 35 }));
@@ -1110,15 +1110,19 @@ function InstalledGameRow({
         <select
           value={drive.id}
           onChange={(event) => onMove(event.target.value)}
-          disabled={moving}
+          disabled={moving || drives.length === 0}
           aria-label={`Move ${game?.name ?? entry.gameId}`}
           className="h-8 max-w-[108px] rounded-lg border border-separator bg-input px-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-acid/20 disabled:opacity-50"
         >
-          {STORAGE_DRIVES.map((target) => (
-            <option key={target.id} value={target.id}>
-              {target.name}
-            </option>
-          ))}
+          {drives.length === 0 ? (
+            <option value={drive.id}>{drive.name}</option>
+          ) : (
+            drives.map((target) => (
+              <option key={target.id} value={target.id}>
+                {target.name}
+              </option>
+            ))
+          )}
         </select>
         <Button
           variant="ghost"
