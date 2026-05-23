@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: deny all. Each collection opts in explicitly.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // AI cache, quotas, and usage telemetry are server-only.
+    // Only Cloud Functions running with the Admin SDK can touch these.
+    match /dw_ai_cache/{cacheKey} {
+      allow read, write: if false;
+    }
+    match /dw_ai_quotas/{uid} {
+      allow read, write: if false;
+    }
+    match /dw_ai_usage/{eventId} {
+      allow read, write: if false;
+    }
+
+  }
+}

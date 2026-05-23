@@ -1,32 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  getPublisherProfile,
-  savePublisherProfile,
-  type PublisherProfile,
-} from "@/lib/api/developer-portal";
+  getPublisher,
+  getMyPrimaryPublisher,
+  savePublisher,
+  type PublisherInput,
+} from "@/lib/api/publishers";
 
 export const publisherKeys = {
   all: ["publishers"] as const,
-  profile: (name: string) => [...publisherKeys.all, "profile", name] as const,
+  byId: (slug: string) => [...publisherKeys.all, "id", slug] as const,
+  mine: () => [...publisherKeys.all, "mine"] as const,
 };
 
-export function usePublisherProfile(name: string | undefined) {
+export function usePublisher(slug: string | undefined) {
   return useQuery({
-    queryKey: name ? publisherKeys.profile(name) : ["disabled"],
-    queryFn: () => getPublisherProfile(name!),
-    enabled: !!name,
+    queryKey: slug ? publisherKeys.byId(slug) : ["disabled"],
+    queryFn: () => getPublisher(slug!),
+    enabled: !!slug,
   });
 }
 
-export function useSavePublisherProfile(name: string | undefined) {
-  const queryClient = useQueryClient();
+export function useMyPublisher() {
+  return useQuery({ queryKey: publisherKeys.mine(), queryFn: getMyPrimaryPublisher });
+}
 
+export function useSavePublisher() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (profile: Omit<PublisherProfile, "updatedAt">) =>
-      savePublisherProfile(profile),
-    onSuccess: () => {
-      if (!name) return;
-      queryClient.invalidateQueries({ queryKey: publisherKeys.profile(name) });
+    mutationFn: (input: PublisherInput) => savePublisher(input),
+    onSuccess: (pub) => {
+      qc.invalidateQueries({ queryKey: publisherKeys.mine() });
+      if (pub?.id) qc.invalidateQueries({ queryKey: publisherKeys.byId(pub.id) });
     },
   });
 }
