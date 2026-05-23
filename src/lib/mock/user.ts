@@ -14,6 +14,8 @@ export const MOCK_USER: UserProfile = {
   country: "India",
   memberSince: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365 * 4).toISOString(),
   showcaseGameIds: ["elden-ring", "witcher-3", "cyberpunk-2077"],
+  role: "user",
+  permissions: [],
 };
 
 const ownedSlugs = [

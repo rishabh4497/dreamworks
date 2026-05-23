@@ -1,4 +1,4 @@
-import type { Collection, LibraryEntry, UserProfile, WishlistEntry } from "../types";
+import type { Collection, LibraryEntry, UserProfile, UserRole, WishlistEntry } from "../types";
 import { getDb, COLLECTIONS, getFirebaseAuth } from "../firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useAuthStore } from "@/stores/auth-store";
@@ -38,6 +38,9 @@ export async function getProfile(uid: string): Promise<UserProfile | undefined> 
     memberSince: data.memberSince || new Date().toISOString(),
     showcaseGameIds: data.showcaseGameIds || [],
     isSubscribed: !!data.isSubscribed,
+    role: ((data.role as UserRole) ?? "user"),
+    permissions: Array.isArray(data.permissions) ? data.permissions : [],
+    suspended: !!data.suspended,
   };
 }
 

@@ -30,6 +30,15 @@ import {
   OpsPanel,
 } from "@/pages/developer-portal/LegacyPanels";
 import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
+import { RoleGuard } from "@/components/common/RoleGuard";
+import { AdminPortalPage } from "@/pages/admin/AdminPortalPage";
+import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
+import { AppSubmissionsQueuePage } from "@/pages/admin/AppSubmissionsQueuePage";
+import { AppSubmissionDetailPage } from "@/pages/admin/AppSubmissionDetailPage";
+import { UsersPage } from "@/pages/admin/UsersPage";
+import { UserDetailPage } from "@/pages/admin/UserDetailPage";
+import { PublisherReviewPage, StudioReviewPage } from "@/pages/admin/CreatorReviewPage";
+import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LibraryGamePage } from "@/pages/LibraryGamePage";
 import { LibraryCollectionPage } from "@/pages/LibraryCollectionPage";
@@ -112,7 +121,27 @@ export default function App() {
             <Route path="analytics" element={<AnalyticsPanel />} />
             <Route path="marketing" element={<MarketingPanel />} />
             <Route path="ops" element={<OpsPanel />} />
-            <Route path="moderation" element={<ModerationQueuePage />} />
+          </Route>
+
+          <Route
+            path="admin"
+            element={
+              <RoleGuard roles={["admin"]}>
+                <AdminPortalPage />
+              </RoleGuard>
+            }
+          >
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="submissions" element={<AppSubmissionsQueuePage />} />
+            <Route path="submissions/:submissionId" element={<AppSubmissionDetailPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="users/:uid" element={<UserDetailPage />} />
+            <Route path="content-moderation" element={<ModerationQueuePage />} />
+            <Route path="publishers" element={<PublisherReviewPage />} />
+            <Route path="publishers/:id" element={<PublisherReviewPage />} />
+            <Route path="studios" element={<StudioReviewPage />} />
+            <Route path="studios/:id" element={<StudioReviewPage />} />
+            <Route path="audit-log" element={<AuditLogPage />} />
           </Route>
 
           <Route path="db" element={<DbHomePage />} />

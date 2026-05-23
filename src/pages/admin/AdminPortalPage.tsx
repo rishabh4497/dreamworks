@@ -12,7 +12,15 @@ import {
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
+interface AdminNavItem {
+  to: string;
+  label: string;
+  icon: typeof ShieldCheck;
+  matchPrefix: string;
+  exact?: boolean;
+}
+
+const NAV_ITEMS: AdminNavItem[] = [
   { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck, matchPrefix: ROUTES.admin, exact: true },
   { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package, matchPrefix: ROUTES.adminSubmissions },
   { to: ROUTES.adminUsers, label: "Users", icon: User, matchPrefix: ROUTES.adminUsers },
@@ -20,7 +28,7 @@ const NAV_ITEMS = [
   { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase, matchPrefix: ROUTES.adminPublishers },
   { to: ROUTES.adminStudios, label: "Studios", icon: Building, matchPrefix: ROUTES.adminStudios },
   { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText, matchPrefix: ROUTES.adminAuditLog },
-] as const;
+];
 
 export function AdminPortalPage() {
   const { pathname } = useLocation();

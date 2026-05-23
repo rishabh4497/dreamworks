@@ -7,7 +7,6 @@ import {
   BarChart3,
   Megaphone,
   Globe2,
-  ShieldAlert,
   Briefcase,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
@@ -21,7 +20,6 @@ const NAV_ITEMS = [
   { to: ROUTES.devAnalytics, label: "Analytics", icon: BarChart3, matchPrefix: ROUTES.devAnalytics },
   { to: ROUTES.devMarketing, label: "Marketing", icon: Megaphone, matchPrefix: ROUTES.devMarketing },
   { to: ROUTES.devOps, label: "Live Ops", icon: Globe2, matchPrefix: ROUTES.devOps },
-  { to: ROUTES.devModeration, label: "Moderation", icon: ShieldAlert, matchPrefix: ROUTES.devModeration },
 ] as const;
 
 export function DeveloperPortalPage() {
