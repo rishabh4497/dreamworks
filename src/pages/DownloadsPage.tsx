@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   AlertTriangle,
@@ -19,6 +19,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,10 +29,11 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
 import { useStartDownload } from "@/hooks/use-start-download";
+import { useStorageDrives } from "@/hooks/use-storage-drives";
+import { useCleanupCandidates } from "@/hooks/use-cleanup-candidates";
 import {
-  STORAGE_DRIVES,
-  buildCleanupCandidates,
   buildMovedInstallPath,
+  deleteCacheCandidate,
   installPathForGame,
   resolveDriveForPath,
   type CleanupCandidate,
@@ -51,7 +53,6 @@ import { cn, formatBytes, relativeDate } from "@/lib/utils";
 import type { DownloadLimitOption, DownloadStatus, DownloadTask, GameId, LibraryEntry } from "@/lib/types";
 
 const ENGINE_SIZE_BYTES = 4_500_000_000;
-const MOCK_DISK_BYTES = 1_000_000_000_000;
 
 const LIMIT_OPTIONS: Array<{ value: DownloadLimitOption; label: string }> = [
   { value: "unlimited", label: "Unlimited" },
@@ -148,14 +149,19 @@ export function DownloadsPage() {
   const { settings, updateSettings } = useUiStore();
   const startDownload = useStartDownload();
   const desktop = isDesktop();
+  const queryClient = useQueryClient();
+  const { data: drives = [] } = useStorageDrives();
   const [moveProgress, setMoveProgress] = useState<Record<GameId, number>>({});
   const [verifyState, setVerifyState] = useState<Record<GameId, "verified" | "verifying">>({});
-  const [backupTarget, setBackupTarget] = useState("/Backups/Dreamworks/library-manifest.json");
+  const [backupTarget, setBackupTarget] = useState(
+    `${settings.installPath.replace(/\/+$/, "")}/Backups/library-manifest.json`,
+  );
   const [backupManifest, setBackupManifest] = useState<BackupManifest | null>(null);
-  const [restorePath, setRestorePath] = useState("/Volumes/Vault/Dreamworks/elden-ring");
+  const [restorePath, setRestorePath] = useState(
+    `${settings.installPath.replace(/\/+$/, "")}/Backups`,
+  );
   const [restoreStatus, setRestoreStatus] = useState("No restore session");
   const [selectedCleanupIds, setSelectedCleanupIds] = useState<Set<string>>(new Set());
-  const cleanupSeededRef = useRef(false);
 
   const runningTasks = useMemo(() => tasks.filter((task) => isRunning(task.status)), [tasks]);
   const pausedTasks = useMemo(() => tasks.filter((task) => task.status === "paused"), [tasks]);
