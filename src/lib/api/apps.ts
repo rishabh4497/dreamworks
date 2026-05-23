@@ -27,7 +27,7 @@ import {
   gameCapsuleUrl,
   gameScreenshotUrl,
   gameScreenshotThumbUrl,
-} from "../mock/images";
+} from "../placeholder-images";
 
 function now() {
   return new Date().toISOString();

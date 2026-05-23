@@ -21,6 +21,7 @@ export function formatSpeedBytes(bps: number): string {
 }
 
 export function formatPrice(minorUnits: number, currency: string = "INR"): string {
+  if (!Number.isFinite(minorUnits)) return "—";
   if (minorUnits === 0) return "Free";
   const value = minorUnits / 100;
   return new Intl.NumberFormat("en-IN", {

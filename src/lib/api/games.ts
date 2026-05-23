@@ -5,16 +5,15 @@ import type {
   RecommendationReason,
   ShelfGame,
 } from "../types";
-import { GAMES, buildGameDetail } from "../mock";
-import { GAME_SEEDS } from "../mock/games";
 import { slugify } from "../utils";
 import { getDb, COLLECTIONS } from "../firebase";
-import { collection, getDocs, writeBatch, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 
 /**
  * Catalog entry used by the launcher scanner — pairs the in-app `GameId` with
  * each external launcher's primary identifier so we can resolve a detected
- * game to our catalog without leaking the mock-data layout to consumers.
+ * game to our catalog. Backed by the live Firestore catalog snapshot so the
+ * scanner sees the same titles that the storefront shelves render.
  */
 export interface ScannerCatalogEntry {
   id: GameId;
@@ -22,40 +21,17 @@ export interface ScannerCatalogEntry {
   steamAppId: string;
 }
 
-export function getScannerCatalog(): ScannerCatalogEntry[] {
-  return GAME_SEEDS.map((s) => ({
-    id: s.id,
-    name: s.name,
-    steamAppId: String(s.steamAppId),
-  }));
-}
-
-let seedingPromise: Promise<void> | null = null;
-
-export async function ensureGamesSeeded(): Promise<void> {
-  if (seedingPromise) return seedingPromise;
-
-  seedingPromise = (async () => {
-    const colRef = collection(getDb(), COLLECTIONS.games);
-    const snap = await getDocs(colRef);
-    if (!snap.empty) {
-      return;
-    }
-
-    console.log("dw_games collection is empty, auto-seeding games from mock data...");
-    const batch = writeBatch(getDb());
-    
-    for (const g of GAMES) {
-      const detail = buildGameDetail(g.id);
-      if (!detail) continue;
-      const docRef = doc(getDb(), COLLECTIONS.games, g.id);
-      batch.set(docRef, detail);
-    }
-    await batch.commit();
-    console.log("Successfully seeded dw_games!");
-  })();
-
-  return seedingPromise;
+export async function getScannerCatalog(): Promise<ScannerCatalogEntry[]> {
+  const games = await fetchAllFromDb();
+  return games
+    .map((g) => {
+      // `steamAppId` is carried in the GameDetail metadata; some seeds may not
+      // have it (e.g. native Dreamworks-only titles) — skip those.
+      const sid = (g as unknown as { steamAppId?: number | string }).steamAppId;
+      if (sid == null) return null;
+      return { id: g.id, name: g.name, steamAppId: String(sid) };
+    })
+    .filter((e): e is ScannerCatalogEntry => e !== null);
 }
 
 // ── Catalog snapshot cache ────────────────────────────────────────────────
@@ -137,7 +113,6 @@ async function fetchCatalogVersion(): Promise<number | null> {
 }
 
 async function loadCatalog(): Promise<{ data: GameDetail[]; version: number | null }> {
-  await ensureGamesSeeded();
   const [snap, version] = await Promise.all([
     getDocs(collection(getDb(), COLLECTIONS.games)),
     fetchCatalogVersion(),
@@ -222,7 +197,6 @@ export async function getGame(id: GameId): Promise<Game | undefined> {
     const hit = catalogCache.find((g) => g.id === id);
     if (hit) return hit;
   }
-  await ensureGamesSeeded();
   const docRef = doc(getDb(), COLLECTIONS.games, id);
   const snap = await getDoc(docRef);
   if (!snap.exists()) return undefined;
@@ -234,7 +208,6 @@ export async function getGameDetail(id: GameId): Promise<GameDetail | undefined>
     const hit = catalogCache.find((g) => g.id === id);
     if (hit) return hit;
   }
-  await ensureGamesSeeded();
   const docRef = doc(getDb(), COLLECTIONS.games, id);
   const snap = await getDoc(docRef);
   if (!snap.exists()) return undefined;

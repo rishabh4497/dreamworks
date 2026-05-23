@@ -26,15 +26,9 @@ import {
 import { useApp } from "@/hooks/use-apps";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "@/stores/toast-store";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { openExternal } from "@/lib/platform";
 import type { AppSubmission, Trailer } from "@/lib/types";
-
-function formatPrice(cents: number): string {
-  if (!Number.isFinite(cents)) return "—";
-  if (cents === 0) return "Free";
-  return `₹${(cents / 100).toFixed(2)}`;
-}
 
 function relativeTime(iso?: string): string {
   if (!iso) return "—";

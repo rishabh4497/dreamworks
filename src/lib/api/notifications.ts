@@ -1,9 +1,4 @@
 import type { AppNotification } from "../types";
-import { SEED_NOTIFICATIONS } from "../mock/notifications";
-
-// Re-exported so stores can hydrate optimistic local state without reaching
-// into `@/lib/mock` directly (forbidden by the stores rule).
-export { SEED_NOTIFICATIONS };
 import { COLLECTIONS, getDb } from "../firebase";
 import {
   collection,
@@ -23,35 +18,10 @@ interface StoredNotification extends AppNotification {
   userId: string;
 }
 
-const seededUsers = new Set<string>();
-
-async function ensureSeededForUser(userId: string): Promise<void> {
-  if (seededUsers.has(userId)) return;
-  seededUsers.add(userId);
-  const q = query(
-    collection(getDb(), COLLECTIONS.notifications),
-    where("userId", "==", userId),
-    fsLimit(1),
-  );
-  const snap = await getDocs(q);
-  if (!snap.empty) return;
-  const batch = writeBatch(getDb());
-  for (const seed of SEED_NOTIFICATIONS) {
-    const id = `${userId}__${seed.id}`;
-    batch.set(doc(getDb(), COLLECTIONS.notifications, id), {
-      ...seed,
-      id,
-      userId,
-    });
-  }
-  await batch.commit();
-}
-
 export async function listNotifications(
   userId: string,
   limit = 200,
 ): Promise<AppNotification[]> {
-  await ensureSeededForUser(userId);
   const q = query(
     collection(getDb(), COLLECTIONS.notifications),
     where("userId", "==", userId),

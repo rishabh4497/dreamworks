@@ -9,8 +9,8 @@ import type { DetectedGame } from "./types";
  *  - Case-insensitive substring match on the name (either direction) → "fuzzy"
  *  - Otherwise → "unmatched"
  */
-export function matchToCatalog(detected: DetectedGame[]): DetectedGame[] {
-  const catalog = getScannerCatalog();
+export async function matchToCatalog(detected: DetectedGame[]): Promise<DetectedGame[]> {
+  const catalog = await getScannerCatalog();
   return detected.map((d) => matchOne(d, catalog));
 }
 

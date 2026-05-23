@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AppNotification, NotificationKind } from "@/lib/types";
 import {
-  SEED_NOTIFICATIONS,
   clearNotificationsOlderThan,
   listNotifications,
   markAllNotificationsRead,
@@ -157,16 +156,12 @@ export const useNotificationsStore = create<NotificationsStore>()(
         if (!state) return;
         // Housekeeping: drop anything past the TTL.
         state.clearOlderThan(DEFAULT_TTL_DAYS);
-        // Seed mock notifications on first ever load.
-        if (!state._seeded && state.notifications.length === 0) {
-          state._hydrateSeed(SEED_NOTIFICATIONS);
-        } else {
-          state._seeded = true;
-          // Recompute unread count just in case the persisted value drifted.
-          state.unreadCount = recomputeUnread(state.notifications);
-        }
-        // Best-effort: refresh from Firestore so the user sees server-side
-        // notifications (price drops, system events) once authenticated.
+        state._seeded = true;
+        state.unreadCount = recomputeUnread(state.notifications);
+        // Refresh from Firestore so the user sees server-side notifications
+        // (price drops, system events, etc.) once authenticated. Pre-auth
+        // sessions show an empty list rather than mock seeds — see
+        // `dw_notifications` in the seed script.
         void state.hydrate();
       },
     },

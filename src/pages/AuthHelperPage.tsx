@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { getFirebaseAuth, getDb } from "@/lib/firebase";
+import { completeDesktopAuthSession } from "@/lib/api/auth-session";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 export function AuthHelperPage() {
@@ -25,24 +23,8 @@ export function AuthHelperPage() {
     setErrorMsg(null);
 
     try {
-      const auth = getFirebaseAuth();
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential || !credential.idToken) {
-        throw new Error("Failed to retrieve credentials from Google.");
-      }
-
       setStatus("saving");
-      
-      // Save credentials under dw_auth_sessions collection in Firestore
-      await setDoc(doc(getDb(), "dw_auth_sessions", sessionId), {
-        idToken: credential.idToken,
-        accessToken: credential.accessToken || null,
-        createdAt: new Date().toISOString(),
-      });
-
+      await completeDesktopAuthSession(sessionId);
       setStatus("success");
     } catch (err: any) {
       console.error("Browser Auth Error:", err);

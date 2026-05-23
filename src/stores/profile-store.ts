@@ -39,7 +39,7 @@ export const detectSystemRig = (): SystemRig => {
   if (typeof window !== "undefined") {
     try {
       if (isDesktop()) {
-        if ((window as any).__TAURI_OS_PLUGIN_INTERNALS__) {
+        if (window.__TAURI_OS_PLUGIN_INTERNALS__) {
           const osType = type();
           const osVer = version();
           const osArch = arch() === "aarch64" ? "Apple Silicon" : arch();
@@ -60,7 +60,7 @@ export const detectSystemRig = (): SystemRig => {
       const cpuCores = navigator.hardwareConcurrency || 8;
       cpu = `Processor (${cpuCores}-Core)`;
       
-      const memory = (navigator as any).deviceMemory || 16;
+      const memory = navigator.deviceMemory || 16;
       ram = `${memory} GB RAM`;
 
       display = `${window.screen.width} x ${window.screen.height}`;

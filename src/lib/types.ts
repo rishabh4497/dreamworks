@@ -1797,3 +1797,14 @@ export type ConfigKey =
   | "notification_kinds"
   | "telemetry_scaffold"
   | "rejection_reasons";
+
+// ── Global augmentations ─────────────────────────────────────────────────────
+// Non-standard browser extensions used for capability detection. `window`-side
+// Tauri internals are already typed by `@tauri-apps/plugin-os` and don't need
+// re-declaration here.
+declare global {
+  interface Navigator {
+    /** Device Memory API — non-standard, not in lib.dom.d.ts. Bucketed value in GB. */
+    deviceMemory?: number;
+  }
+}
