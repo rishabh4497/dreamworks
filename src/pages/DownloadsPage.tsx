@@ -729,29 +729,32 @@ export function DownloadsPage() {
               <HardDrive className="h-4 w-4 text-muted/55" />
               <h2 className="text-[14px] font-semibold text-foreground">Storage</h2>
             </div>
-            <div className="space-y-4">
-              <div>
-                <div className="mb-2 flex items-center justify-between text-[12px]">
-                  <span className="text-muted/55">Installed</span>
-                  <span className="font-medium text-foreground/85">
-                    {formatBytes(installedBytes)} / {formatBytes(MOCK_DISK_BYTES)}
-                  </span>
+            {primaryDrive ? (
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-[12px]">
+                    <span className="text-muted/55">{primaryDrive.name}</span>
+                    <span className="font-medium text-foreground/85">
+                      {formatBytes(primaryDrive.usedBytes)} / {formatBytes(totalCapacityBytes)}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-card-active">
+                    <div
+                      className="h-full rounded-full bg-foreground/65 transition-all"
+                      style={{ width: `${storagePct}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-card-active">
-                  <div
-                    className="h-full rounded-full bg-foreground/65 transition-all"
-                    style={{ width: `${storagePct}%` }}
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <StorageStat label="Queue" value={formatBytes(queuedBytes)} />
+                  <StorageStat label="Free" value={formatBytes(totalFreeBytes)} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <StorageStat label="Queue" value={formatBytes(queuedBytes)} />
-                <StorageStat
-                  label="Free"
-                  value={formatBytes(Math.max(0, MOCK_DISK_BYTES - installedBytes))}
-                />
-              </div>
-            </div>
+            ) : (
+              <p className="text-[12px] text-muted/45">
+                {desktop ? "Scanning drives…" : "Drives unavailable on the web client"}
+              </p>
+            )}
           </section>
         </aside>
       </div>
@@ -790,7 +793,7 @@ export function DownloadsPage() {
                   Installed Library
                 </h3>
                 <p className="text-[11px] text-muted/45">
-                  {installedEntries.length} installed games across {STORAGE_DRIVES.length} drives
+                  {installedEntries.length} installed games across {drives.length} drives
                 </p>
               </div>
               <Button
@@ -821,6 +824,7 @@ export function DownloadsPage() {
                     entry.installPath,
                     settings.installPath,
                   )}
+                  drives={drives}
                   moveProgress={moveProgress[entry.gameId]}
                   verifyState={verifyState[entry.gameId]}
                   onMove={(driveId) => handleMoveInstall(entry, driveId)}
@@ -839,14 +843,23 @@ export function DownloadsPage() {
                 </h3>
               </div>
               <div className="space-y-2">
-                {cleanupCandidates.slice(0, 5).map((candidate) => (
-                  <CleanupCandidateRow
-                    key={candidate.id}
-                    candidate={candidate}
-                    selected={selectedCleanupIds.has(candidate.id)}
-                    onToggle={() => toggleCleanup(candidate.id)}
-                  />
-                ))}
+                {cleanupCandidates.length === 0 ? (
+                  <p className="rounded-lg bg-card-active/35 px-3 py-3 text-[11px] text-muted/45">
+                    {desktop
+                      ? "No cache files found yet. Install or run games to populate."
+                      : "Cache scan is a desktop-only feature."}
+                  </p>
+                ) : (
+                  cleanupCandidates.slice(0, 6).map((candidate) => (
+                    <CleanupCandidateRow
+                      key={candidate.id}
+                      candidate={candidate}
+                      drives={drives}
+                      selected={selectedCleanupIds.has(candidate.id)}
+                      onToggle={() => toggleCleanup(candidate.id)}
+                    />
+                  ))
+                )}
               </div>
             </Card>
 
@@ -994,14 +1007,16 @@ function DriveCard({ drive }: { drive: DriveStats }) {
 
 function CleanupCandidateRow({
   candidate,
+  drives,
   selected,
   onToggle,
 }: {
   candidate: CleanupCandidate;
+  drives: StorageDrive[];
   selected: boolean;
   onToggle: () => void;
 }) {
-  const drive = STORAGE_DRIVES.find((item) => item.id === candidate.driveId);
+  const drive = drives.find((item) => item.id === candidate.driveId);
 
   return (
     <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-card-active/35 px-3 py-2 hover:bg-card-active/55">
@@ -1031,6 +1046,7 @@ function CleanupCandidateRow({
 function InstalledGameRow({
   entry,
   installPath,
+  drives,
   moveProgress,
   verifyState,
   onMove,
@@ -1038,13 +1054,14 @@ function InstalledGameRow({
 }: {
   entry: LibraryEntry;
   installPath: string;
+  drives: StorageDrive[];
   moveProgress?: number;
   verifyState?: "verified" | "verifying";
   onMove: (driveId: string) => void;
   onVerify: () => void;
 }) {
   const game = getGameById(entry.gameId);
-  const drive = resolveDriveForPath(installPath);
+  const drive = resolveDriveForPath(installPath, drives);
   const moving = typeof moveProgress === "number";
 
   return (
