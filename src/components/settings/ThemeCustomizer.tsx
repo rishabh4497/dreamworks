@@ -55,7 +55,13 @@ export function ThemeCustomizer() {
               <button
                 type="button"
                 key={theme.id}
-                onClick={() => setActiveThemeId(theme.id)}
+                onClick={() => {
+                  if (active && theme.id !== defaultThemeId) {
+                    setActiveThemeId(defaultThemeId);
+                  } else if (!active) {
+                    setActiveThemeId(theme.id);
+                  }
+                }}
                 aria-pressed={active}
                 className={cn(
                   "group relative flex h-full flex-col items-start gap-4 rounded-lg border bg-input p-4 text-left transition-colors",

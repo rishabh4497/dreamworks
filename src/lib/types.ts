@@ -2023,6 +2023,320 @@ export interface SocialGraphCountersDoc {
   communities: number;
 }
 
+// ── Telemetry (in-house Console / Observability backbone) ───────────────────
+//
+// Captured from the client by `src/lib/telemetry.ts`; admin-only reads through
+// `src/lib/api/telemetry.ts`. No PII in payloads — pre-sanitized before write.
+
+export type TelemetryOS = "windows" | "mac" | "linux" | "web";
+
+/** Snapshot of the client's runtime environment at session start. */
+export interface DeviceSnapshot {
+  os: TelemetryOS;
+  isDesktop: boolean;
+  cpuCores: number;
+  deviceMemoryGb: number;
+  screenW: number;
+  screenH: number;
+  pixelRatio: number;
+  userAgent: string;
+  language: string;
+  timezone: string;
+  /** Tauri version, when running inside the desktop shell. */
+  tauriVersion?: string;
+  /** Deep CPU model from Tauri's read_hardware_info (desktop only). */
+  cpuModel?: string;
+  /** Primary GPU vendor/model from Tauri (desktop only). */
+  gpu?: string;
+  /** Total RAM in bytes from Tauri (desktop only). */
+  totalMemoryBytes?: number;
+  /** App version (from Vite define / package.json). */
+  appVersion?: string;
+}
+
+export interface TelemetrySession {
+  id: string;
+  uid: string | null;
+  startedAt: ISODate;
+  endedAt?: ISODate;
+  /** First route the session landed on. */
+  entryRoute: string;
+  /** Most recent route observed in this session. */
+  lastRoute: string;
+  device: DeviceSnapshot;
+  /** Number of page views captured in this session. */
+  pageViews: number;
+  /** Number of events captured in this session. */
+  eventCount: number;
+  /** Number of errors captured in this session. */
+  errorCount: number;
+}
+
+export type TelemetryEventType =
+  | "page_view"
+  | "session_start"
+  | "session_end"
+  | "search_query"
+  | "game_view"
+  | "wishlist_add"
+  | "wishlist_remove"
+  | "cart_add"
+  | "cart_remove"
+  | "checkout_start"
+  | "checkout_complete"
+  | "checkout_abandon"
+  | "library_install"
+  | "library_launch"
+  | "studio_submit"
+  | "build_upload"
+  | "publish_action"
+  | "review_submit"
+  | "voice_join"
+  | "community_join"
+  | "feature_click";
+
+export interface TelemetryEvent {
+  id: string;
+  sessionId: string;
+  uid: string | null;
+  ts: ISODate;
+  /** Discriminator for analytics queries. */
+  type: TelemetryEventType | (string & {});
+  /** Route on which the event fired. */
+  route: string;
+  /** Sanitized payload — no PII (no email, full tokens, etc.). */
+  payload?: Record<string, unknown>;
+}
+
+export interface TelemetryError {
+  id: string;
+  sessionId: string;
+  uid: string | null;
+  ts: ISODate;
+  message: string;
+  /** Trimmed stack — file paths normalized to `src/...`. */
+  stack?: string;
+  /** Where it surfaced: window-error, unhandled-rejection, error-boundary. */
+  source: "window" | "unhandledrejection" | "boundary" | "manual";
+  route: string;
+  /** Device summary copied from the session for one-shot lookups. */
+  device: Pick<DeviceSnapshot, "os" | "isDesktop" | "userAgent">;
+  /** Free-form extra context the caller supplied. */
+  context?: Record<string, unknown>;
+}
+
+export type TelemetryPerfName =
+  | "lcp"
+  | "fcp"
+  | "cls"
+  | "longtask"
+  | "route_render"
+  | "api";
+
+export interface TelemetryPerf {
+  id: string;
+  sessionId: string;
+  uid: string | null;
+  ts: ISODate;
+  name: TelemetryPerfName | (string & {});
+  /** Duration in milliseconds (or unitless score for CLS). */
+  ms: number;
+  route: string;
+  meta?: Record<string, unknown>;
+}
+
+/** Latest device snapshot per uid; upserted once per session for the "current rig" view. */
+export interface TelemetryDeviceDoc {
+  uid: string;
+  latest: DeviceSnapshot;
+  /** ISO timestamp of the last upsert. */
+  updatedAt: ISODate;
+  /** Total sessions observed for this device. */
+  sessionsObserved: number;
+}
+
+// ── Console (admin-only dashboards) ─────────────────────────────────────────
+//
+// Read-side aggregations produced by `src/lib/api/telemetry.ts`. None of these
+// are persisted to Firestore — they are computed per-query from the raw event
+// stream and cached in React Query.
+
+export type ConsoleRange = "24h" | "7d" | "30d" | "90d";
+
+export interface ConsoleTimePoint {
+  /** Bucket boundary as ISO string. */
+  bucket: ISODate;
+  value: number;
+}
+
+export interface ConsoleMultiSeriesPoint {
+  bucket: ISODate;
+  [seriesKey: string]: ISODate | number;
+}
+
+export interface ConsoleNamedCount {
+  name: string;
+  count: number;
+  /** Optional sub-count (e.g. unique users for an event). */
+  uniqueUsers?: number;
+  /** Optional percentage out of total (0–100). */
+  pct?: number;
+}
+
+export interface ConsoleOverviewSummary {
+  dau: number;
+  wau: number;
+  mau: number;
+  sessionsInRange: number;
+  eventsInRange: number;
+  errorsInRange: number;
+  p95LcpMs: number;
+  eventsSeries: ConsoleTimePoint[];
+  activeSessionsSeries: ConsoleTimePoint[];
+  topRoutesNow: ConsoleNamedCount[];
+}
+
+export interface ConsoleUserKpis {
+  totalUsers: number;
+  newUsersInRange: number;
+  returningUsersInRange: number;
+  retention7Pct: number;
+  retention30Pct: number;
+  churnRiskCount: number;
+  signupsSeries: ConsoleTimePoint[];
+  dauSeries: ConsoleTimePoint[];
+  /** 8 cohort rows × 8 day-offset columns of retention %. */
+  retentionCohort: ConsoleMultiSeriesPoint[];
+  /** 7 days × 24 hours of bucketed event counts. */
+  activityHeatmap: { dow: number; hour: number; count: number }[];
+  topActiveUsers: {
+    uid: string;
+    displayName: string;
+    sessions: number;
+    events: number;
+    lastSeen: ISODate;
+  }[];
+  churnWatchList: {
+    uid: string;
+    displayName: string;
+    lastSeen: ISODate;
+    daysInactive: number;
+  }[];
+  signupToFirstPurchaseFunnel: { stage: string; count: number; pct: number }[];
+}
+
+export interface ConsoleStudioKpis {
+  totalStudios: number;
+  activeStudiosInRange: number;
+  appsInDraft: number;
+  appsSubmittedInRange: number;
+  appsPublishedInRange: number;
+  medianTimeToPublishDays: number | null;
+  submissionsSeries: ConsoleTimePoint[];
+  buildsSeries: ConsoleTimePoint[];
+  publishOutcomeBreakdown: ConsoleNamedCount[];
+  topStudios: {
+    id: string;
+    name: string;
+    appsCount: number;
+    buildsCount: number;
+    eventsCount: number;
+  }[];
+  stuckInReview: {
+    submissionId: string;
+    appTitle: string;
+    studioName: string;
+    submittedAt: ISODate;
+    daysPending: number;
+  }[];
+}
+
+export interface ConsolePublisherKpis {
+  totalPublishers: number;
+  activePublishersInRange: number;
+  revenueCentsInRange: number;
+  refundsInRange: number;
+  avgTicketCents: number;
+  revenueByPublisher: ConsoleMultiSeriesPoint[];
+  appsPerPublisher: ConsoleNamedCount[];
+  topPublishersByRevenue: { id: string; name: string; revenueCents: number }[];
+  topPublishersByCatalog: { id: string; name: string; appsCount: number }[];
+}
+
+export interface ConsoleDeviceBreakdown {
+  desktopPct: number;
+  webPct: number;
+  topOs: TelemetryOS | "none";
+  modalCpuCores: number;
+  osBreakdown: ConsoleNamedCount[];
+  cpuCoreHistogram: ConsoleNamedCount[];
+  memoryHistogram: ConsoleNamedCount[];
+  gpuTop10: ConsoleNamedCount[];
+  resolutionBreakdown: ConsoleNamedCount[];
+  osErrorRate: { os: string; sessions: number; errors: number; ratePer1k: number }[];
+  highErrorUsers: {
+    uid: string;
+    displayName: string;
+    errors: number;
+    device: Pick<DeviceSnapshot, "os" | "isDesktop" | "cpuCores" | "deviceMemoryGb">;
+  }[];
+}
+
+export interface ConsolePerformanceBreakdown {
+  lcpMs: { p50: number; p75: number; p95: number; p99: number };
+  fcpMs: { p50: number; p75: number; p95: number; p99: number };
+  cls: { p50: number; p75: number; p95: number; p99: number };
+  errorsPerSession: number;
+  avgApiLatencyMs: number;
+  lcpSeries: ConsoleMultiSeriesPoint[];
+  apiByEndpoint: { endpoint: string; p50: number; p95: number; samples: number }[];
+  longTasksByRoute: ConsoleNamedCount[];
+  slowestRoutes: { route: string; p95Ms: number; samples: number }[];
+  worstApis: { endpoint: string; p95Ms: number; samples: number }[];
+}
+
+export interface ConsoleFeatureUsage {
+  totalEventsInRange: number;
+  uniqueEventTypes: number;
+  topEvents: ConsoleNamedCount[];
+  eventsByRoute: ConsoleMultiSeriesPoint[];
+  topSearchQueries: {
+    term: string;
+    count: number;
+    zeroResultsPct: number;
+  }[];
+  browseToBuyFunnel: { stage: string; count: number; pct: number }[];
+  signupToPurchaseFunnel: { stage: string; count: number; pct: number }[];
+  studioOnboardingFunnel: { stage: string; count: number; pct: number }[];
+}
+
+export interface ConsoleErrorFeed {
+  errorsToday: number;
+  uniqueErrorsToday: number;
+  sessionsImpacted: number;
+  pctSessionsErrored: number;
+  errorsSeries: ConsoleTimePoint[];
+  topErrorClusters: {
+    fingerprint: string;
+    message: string;
+    count: number;
+    sessions: number;
+    sampleStack?: string;
+    firstSeen: ISODate;
+    lastSeen: ISODate;
+  }[];
+  recentErrors: TelemetryError[];
+}
+
+export interface ConsoleActiveSession {
+  id: string;
+  uid: string | null;
+  displayName?: string;
+  startedAt: ISODate;
+  lastRoute: string;
+  device: Pick<DeviceSnapshot, "os" | "isDesktop">;
+}
+
 // ── Global augmentations ─────────────────────────────────────────────────────
 // Non-standard browser extensions used for capability detection. `window`-side
 // Tauri internals are already typed by `@tauri-apps/plugin-os` and don't need

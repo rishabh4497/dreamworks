@@ -220,5 +220,39 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // ── Telemetry (Console / observability backbone) ────────────────────
+    // Signed-in users write their own session/event/error/perf records;
+    // session updates (e.g. endedAt, lastRoute) are also self-write. All
+    // reads gated to admins so we never leak event history client-side.
+    match /dw_telemetry_sessions/{id} {
+      allow read, list: if isAdmin();
+      allow create, update: if isSignedIn()
+                            && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+    match /dw_telemetry_events/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /dw_telemetry_errors/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /dw_telemetry_perf/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /dw_telemetry_devices/{uid} {
+      allow read, list: if isAdmin();
+      allow write: if isOwner(uid)
+                   && request.resource.data.uid == request.auth.uid;
+    }
   }
 }

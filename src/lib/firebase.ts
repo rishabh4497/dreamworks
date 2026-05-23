@@ -128,6 +128,12 @@ export const COLLECTIONS = {
   communityMembers: "dw_community_members",
   communityPosts: "dw_community_posts",
   socialGraphCounters: "dw_social_graph_counters",
+  // Telemetry (Console / observability backbone)
+  telemetrySessions: "dw_telemetry_sessions",
+  telemetryEvents: "dw_telemetry_events",
+  telemetryErrors: "dw_telemetry_errors",
+  telemetryPerf: "dw_telemetry_perf",
+  telemetryDevices: "dw_telemetry_devices",
 } as const;
 
 // Per-user subcollection paths under `dw_users/{uid}/...`.

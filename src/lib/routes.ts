@@ -39,6 +39,18 @@ export const ROUTES = {
   adminStudioDetail: (id: string) => `/admin/studios/${id}`,
   adminAuditLog: "/admin/audit-log",
 
+  // Admin Console (observability / god-view). Top-level route, role-gated to
+  // admins. Tabs are URL-param driven (mirrors DbHomePage).
+  console: "/console",
+  consoleOverview: "/console?tab=overview",
+  consoleUsers: "/console?tab=users",
+  consoleStudios: "/console?tab=studios",
+  consolePublishers: "/console?tab=publishers",
+  consoleDevices: "/console?tab=devices",
+  consolePerformance: "/console?tab=performance",
+  consoleFeatures: "/console?tab=features",
+  consoleErrors: "/console?tab=errors",
+
   db: "/db",
   gameDb: (id: GameId) => `/db/game/${id}`,
   dbChart: (type: ChartType) => `/db/charts/${type}`,
