@@ -111,6 +111,8 @@ export const COLLECTIONS = {
   gameDbMetrics: "dw_game_db_metrics",
   lfgGroups: "dw_lfg_groups",
   speedrunRuns: "dw_speedrun_runs",
+  // Avatar wardrobe catalog
+  cosmetics: "dw_cosmetics",
 } as const;
 
 // Per-user subcollection paths under `dw_users/{uid}/...`.

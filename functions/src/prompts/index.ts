@@ -15,6 +15,10 @@ import { influencerDiscovery } from "./influencer-discovery.js";
 import { stuckAssistant } from "./stuck-assistant.js";
 import { storeCurator } from "./store-curator.js";
 import { developerOverview, publisherOverview } from "./studio-overview.js";
+import { wishlistSniper } from "./wishlist-sniper.js";
+import { libraryOrganizer } from "./library-organizer.js";
+import { playNext } from "./play-next.js";
+import { launcherUnifier } from "./launcher-unifier.js";
 
 export const PROMPT_REGISTRY: Record<AIFeatureKey, PromptModule<unknown, unknown>> = {
   "game-overview": gameOverview as PromptModule<unknown, unknown>,
@@ -32,6 +36,10 @@ export const PROMPT_REGISTRY: Record<AIFeatureKey, PromptModule<unknown, unknown
   "store-curator": storeCurator as PromptModule<unknown, unknown>,
   "publisher-overview": publisherOverview as PromptModule<unknown, unknown>,
   "developer-overview": developerOverview as PromptModule<unknown, unknown>,
+  "wishlist-sniper": wishlistSniper as PromptModule<unknown, unknown>,
+  "library-organizer": libraryOrganizer as PromptModule<unknown, unknown>,
+  "play-next": playNext as PromptModule<unknown, unknown>,
+  "launcher-unifier": launcherUnifier as PromptModule<unknown, unknown>,
 };
 
 export function getPromptModule(key: string): PromptModule<unknown, unknown> | null {

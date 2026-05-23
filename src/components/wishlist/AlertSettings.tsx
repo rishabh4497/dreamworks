@@ -5,7 +5,7 @@ import { toast } from "@/stores/toast-store";
 import type { GameId, WishlistEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Mode = "any-sale" | "below-price" | "atl-only";
+type Mode = "any-sale" | "below-price" | "atl-only" | "smart-rule";
 
 interface AlertSettingsProps {
   gameId: GameId;
@@ -16,6 +16,7 @@ interface AlertSettingsProps {
 
 function modeFromEntry(entry: WishlistEntry | undefined): Mode {
   if (!entry) return "any-sale";
+  if (entry.smartRule) return "smart-rule";
   if (entry.notifyOnlyAtATL) return "atl-only";
   if (typeof entry.priceCeilingCents === "number") return "below-price";
   return "any-sale";
@@ -31,6 +32,7 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
       ? (entry.priceCeilingCents / 100).toFixed(2)
       : "19.99",
   );
+  const [smartRuleInput, setSmartRuleInput] = useState<string>(() => entry?.smartRule ?? "");
 
   // Re-sync when the modal opens with a (possibly different) entry.
   useEffect(() => {
@@ -41,6 +43,7 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
         ? (entry.priceCeilingCents / 100).toFixed(2)
         : "19.99",
     );
+    setSmartRuleInput(entry?.smartRule ?? "");
   }, [open, entry]);
 
   const onSave = () => {
@@ -48,6 +51,7 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
       updateEntry(gameId, {
         priceCeilingCents: undefined,
         notifyOnlyAtATL: false,
+        smartRule: undefined,
         notifyOnSale: true,
         lastAlertedAt: undefined,
       });
@@ -61,18 +65,34 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
       updateEntry(gameId, {
         priceCeilingCents: Math.round(dollars * 100),
         notifyOnlyAtATL: false,
+        smartRule: undefined,
         notifyOnSale: true,
         lastAlertedAt: undefined,
       });
       toast.success(`Alert set: under $${dollars.toFixed(2)}`);
-    } else {
+    } else if (mode === "atl-only") {
       updateEntry(gameId, {
         priceCeilingCents: undefined,
         notifyOnlyAtATL: true,
+        smartRule: undefined,
         notifyOnSale: true,
         lastAlertedAt: undefined,
       });
       toast.success("Alert set: all-time low only");
+    } else {
+      const rule = smartRuleInput.trim();
+      if (!rule) {
+        toast.error("Describe your alert rule in plain English");
+        return;
+      }
+      updateEntry(gameId, {
+        priceCeilingCents: undefined,
+        notifyOnlyAtATL: false,
+        smartRule: rule,
+        notifyOnSale: true,
+        lastAlertedAt: undefined,
+      });
+      toast.success("Smart rule set — sniper is watching");
     }
     onClose();
   };
@@ -81,6 +101,7 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
     updateEntry(gameId, {
       priceCeilingCents: undefined,
       notifyOnlyAtATL: false,
+      smartRule: undefined,
       notifyOnSale: false,
       lastAlertedAt: undefined,
     });
@@ -130,6 +151,28 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
           label="At all-time low only"
           description="Strictest setting — fires only when the current price ties or beats the lowest ever."
         />
+        <RadioRow
+          checked={mode === "smart-rule"}
+          onChange={() => setMode("smart-rule")}
+          label="Smart rule (AI)"
+          description="Describe in plain English — the AI sniper parses it and watches the price + history."
+        >
+          {mode === "smart-rule" && (
+            <div className="mt-2.5">
+              <textarea
+                rows={2}
+                value={smartRuleInput}
+                onChange={(e) => setSmartRuleInput(e.target.value)}
+                placeholder='e.g. "below $30 OR 60% off, but only if it hasn\'t been on sale in 90 days"'
+                className="w-full rounded-lg border border-separator bg-input px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-acid/40"
+              />
+              <p className="mt-1 text-[10px] text-muted/60">
+                The sniper compares your rule against the current price, all-time low, and recent
+                history.
+              </p>
+            </div>
+          )}
+        </RadioRow>
       </div>
 
       <div className="mt-6 flex items-center justify-between">

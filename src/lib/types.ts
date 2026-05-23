@@ -986,6 +986,8 @@ export interface WishlistEntry {
   priceCeilingCents?: number;
   /** Alert only when the price meets/beats its all-time low. */
   notifyOnlyAtATL?: boolean;
+  /** Free-form natural-language rule parsed by the AI sniper (e.g. "below $30 OR at ATL"). */
+  smartRule?: string;
   /** Last time we surfaced an alert for this entry — prevents re-firing. */
   lastAlertedAt?: ISODate;
 }
@@ -1797,6 +1799,19 @@ export type ConfigKey =
   | "notification_kinds"
   | "telemetry_scaffold"
   | "rejection_reasons";
+
+// ── Avatar wardrobe / cross-game cosmetics ─────────────────────────────────
+export type CosmeticRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+export type CosmeticSlot = "head" | "body" | "back" | "feet" | "hand" | "trinket";
+
+export interface Cosmetic {
+  id: string;
+  name: string;
+  /** Source game that grants the cosmetic when earned. */
+  game: string;
+  rarity: CosmeticRarity;
+  slot: CosmeticSlot;
+}
 
 // ── Global augmentations ─────────────────────────────────────────────────────
 // Non-standard browser extensions used for capability detection. `window`-side

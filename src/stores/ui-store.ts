@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { NotificationKind, ClientSettings } from "@/lib/types";
+import { syncWithFirestore } from "@/lib/firestore-sync";
 
 type NotificationPrefs = Record<NotificationKind, boolean>;
 
@@ -66,24 +67,66 @@ interface UiStore {
   updateSettings: (updates: Partial<ClientSettings>) => void;
 }
 
+interface RemoteUi {
+  notificationPrefs: NotificationPrefs;
+  settings: ClientSettings;
+}
+
+let firestoreHandle: ReturnType<typeof syncWithFirestore<RemoteUi>> | null = null;
+
 export const useUiStore = create<UiStore>()(
   persist(
-    (set) => ({
-      sidebarCollapsed: false,
-      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-      friendsRailVisible: false,
-      toggleFriendsRail: () => set((s) => ({ friendsRailVisible: !s.friendsRailVisible })),
-      notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS },
-      setNotificationPref: (kind, value) =>
-        set((s) => ({
-          notificationPrefs: { ...s.notificationPrefs, [kind]: value },
-        })),
-      settings: { ...DEFAULT_SETTINGS },
-      updateSettings: (updates) =>
-        set((s) => ({
-          settings: { ...s.settings, ...updates },
-        })),
-    }),
+    (set, get) => {
+      if (typeof window !== "undefined" && !firestoreHandle) {
+        firestoreHandle = syncWithFirestore<RemoteUi>({
+          key: "ui",
+          selectSlice: () => ({
+            notificationPrefs: get().notificationPrefs,
+            settings: get().settings,
+          }),
+          applyRemote: (remote) => {
+            const patch: Partial<UiStore> = {};
+            if (remote.notificationPrefs) {
+              patch.notificationPrefs = {
+                ...DEFAULT_NOTIFICATION_PREFS,
+                ...remote.notificationPrefs,
+              };
+            }
+            if (remote.settings) {
+              patch.settings = { ...DEFAULT_SETTINGS, ...remote.settings };
+            }
+            if (Object.keys(patch).length > 0) set(patch);
+          },
+        });
+      }
+      return {
+        sidebarCollapsed: false,
+        toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+        friendsRailVisible: false,
+        toggleFriendsRail: () =>
+          set((s) => ({ friendsRailVisible: !s.friendsRailVisible })),
+        notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS },
+        setNotificationPref: (kind, value) =>
+          set((s) => {
+            const notificationPrefs = { ...s.notificationPrefs, [kind]: value };
+            firestoreHandle?.push({
+              notificationPrefs,
+              settings: s.settings,
+            });
+            return { notificationPrefs };
+          }),
+        settings: { ...DEFAULT_SETTINGS },
+        updateSettings: (updates) =>
+          set((s) => {
+            const settings = { ...s.settings, ...updates };
+            firestoreHandle?.push({
+              notificationPrefs: s.notificationPrefs,
+              settings,
+            });
+            return { settings };
+          }),
+      };
+    },
     {
       name: "dreamworks-ui",
       version: 1,

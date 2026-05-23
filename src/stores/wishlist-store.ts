@@ -94,6 +94,7 @@ attachUserQuerySync<WishlistStore, WishlistEntry & { userId?: string }>(useWishl
       notifyOnSale: data.notifyOnSale !== false,
       priceCeilingCents: data.priceCeilingCents,
       notifyOnlyAtATL: !!data.notifyOnlyAtATL,
+      smartRule: data.smartRule,
       lastAlertedAt: data.lastAlertedAt,
     }));
     return { entries, ids: deriveIds(entries) };

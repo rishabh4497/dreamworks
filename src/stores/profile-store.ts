@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { isDesktop } from "@/lib/platform";
 import { type, version, arch } from "@tauri-apps/plugin-os";
+import { syncWithFirestore } from "@/lib/firestore-sync";
 
 export interface SystemRig {
   os: string;
@@ -29,6 +30,11 @@ interface ProfileStore {
   setCustomFps: (gameId: string, estimate: FpsEstimate) => void;
 }
 
+interface RemoteProfile {
+  activeThemeId: string;
+  customFps: Record<string, FpsEstimate>;
+}
+
 export const detectSystemRig = (): SystemRig => {
   let os = "Unknown OS";
   let cpu = "Unknown Processor";
@@ -43,7 +49,7 @@ export const detectSystemRig = (): SystemRig => {
           const osType = type();
           const osVer = version();
           const osArch = arch() === "aarch64" ? "Apple Silicon" : arch();
-          
+
           if (osType === "macos") os = `macOS ${osVer} (${osArch})`;
           else if (osType === "windows") os = `Windows ${osVer} (${osArch})`;
           else if (osType === "linux") os = `Linux ${osVer} (${osArch})`;
@@ -59,7 +65,7 @@ export const detectSystemRig = (): SystemRig => {
 
       const cpuCores = navigator.hardwareConcurrency || 8;
       cpu = `Processor (${cpuCores}-Core)`;
-      
+
       const memory = navigator.deviceMemory || 16;
       ram = `${memory} GB RAM`;
 
@@ -86,23 +92,58 @@ export const detectSystemRig = (): SystemRig => {
     cpu,
     gpu,
     ram,
-    storage: "1TB NVMe SSD", 
+    storage: "1TB NVMe SSD",
     display,
   };
 };
 
+let firestoreHandle: ReturnType<typeof syncWithFirestore<RemoteProfile>> | null = null;
+
 export const useProfileStore = create<ProfileStore>()(
   persist(
-    (set) => ({
-      activeThemeId: "cyber",
-      setActiveThemeId: (id) => set({ activeThemeId: id }),
-      systemRig: detectSystemRig(),
-      setSystemRig: (rig) =>
-        set((state) => ({ systemRig: { ...state.systemRig, ...rig } })),
-      customFps: {},
-      setCustomFps: (gameId, estimate) => 
-        set((state) => ({ customFps: { ...state.customFps, [gameId]: estimate } }))
-    }),
+    (set, get) => {
+      if (typeof window !== "undefined" && !firestoreHandle) {
+        firestoreHandle = syncWithFirestore<RemoteProfile>({
+          key: "profile",
+          selectSlice: () => ({
+            activeThemeId: get().activeThemeId,
+            customFps: get().customFps,
+          }),
+          applyRemote: (remote) => {
+            const patch: Partial<ProfileStore> = {};
+            if (typeof remote.activeThemeId === "string") {
+              patch.activeThemeId = remote.activeThemeId;
+            }
+            if (remote.customFps && typeof remote.customFps === "object") {
+              patch.customFps = remote.customFps;
+            }
+            if (Object.keys(patch).length > 0) set(patch);
+          },
+        });
+      }
+      return {
+        activeThemeId: "cyber",
+        setActiveThemeId: (id) => {
+          set({ activeThemeId: id });
+          firestoreHandle?.push({
+            activeThemeId: id,
+            customFps: get().customFps,
+          });
+        },
+        systemRig: detectSystemRig(),
+        setSystemRig: (rig) =>
+          set((state) => ({ systemRig: { ...state.systemRig, ...rig } })),
+        customFps: {},
+        setCustomFps: (gameId, estimate) => {
+          const next = { ...get().customFps, [gameId]: estimate };
+          set({ customFps: next });
+          firestoreHandle?.push({
+            activeThemeId: get().activeThemeId,
+            customFps: next,
+          });
+        },
+      };
+    },
     {
       name: "dreamworks-profile-storage",
       partialize: (state) => ({
@@ -112,6 +153,7 @@ export const useProfileStore = create<ProfileStore>()(
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         ...(persistedState || {}),
+        // systemRig is hardware-specific to the current machine — never sync.
         systemRig: currentState.systemRig,
       }),
     }

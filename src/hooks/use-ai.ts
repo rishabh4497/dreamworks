@@ -66,6 +66,10 @@ import type {
   StuckAssistantPayload,
   StoreCuratorPayload,
   StudioOverviewPayload,
+  WishlistSniperPayload,
+  LibraryOrganizerPayload,
+  PlayNextPayload,
+  LauncherUnifierPayload,
 } from "@/lib/ai/payload-types";
 
 export function useAIGameOverview(payload: GameOverviewPayload | null | undefined) {
@@ -126,4 +130,20 @@ export function useAIDeveloperOverview(payload: StudioOverviewPayload | null | u
 
 export function useAIPublisherOverview(payload: StudioOverviewPayload | null | undefined) {
   return useAIFeature("publisher-overview", payload);
+}
+
+export function useAIWishlistSniper(payload: WishlistSniperPayload | null | undefined) {
+  return useAIFeature("wishlist-sniper", payload);
+}
+
+export function useAILibraryOrganizer() {
+  return useAIAction<"library-organizer", LibraryOrganizerPayload>("library-organizer");
+}
+
+export function useAIPlayNext() {
+  return useAIAction<"play-next", PlayNextPayload>("play-next");
+}
+
+export function useAILauncherUnifier() {
+  return useAIAction<"launcher-unifier", LauncherUnifierPayload>("launcher-unifier");
 }

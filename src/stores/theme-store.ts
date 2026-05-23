@@ -1,10 +1,15 @@
 import { create } from "zustand";
+import { syncWithFirestore } from "@/lib/firestore-sync";
 
 export type ThemeMode = "dark" | "light" | "system";
 
 interface ThemeStore {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
+}
+
+interface RemoteTheme {
+  mode: ThemeMode;
 }
 
 function getInitialMode(): ThemeMode {
@@ -25,7 +30,9 @@ function applyTheme(mode: ThemeMode) {
   root.setAttribute("data-theme", resolved);
 }
 
-export const useThemeStore = create<ThemeStore>((set) => {
+let firestoreHandle: ReturnType<typeof syncWithFirestore<RemoteTheme>> | null = null;
+
+export const useThemeStore = create<ThemeStore>((set, get) => {
   const initial = getInitialMode();
   applyTheme(initial);
 
@@ -36,6 +43,23 @@ export const useThemeStore = create<ThemeStore>((set) => {
         const current = localStorage.getItem("dreamworks-theme") as ThemeMode | null;
         if (!current || current === "system") applyTheme("system");
       });
+
+    // Pull remote prefs once authenticated; localStorage covers pre-auth state.
+    firestoreHandle = syncWithFirestore<RemoteTheme>({
+      key: "theme",
+      selectSlice: () => ({ mode: get().mode }),
+      applyRemote: (remote) => {
+        if (
+          remote.mode === "dark" ||
+          remote.mode === "light" ||
+          remote.mode === "system"
+        ) {
+          localStorage.setItem("dreamworks-theme", remote.mode);
+          applyTheme(remote.mode);
+          set({ mode: remote.mode });
+        }
+      },
+    });
   }
 
   return {
@@ -44,6 +68,7 @@ export const useThemeStore = create<ThemeStore>((set) => {
       localStorage.setItem("dreamworks-theme", mode);
       applyTheme(mode);
       set({ mode });
+      firestoreHandle?.push({ mode });
     },
   };
 });
