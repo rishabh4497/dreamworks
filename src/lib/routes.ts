@@ -43,8 +43,9 @@ export const ROUTES = {
   gameDb: (id: GameId) => `/db/game/${id}`,
   dbChart: (type: ChartType) => `/db/charts/${type}`,
   dbSales: "/db/sales",
-  dbCalendar: "/db/calendar",
-  dbAccount: "/db/account",
+  // Calendar and My Analytics live as tabs inside the DB overview.
+  dbCalendar: "/db?tab=calendar",
+  dbAccount: "/db?tab=account",
 
   feed: "/feed",
   news: "/feed?tab=news",

@@ -80,8 +80,6 @@ const DbHomePage = lazyNamed(() => import("@/pages/db/DbHomePage"), "DbHomePage"
 const GameDbPage = lazyNamed(() => import("@/pages/db/GameDbPage"), "GameDbPage");
 const TopChartsPage = lazyNamed(() => import("@/pages/db/TopChartsPage"), "TopChartsPage");
 const SalesTrackerPage = lazyNamed(() => import("@/pages/db/SalesTrackerPage"), "SalesTrackerPage");
-const CalendarPage = lazyNamed(() => import("@/pages/db/CalendarPage"), "CalendarPage");
-const AccountAnalyticsPage = lazyNamed(() => import("@/pages/db/AccountAnalyticsPage"), "AccountAnalyticsPage");
 const LicensesPage = lazyNamed(() => import("@/pages/LicensesPage"), "LicensesPage");
 const CommunityDetailPage = lazyNamed(() => import("@/pages/CommunityDetailPage"), "CommunityDetailPage");
 
@@ -177,8 +175,8 @@ export default function App() {
             <Route path="db/charts/recently-updated" element={<TopChartsPage />} />
             <Route path="db/charts/free" element={<TopChartsPage />} />
             <Route path="db/sales" element={<SalesTrackerPage />} />
-            <Route path="db/calendar" element={<CalendarPage />} />
-            <Route path="db/account" element={<AccountAnalyticsPage />} />
+            <Route path="db/calendar" element={<Navigate to="/db?tab=calendar" replace />} />
+            <Route path="db/account" element={<Navigate to="/db?tab=account" replace />} />
 
             <Route path="feed" element={<FeedPage />} />
             <Route path="feed/news/:slug" element={<NewsArticlePage />} />

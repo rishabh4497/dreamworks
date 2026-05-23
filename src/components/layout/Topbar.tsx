@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Clock, Gamepad2, Heart, Search, ShoppingCart, Users, WifiOff } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { isDesktop } from "@/lib/platform";
@@ -10,12 +10,11 @@ import { useWishlistStore } from "@/stores/wishlist-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useRecentSearchesStore } from "@/stores/recent-searches-store";
-import { useGames } from "@/hooks/use-games";
+import { useGameSearch } from "@/hooks/use-game-search";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { useTranslation } from "@/lib/i18n";
-import type { Game } from "@/lib/types";
 
 export function Topbar() {
   const navigate = useNavigate();
@@ -35,20 +34,8 @@ export function Topbar() {
   const recentQueries = useRecentSearchesStore((s) => s.queries);
   const pushRecent = useRecentSearchesStore((s) => s.push);
   const clearRecent = useRecentSearchesStore((s) => s.clear);
-  const { data: games } = useGames();
 
-  const suggestions = useMemo<Game[]>(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || !games) return [];
-    return games
-      .filter(
-        (g) =>
-          g.name.toLowerCase().includes(q) ||
-          (g.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
-          g.developer.toLowerCase().includes(q),
-      )
-      .slice(0, 6);
-  }, [query, games]);
+  const suggestions = useGameSearch(query, 6);
 
   // The dropdown shows either suggestions (when typing) or recent queries (when empty).
   const showSuggestions = searchOpen && (query.trim().length > 0 || recentQueries.length > 0);
@@ -152,7 +139,7 @@ export function Topbar() {
             </div>
           </form>
           {showSuggestions && (
-            <div className="absolute left-0 right-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-separator bg-card shadow-2xl">
+            <div className="absolute left-0 right-0 top-full z-30 mt-1.5 overflow-hidden rounded-xl border border-separator bg-background/80 shadow-2xl backdrop-blur-xl">
               {query.trim() ? (
                 <ul className="max-h-[60vh] overflow-y-auto p-1">
                   <SuggestionRow

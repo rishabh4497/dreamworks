@@ -2,19 +2,15 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   BarChart3,
-  Calendar,
   Globe,
-  Heart,
   Home,
   Library,
   LogOut,
   Search,
   Settings,
   ShieldCheck,
-  ShoppingCart,
   Tag,
   TrendingUp,
-  User,
   Puzzle,
   Download,
   Package,
@@ -25,8 +21,6 @@ const logoSrc = "/internal-logo.png";
 import { cn } from "@/lib/utils";
 import { ROUTES, DESKTOP_ONLY_ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/stores/auth-store";
-import { useCartStore } from "@/stores/cart-store";
-import { useWishlistStore } from "@/stores/wishlist-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { usePlatform } from "@/hooks/use-platform";
@@ -49,9 +43,6 @@ const GROUP_LABEL = "text-[10px] font-semibold uppercase tracking-widest text-mu
 export function Sidebar() {
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
-  const cartCount = useCartStore((s) => s.items.length);
-  const wishlistCount = useWishlistStore((s) => s.entries.length);
-  const activeDownloads = useDownloadStore((s) => s.activeCount);
   const installedCount = useLibraryStore((s) =>
     s.entries.filter((e) => e.installed).length,
   );
@@ -64,8 +55,8 @@ export function Sidebar() {
     { to: ROUTES.store, label: t("Home"), icon: Home },
     { to: ROUTES.storeSearch, label: t("Search"), icon: Search },
     { to: ROUTES.plus, label: t("Dreamworks+"), icon: Sparkles },
-    { to: ROUTES.feed, label: t("Feed"), icon: Globe },
     { to: ROUTES.workshop, label: t("Workshop"), icon: Puzzle },
+    { to: ROUTES.feed, label: t("Feed"), icon: Globe },
   ];
 
   const devNav: NavItem[] = [
@@ -77,25 +68,18 @@ export function Sidebar() {
     { to: ROUTES.admin, label: t("Admin Panel"), icon: ShieldCheck },
   ];
 
-  // Steam parity: the full Library experience and download queue are
-  // desktop-only. Web users still have wishlist, cart, and profile.
-  const youNav: NavItem[] = filterByPlatform(
-    [
-      { to: ROUTES.library, label: t("Library"), icon: Library, badge: installedCount },
-      { to: ROUTES.downloads, label: t("Downloads"), icon: Download, badge: activeDownloads },
-      { to: ROUTES.wishlist, label: t("Wishlist"), icon: Heart, badge: wishlistCount },
-      { to: ROUTES.cart, label: t("Cart"), icon: ShoppingCart, badge: cartCount },
-      { to: ROUTES.profile, label: t("Profile"), icon: User },
-    ],
+  // Library lives in the sidebar (desktop-only); downloads/wishlist/cart/profile
+  // are reached from the top header.
+  const libraryNav: NavItem[] = filterByPlatform(
+    [{ to: ROUTES.library, label: t("Library"), icon: Library, badge: installedCount }],
     isDesktop,
   );
 
+  // Calendar and My Analytics are tabs inside the DB Overview page.
   const dbNav: NavItem[] = [
     { to: ROUTES.db, label: t("Overview"), icon: BarChart3 },
     { to: ROUTES.dbChart("top-played"), label: t("Top Charts"), icon: TrendingUp },
     { to: ROUTES.dbSales, label: t("Sales Tracker"), icon: Tag },
-    { to: ROUTES.dbCalendar, label: t("Calendar"), icon: Calendar },
-    { to: ROUTES.dbAccount, label: t("My Analytics"), icon: Activity },
   ];
 
   return (
@@ -124,9 +108,12 @@ export function Sidebar() {
         {compactMode && <div className="mt-4 mb-1.5" />}
         <NavGroup items={storeNav} currentPath={location.pathname} compactMode={compactMode} />
 
-        {!compactMode && <p className={GROUP_LABEL}>{t("You")}</p>}
-        {compactMode && <div className="mt-4 mb-1.5" />}
-        <NavGroup items={youNav} currentPath={location.pathname} compactMode={compactMode} />
+        {libraryNav.length > 0 && (
+          <>
+            <div className="mt-4 mb-1.5" />
+            <NavGroup items={libraryNav} currentPath={location.pathname} compactMode={compactMode} />
+          </>
+        )}
 
         {!compactMode && <p className={GROUP_LABEL}>{t("Analytics")}</p>}
         {compactMode && <div className="mt-4 mb-1.5" />}
