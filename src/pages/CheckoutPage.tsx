@@ -5,6 +5,7 @@ import { CheckCircle2, Clock3, Gift, Loader2, ShieldCheck, UsersRound, XCircle }
 import { useCartStore } from "@/stores/cart-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useGiftRecipientsStore } from "@/stores/gift-recipients-store";
 import { useGames } from "@/hooks/use-games";
 import { placeMockOrder } from "@/lib/api/orders";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { ROUTES } from "@/lib/routes";
 import { toast } from "@/stores/toast-store";
 import { formatPrice } from "@/lib/utils";
 import { EmptyState } from "@/components/common/EmptyState";
-import type { CartItem, FamilyApprovalMetadata, GameId, GiftRecipient } from "@/lib/types";
+import type { CartItem, FamilyApprovalMetadata, GameId } from "@/lib/types";
 
 interface Form {
   name: string;
@@ -25,16 +26,13 @@ type Errors = Partial<Record<keyof Form, string>>;
 type ApprovalStatus = FamilyApprovalMetadata["status"];
 
 const COUNTRIES = ["United States", "United Kingdom", "Canada", "Australia", "India", "Germany", "Japan", "Brazil"];
-const RECIPIENTS: GiftRecipient[] = [
-  { name: "Maya", email: "maya@example.com", friendId: "FR-2048" },
-  { name: "Noah", email: "noah@example.com", friendId: "FR-1337" },
-  { name: "Avery", friendId: "FR-9001" },
-];
 
 export function CheckoutPage() {
   const items = useCartStore((s) => s.items);
   const clear = useCartStore((s) => s.clear);
   const updateGift = useCartStore((s) => s.updateGift);
+  const savedRecipients = useGiftRecipientsStore((s) => s.recipients);
+  const addRecipient = useGiftRecipientsStore((s) => s.add);
   const addToLibrary = useLibraryStore((s) => s.addFromPurchase);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const profile = useAuthStore((s) => s.profile);
@@ -211,6 +209,13 @@ export function CheckoutPage() {
         updateProfile({ isSubscribed: true });
       }
 
+      // Persist any new gift recipients so they appear as chips next checkout.
+      for (const item of orderedItems) {
+        if (item.asGift && item.giftRecipient && item.giftRecipient.name.trim()) {
+          await addRecipient(item.giftRecipient);
+        }
+      }
+
       const gameIds = buyerLibraryIdsFrom(orderedItems);
       if (gameIds.length > 0) addToLibrary(gameIds, result.order.id);
       clear();
@@ -300,24 +305,26 @@ export function CheckoutPage() {
                     </p>
                     <Gift className="h-4 w-4 shrink-0 text-acid" />
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {RECIPIENTS.map((recipient) => (
-                      <button
-                        key={`${g.id}:${recipient.friendId ?? recipient.email}`}
-                        type="button"
-                        onClick={() =>
-                          updateGift(g.id, {
-                            asGift: true,
-                            recipient,
-                            scheduledDeliveryAt: g.cartItem.scheduledDeliveryAt,
-                          })
-                        }
-                        className="rounded-lg border border-separator bg-card px-2.5 py-1.5 text-[11px] text-foreground/80 hover:border-acid/35 hover:text-acid"
-                      >
-                        {recipient.name}
-                      </button>
-                    ))}
-                  </div>
+                  {savedRecipients.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {savedRecipients.map((recipient) => (
+                        <button
+                          key={`${g.id}:${recipient.friendId ?? recipient.email}`}
+                          type="button"
+                          onClick={() =>
+                            updateGift(g.id, {
+                              asGift: true,
+                              recipient,
+                              scheduledDeliveryAt: g.cartItem.scheduledDeliveryAt,
+                            })
+                          }
+                          className="rounded-lg border border-separator bg-card px-2.5 py-1.5 text-[11px] text-foreground/80 hover:border-acid/35 hover:text-acid"
+                        >
+                          {recipient.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
                     <Input
                       aria-label={`${g.name} recipient name`}

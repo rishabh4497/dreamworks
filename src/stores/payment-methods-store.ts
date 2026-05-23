@@ -42,7 +42,7 @@ export const usePaymentMethodsStore = create<PaymentMethodsStore>(() => ({
 let lastUid: string | undefined = undefined;
 let unsubscribe: (() => void) | null = null;
 
-useAuthStore.subscribe((state) => {
+function sync(state: ReturnType<typeof useAuthStore.getState>) {
   const uid = state.profile?.uid;
   if (uid === lastUid) return;
   lastUid = uid;
@@ -66,4 +66,7 @@ useAuthStore.subscribe((state) => {
     const data = snap.data() as UserBillingDoc;
     usePaymentMethodsStore.setState({ cards: data.paymentMethods ?? [] });
   });
-});
+}
+
+useAuthStore.subscribe(sync);
+sync(useAuthStore.getState());

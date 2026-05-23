@@ -22,6 +22,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useFeedStore } from "@/stores/feed-store";
+import { useFollowingStore } from "@/stores/following-store";
 import { useGames } from "@/hooks/use-games";
 import { useNews } from "@/hooks/use-news";
 import { useRecentThreads } from "@/hooks/use-forums";
@@ -125,11 +126,11 @@ export function FeedPage() {
   const [filterGameId, setFilterGameId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
 
-  // Who to Follow following states (in-memory toggles; not yet persisted)
-  const [following, setFollowing] = useState<Record<string, boolean>>({});
+  const following = useFollowingStore((s) => s.handles);
+  const toggleFollow = useFollowingStore((s) => s.toggle);
 
   const handleToggleFollow = (handle: string) => {
-    setFollowing((prev) => ({ ...prev, [handle]: !prev[handle] }));
+    void toggleFollow(handle);
   };
 
   const handleTabChange = (tab: string) => {

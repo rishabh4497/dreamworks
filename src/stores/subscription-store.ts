@@ -41,7 +41,7 @@ export const useSubscriptionStore = create<SubscriptionStore>(() => ({
 let lastUid: string | undefined = undefined;
 let unsubscribe: (() => void) | null = null;
 
-useAuthStore.subscribe((state) => {
+function sync(state: ReturnType<typeof useAuthStore.getState>) {
   const uid = state.profile?.uid;
   if (uid === lastUid) return;
   lastUid = uid;
@@ -74,4 +74,7 @@ useAuthStore.subscribe((state) => {
       loaded: true,
     });
   });
-});
+}
+
+useAuthStore.subscribe(sync);
+sync(useAuthStore.getState());
