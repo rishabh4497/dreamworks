@@ -9,7 +9,10 @@
     "notification:default",
     "os:allow-platform",
     "os:allow-arch",
+    "dialog:allow-open",
     "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-mkdir",
     "fs:allow-read-dir",
     "fs:allow-exists",
     {
@@ -21,7 +24,10 @@
         { "path": "C:/Program Files (x86)/Steam/**" },
         { "path": "C:/Program Files/Steam/**" },
         { "path": "C:/ProgramData/Epic/EpicGamesLauncher/Data/Manifests/**" },
-        { "path": "/Users/Shared/Epic/EpicGamesLauncher/Data/Manifests/**" }
+        { "path": "/Users/Shared/Epic/EpicGamesLauncher/Data/Manifests/**" },
+        { "path": "$HOME/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" }
       ]
     }
   ]

@@ -57,6 +57,21 @@ const STATUS_RANK: Record<FriendStatus, number> = {
   offline: 3,
 };
 
+/**
+ * Returns the full friend → owned-game-ids map. Used by recommendation hooks
+ * to score "your friends play this" suggestions across the catalog.
+ */
+export async function listFriendOwnership(): Promise<Record<string, GameId[]>> {
+  await ensureFriendsSeeded();
+  const snap = await getDocs(collection(getDb(), OWNED_COL));
+  const out: Record<string, GameId[]> = {};
+  snap.forEach((d) => {
+    const data = d.data() as { uid: string; gameIds: GameId[] };
+    out[data.uid] = data.gameIds;
+  });
+  return out;
+}
+
 export async function listFriendsWhoOwn(gameId: GameId): Promise<Friend[]> {
   await ensureFriendsSeeded();
   const [friendsSnap, ownedSnap] = await Promise.all([

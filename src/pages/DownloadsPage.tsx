@@ -44,9 +44,15 @@ import {
   verifyInstall,
   writeBackupManifest,
 } from "@/lib/api/downloads";
-import { isDesktop, pathExistsSafe } from "@/lib/platform";
+import { isDesktop, pathExistsSafe, pickFile, pickFolder } from "@/lib/platform";
 import { useGames } from "@/hooks/use-games";
-import { cn, formatBytes, relativeDate } from "@/lib/utils";
+import {
+  bytesPerSecondForLimit,
+  cn,
+  formatBytes,
+  formatSpeedBytes,
+  relativeDate,
+} from "@/lib/utils";
 import type { DownloadLimitOption, DownloadStatus, DownloadTask, Game, GameId, LibraryEntry } from "@/lib/types";
 
 const ENGINE_SIZE_BYTES = 4_500_000_000;
@@ -93,9 +99,12 @@ function statusTone(status: DownloadStatus) {
   return "text-positive bg-positive/10";
 }
 
-function bytesPerSecond(limit: DownloadLimitOption) {
-  if (limit === "unlimited") return 42_000_000;
-  return Number(limit) * 1_000_000;
+function effectiveSpeedBps(task: DownloadTask, limit: DownloadLimitOption): number {
+  const reported = task.speedBytesPerSec ?? 0;
+  if (reported > 0) return reported;
+  // Fall back to the configured limit only when actually downloading and not stalled.
+  if (task.status === "downloading") return bytesPerSecondForLimit(limit);
+  return 0;
 }
 
 function formatEta(task: DownloadTask, limit: DownloadLimitOption) {
@@ -106,18 +115,20 @@ function formatEta(task: DownloadTask, limit: DownloadLimitOption) {
   if (task.status === "verifying") return "Verifying";
   if (task.status === "extracting") return "Extracting";
   const remaining = Math.max(0, task.totalBytes - task.downloadedBytes);
-  const seconds = Math.ceil(remaining / bytesPerSecond(limit));
+  const bps = effectiveSpeedBps(task, limit);
+  if (bps <= 0) return "Stalled";
+  const seconds = Math.ceil(remaining / bps);
   if (seconds <= 0) return "Finishing";
   if (seconds < 60) return `${seconds}s left`;
   if (seconds < 3600) return `${Math.ceil(seconds / 60)}m left`;
   return `${Math.ceil(seconds / 3600)}h left`;
 }
 
-function formatSpeed(status: DownloadStatus, limit: DownloadLimitOption) {
-  if (!isRunning(status) || status === "queued") return "--";
-  if (status === "verifying") return "Disk";
-  if (status === "extracting") return "CPU";
-  return limit === "unlimited" ? "42 MB/s" : `${limit} MB/s`;
+function formatSpeed(task: DownloadTask) {
+  if (!isRunning(task.status) || task.status === "queued") return "--";
+  if (task.status === "verifying") return "Disk";
+  if (task.status === "extracting") return "CPU";
+  return formatSpeedBytes(task.speedBytesPerSec ?? 0);
 }
 
 function taskSortScore(task: DownloadTask) {
@@ -193,7 +204,13 @@ export function DownloadsPage() {
         .reduce((sum, task) => sum + Math.max(0, task.totalBytes - task.downloadedBytes), 0),
     [tasks],
   );
-  const activeSpeed = runningTasks.length ? bytesPerSecond(settings.downloadLimit) : 0;
+  const activeSpeed = useMemo(
+    () =>
+      runningTasks
+        .filter((task) => task.status === "downloading")
+        .reduce((sum, task) => sum + (task.speedBytesPerSec ?? 0), 0),
+    [runningTasks],
+  );
 
   const primaryDrive = useMemo(() => {
     if (drives.length === 0) return null;
@@ -472,23 +489,51 @@ export function DownloadsPage() {
   };
 
   const handleRestoreRelink = async () => {
-    if (desktop) {
-      const exists = await pathExistsSafe(restorePath);
-      if (!exists) {
-        setRestoreStatus(`Path not found: ${restorePath}`);
-        toast.error("Restore path does not exist");
-        return;
-      }
-    }
-    const selectedGame = installedEntries[0];
-    if (selectedGame) {
-      await moveInstallPath(selectedGame.gameId, restorePath);
-      setRestoreStatus(`Relinked ${selectedGame.gameId} from ${restorePath}`);
-      toast.success("Install relinked");
+    if (!desktop) {
+      setRestoreStatus("Restore is desktop-only");
+      toast.info("Restore is a desktop-only operation");
       return;
     }
-    setRestoreStatus(`Restore path staged at ${restorePath}`);
-    toast.info("Restore path staged");
+
+    const restoreRoot = restorePath.replace(/\/+$/, "");
+    const restoreRootExists = await pathExistsSafe(restoreRoot);
+    if (!restoreRootExists) {
+      setRestoreStatus(`Path not found: ${restoreRoot}`);
+      toast.error("Restore path does not exist");
+      return;
+    }
+
+    // Pull the manifest from disk and only relink entries it knows about.
+    const manifestOnDisk = await readBackupManifest(backupTarget);
+    if (!manifestOnDisk) {
+      setRestoreStatus(`No manifest at ${backupTarget}`);
+      toast.error("Read the backup manifest first");
+      return;
+    }
+    const manifestEntries = manifestOnDisk.entries ?? [];
+    if (manifestEntries.length === 0) {
+      setRestoreStatus("Manifest has no entries");
+      toast.info("Manifest has no entries to relink");
+      return;
+    }
+
+    let relinked = 0;
+    let missing = 0;
+    for (const item of manifestEntries) {
+      const candidatePath = `${restoreRoot}/${item.gameId}`;
+      const exists = await pathExistsSafe(candidatePath);
+      if (!exists) {
+        missing += 1;
+        continue;
+      }
+      await moveInstallPath(item.gameId, candidatePath);
+      relinked += 1;
+    }
+
+    const summary = `Relinked ${relinked}/${manifestEntries.length}${missing ? ` (${missing} missing on disk)` : ""}`;
+    setRestoreStatus(summary);
+    if (relinked > 0) toast.success(summary);
+    else toast.error(summary);
   };
 
   const handleValidateBackup = async () => {
@@ -568,7 +613,7 @@ export function DownloadsPage() {
         <MetricCard
           icon={<Gauge className="h-4 w-4" />}
           label="Speed"
-          value={activeSpeed > 0 ? formatBytes(activeSpeed) + "/s" : "--"}
+          value={formatSpeedBytes(activeSpeed)}
           detail={settings.downloadLimit === "unlimited" ? "Unlimited" : `${settings.downloadLimit} MB/s limit`}
         />
         <MetricCard
@@ -856,11 +901,27 @@ export function DownloadsPage() {
                   <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-muted/45">
                     Backup manifest
                   </span>
-                  <Input
-                    value={backupTarget}
-                    onChange={(e) => setBackupTarget(e.target.value)}
-                    className="h-9 rounded-lg text-[12px]"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={backupTarget}
+                      onChange={(e) => setBackupTarget(e.target.value)}
+                      className="h-9 flex-1 rounded-lg text-[12px]"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const picked = await pickFile("Locate backup manifest", [
+                          { name: "Manifest", extensions: ["json"] },
+                        ]);
+                        if (picked) setBackupTarget(picked);
+                      }}
+                      disabled={!desktop}
+                      title={desktop ? "Browse for manifest" : "Desktop only"}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button variant="secondary" onClick={handleCreateBackup}>
@@ -889,11 +950,25 @@ export function DownloadsPage() {
                   <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-muted/45">
                     Restore or relink path
                   </span>
-                  <Input
-                    value={restorePath}
-                    onChange={(e) => setRestorePath(e.target.value)}
-                    className="h-9 rounded-lg text-[12px]"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={restorePath}
+                      onChange={(e) => setRestorePath(e.target.value)}
+                      className="h-9 flex-1 rounded-lg text-[12px]"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const picked = await pickFolder("Locate restore folder");
+                        if (picked) setRestorePath(picked);
+                      }}
+                      disabled={!desktop}
+                      title={desktop ? "Browse for folder" : "Desktop only"}
+                    >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </label>
                 <Button onClick={handleRestoreRelink} className="w-full">
                   <MoveRight className="h-4 w-4" />
@@ -1201,7 +1276,7 @@ function TaskRow({
           Speed
         </span>
         <span className="text-[12px] font-medium text-foreground/75">
-          {formatSpeed(task.status, downloadLimit)}
+          {formatSpeed(task)}
         </span>
       </div>
 
@@ -1238,7 +1313,7 @@ function TaskRow({
             <RotateCcw className="h-3.5 w-3.5" />
           </IconAction>
         )}
-        {complete && (
+        {task.installPath && (running || paused || complete) && (
           <IconAction label="Open folder" onClick={onOpenFolder}>
             <FolderOpen className="h-3.5 w-3.5" />
           </IconAction>

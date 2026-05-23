@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import { useGames } from "@/hooks/use-games";
 import { useLibraryStore } from "@/stores/library-store";
-import { useFriends } from "@/hooks/use-friends";
-// OK to import from mock here — it's data the friends API already exposes
-// (mirrors what `listFriendsWhoOwn` does in `src/lib/api/friends.ts`).
-import { FRIEND_OWNED } from "@/lib/mock/friends";
+import { useFriends, useFriendOwnership } from "@/hooks/use-friends";
 import type { Game, RecommendationReason } from "@/lib/types";
 
 export interface RecRow {
@@ -77,10 +74,11 @@ export function useBehaviorRecs(limit = 6): RecRow[] {
 export function useFriendRecs(limit = 6): RecRow[] {
   const { data: games } = useGames();
   const { data: friends } = useFriends();
+  const { data: ownership } = useFriendOwnership();
   const entries = useLibraryStore((s) => s.entries);
 
   return useMemo(() => {
-    if (!games || !friends || friends.length === 0) return [];
+    if (!games || !friends || friends.length === 0 || !ownership) return [];
 
     const ownedIds = new Set(entries.map((e) => e.gameId));
     const gamesById = new Map(games.map((g) => [g.id, g] as const));
@@ -88,7 +86,7 @@ export function useFriendRecs(limit = 6): RecRow[] {
     // gameId → set of friend uids who own it.
     const ownersByGame = new Map<string, Set<string>>();
     for (const friend of friends) {
-      const ownedList = FRIEND_OWNED[friend.uid] ?? [];
+      const ownedList = ownership[friend.uid] ?? [];
       for (const gameId of ownedList) {
         if (ownedIds.has(gameId)) continue;
         if (!ownersByGame.has(gameId)) ownersByGame.set(gameId, new Set());
@@ -113,5 +111,5 @@ export function useFriendRecs(limit = 6): RecRow[] {
         label: `${count} of your friends play this`,
       },
     }));
-  }, [games, friends, entries, limit]);
+  }, [games, friends, ownership, entries, limit]);
 }

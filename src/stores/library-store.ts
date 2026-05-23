@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { DrmType, GameId, LauncherSource, LibraryEntry, LibrarySourceCopy } from "@/lib/types";
-import { buildGameDetail } from "@/lib/mock";
+import { getGameDetail } from "@/lib/api/games";
 import { computeRefundWindow, isRefundEligible } from "@/lib/refund";
 import { defaultCloudSaveStatus } from "@/lib/native-launcher";
 import { useAuthStore } from "@/stores/auth-store";
@@ -73,7 +73,7 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     const now = new Date().toISOString();
     const batch = writeBatch(getDb());
     for (const id of ids) {
-      const detail = buildGameDetail(id);
+      const detail = await getGameDetail(id);
       const mainHours = detail?.playtime.mainHours ?? 0;
       const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
       batch.set(docRef, {

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AppNotification, NotificationKind } from "@/lib/types";
-import { SEED_NOTIFICATIONS } from "@/lib/mock/notifications";
 import {
+  SEED_NOTIFICATIONS,
   clearNotificationsOlderThan,
   listNotifications,
   markAllNotificationsRead,

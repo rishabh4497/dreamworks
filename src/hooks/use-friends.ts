@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   listFriendActivity,
+  listFriendOwnership,
   listFriends,
   listFriendsWhoOwn,
 } from "@/lib/api/friends";
@@ -20,4 +21,8 @@ export function useFriendsWhoOwn(gameId: GameId | undefined) {
     queryFn: () => listFriendsWhoOwn(gameId!),
     enabled: !!gameId,
   });
+}
+
+export function useFriendOwnership() {
+  return useQuery({ queryKey: ["friends", "ownership"], queryFn: listFriendOwnership });
 }

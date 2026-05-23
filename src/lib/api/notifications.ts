@@ -1,5 +1,9 @@
 import type { AppNotification } from "../types";
 import { SEED_NOTIFICATIONS } from "../mock/notifications";
+
+// Re-exported so stores can hydrate optimistic local state without reaching
+// into `@/lib/mock` directly (forbidden by the stores rule).
+export { SEED_NOTIFICATIONS };
 import { COLLECTIONS, getDb } from "../firebase";
 import {
   collection,

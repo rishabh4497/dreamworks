@@ -97,6 +97,50 @@ export async function readTextFileSafe(path: string): Promise<string | null> {
   }
 }
 
+/**
+ * Open a native folder picker. Returns the selected absolute path, or null if
+ * the user cancelled or the picker is unavailable (web).
+ */
+export async function pickFolder(title?: string): Promise<string | null> {
+  if (!isDesktop()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selection = await open({
+      directory: true,
+      multiple: false,
+      title,
+    });
+    if (typeof selection === "string") return selection;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Open a native file picker. Returns the selected absolute path, or null if
+ * the user cancelled or the picker is unavailable (web).
+ */
+export async function pickFile(
+  title?: string,
+  filters?: { name: string; extensions: string[] }[],
+): Promise<string | null> {
+  if (!isDesktop()) return null;
+  try {
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const selection = await open({
+      directory: false,
+      multiple: false,
+      title,
+      filters,
+    });
+    if (typeof selection === "string") return selection;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function writeTextFileSafe(path: string, contents: string): Promise<boolean> {
   if (!isDesktop()) return false;
   try {
