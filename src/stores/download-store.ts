@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
-  DownloadLimitOption,
   DownloadStatus,
   DownloadTask,
   GameId,
@@ -15,6 +14,7 @@ import {
 import { notify } from "@/lib/platform";
 import { notificationPrefEnabled, useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
+import { bytesPerSecondForLimit } from "@/lib/utils";
 
 const MAX_CONCURRENT = 2;
 const TICK_MS = 1000;
@@ -28,11 +28,6 @@ const EXTRACT_DURATION_MS = 1500;
 const intervals = new Map<string, ReturnType<typeof setInterval>>();
 const stallUntil = new Map<string, number>();
 const erroredOnceFor = new Set<string>();
-
-function bytesPerSecondForLimit(limit: DownloadLimitOption): number {
-  if (limit === "unlimited") return 42_000_000;
-  return Number(limit) * 1_000_000;
-}
 
 function isActiveStatus(status: DownloadStatus): boolean {
   return ["downloading", "verifying", "extracting"].includes(status);

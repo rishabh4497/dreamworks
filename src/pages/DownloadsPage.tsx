@@ -140,6 +140,12 @@ export function DownloadsPage() {
   const desktop = isDesktop();
   const queryClient = useQueryClient();
   const { data: drives = [] } = useStorageDrives();
+  const { data: games = [] } = useGames();
+  const gamesById = useMemo(() => {
+    const map = new Map<GameId, Game>();
+    for (const g of games) map.set(g.id, g);
+    return map;
+  }, [games]);
   const [moveProgress, setMoveProgress] = useState<Record<GameId, number>>({});
   const [verifyState, setVerifyState] = useState<Record<GameId, "verified" | "verifying">>({});
   const [backupTarget, setBackupTarget] = useState(
@@ -793,6 +799,7 @@ export function DownloadsPage() {
                 <InstalledGameRow
                   key={entry.gameId}
                   entry={entry}
+                  game={gamesById.get(entry.gameId)}
                   installPath={installPathForGame(
                     entry.gameId,
                     entry.installPath,
@@ -1019,6 +1026,7 @@ function CleanupCandidateRow({
 
 function InstalledGameRow({
   entry,
+  game,
   installPath,
   drives,
   moveProgress,
@@ -1027,6 +1035,7 @@ function InstalledGameRow({
   onVerify,
 }: {
   entry: LibraryEntry;
+  game?: Game;
   installPath: string;
   drives: StorageDrive[];
   moveProgress?: number;
@@ -1034,7 +1043,6 @@ function InstalledGameRow({
   onMove: (driveId: string) => void;
   onVerify: () => void;
 }) {
-  const game = getGameById(entry.gameId);
   const drive = resolveDriveForPath(installPath, drives);
   const moving = typeof moveProgress === "number";
 

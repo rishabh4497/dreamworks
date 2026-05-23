@@ -41,7 +41,6 @@ import {
   Download,
   Folder,
   Gamepad2,
-  Globe,
   Lock,
   RefreshCw,
   Settings as SettingsIcon,

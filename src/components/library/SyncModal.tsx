@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLibraryStore } from "@/stores/library-store";
 import { toast } from "@/stores/toast-store";
 import type { LauncherSource } from "@/lib/types";
-import { GAME_SEEDS } from "@/lib/mock/games";
+import { useGames } from "@/hooks/use-games";
 import { launcherLabel, markLauncherSynced, SUPPORTED_LAUNCHER_SOURCES } from "@/lib/api/launcher-accounts";
 
 interface SyncModalProps {
@@ -15,6 +15,7 @@ interface SyncModalProps {
 
 export function SyncModal({ open, onClose }: SyncModalProps) {
   const addExternal = useLibraryStore((s) => s.addExternal);
+  const { data: games = [] } = useGames();
   const [syncing, setSyncing] = useState<LauncherSource | null>(null);
   const [synced, setSynced] = useState<Set<LauncherSource>>(new Set());
 
@@ -23,9 +24,8 @@ export function SyncModal({ open, onClose }: SyncModalProps) {
   const handleSync = (source: LauncherSource) => {
     setSyncing(source);
     setTimeout(() => {
-      // Mock adding external games
-      const randomGames = GAME_SEEDS.sort(() => 0.5 - Math.random()).slice(0, 3);
-      randomGames.forEach(g => {
+      const randomGames = [...games].sort(() => 0.5 - Math.random()).slice(0, 3);
+      randomGames.forEach((g) => {
         addExternal(g.id, source, {
           installed: true,
           externalId: `${source}:${g.id}`,
@@ -34,7 +34,7 @@ export function SyncModal({ open, onClose }: SyncModalProps) {
       });
       void markLauncherSynced({ source, importedGameCount: randomGames.length });
       setSyncing(null);
-      setSynced(prev => new Set(prev).add(source));
+      setSynced((prev) => new Set(prev).add(source));
       toast.success(`Successfully synced games from ${launcherLabel(source)}`);
     }, 2000);
   };

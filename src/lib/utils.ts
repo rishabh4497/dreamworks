@@ -1,8 +1,23 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { DownloadLimitOption } from "@/lib/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+const UNLIMITED_BPS = 42_000_000;
+
+export function bytesPerSecondForLimit(limit: DownloadLimitOption): number {
+  if (limit === "unlimited") return UNLIMITED_BPS;
+  return Number(limit) * 1_000_000;
+}
+
+export function formatSpeedBytes(bps: number): string {
+  if (bps <= 0) return "--";
+  if (bps >= 1e6) return `${(bps / 1e6).toFixed(1)} MB/s`;
+  if (bps >= 1e3) return `${(bps / 1e3).toFixed(0)} KB/s`;
+  return `${Math.round(bps)} B/s`;
 }
 
 export function formatPrice(minorUnits: number, currency: string = "INR"): string {

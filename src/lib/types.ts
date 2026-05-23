@@ -1211,9 +1211,7 @@ export interface ClientSettings {
   screenshotKey: string;
   screenshotSound: boolean;
   downloadLimit: DownloadLimitOption;
-  downloadRegion: string;
   installPath: string;
-  allowDownloadsDuringGameplay: boolean;
   emailOnSale: boolean;
   browserNotify: boolean;
   playNotificationSound: boolean;

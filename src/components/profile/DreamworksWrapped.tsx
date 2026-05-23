@@ -90,14 +90,6 @@ export function DreamworksWrapped({ open, onClose }: DreamworksWrappedProps) {
         {formatHours(totalMinutes).replace(' hrs', '')}
       </motion.div>
       <p className="mt-2 text-[20px] font-semibold text-foreground/80">Hours</p>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-8 text-[14px] text-muted/60"
-      >
-        That's top 5% of all players this year.
-      </motion.p>
     </div>,
 
     // Slide 3: Top Game
