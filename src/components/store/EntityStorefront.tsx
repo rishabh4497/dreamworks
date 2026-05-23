@@ -12,6 +12,7 @@ import { GameCard } from "@/components/store/GameCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { EntityNewsRail } from "@/components/store/EntityNewsRail";
+import { StudioUpdatesRail } from "@/components/store/StudioUpdatesRail";
 import { AIStudioOverview } from "@/components/store/AIStudioOverview";
 import { toast } from "@/stores/toast-store";
 import { useAccentStore } from "@/stores/accent-store";
@@ -368,6 +369,7 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
           )}
         </div>
         <aside className="space-y-4">
+          <StudioUpdatesRail name={name} games={games} />
           <EntityNewsRail kind={kind} name={name} />
         </aside>
         </div>

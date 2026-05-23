@@ -9,8 +9,8 @@ const COLOR: Record<string, string> = {
   Mixed: "bg-orange",
   Negative: "bg-red/80",
   "Very Negative": "bg-red",
-  Overwhelmingly Positive: "bg-green",
-  Overwhelmingly Negative: "bg-red",
+  "Overwhelmingly Positive": "bg-green",
+  "Overwhelmingly Negative": "bg-red",
 };
 
 export function ReviewBreakdownCard({ rows }: { rows: ReviewLabelBreakdown[] }) {

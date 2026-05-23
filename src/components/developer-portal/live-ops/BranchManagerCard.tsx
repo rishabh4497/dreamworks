@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { GitBranch, RotateCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/stores/toast-store";
 import { useApp } from "@/hooks/use-apps";
 import { useAppBuilds, useSetBranchLive } from "@/hooks/use-app-builds";

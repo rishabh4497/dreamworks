@@ -641,6 +641,12 @@ async function main() {
     console.error(`  ✗ dw_meta/catalog: ${(err as Error).message}`);
   }
 
+  // ── Phase 6c: live ops + marketing seeds ─────────────────────────────────
+  // Pre-populates the developer portal (and the public Game Detail page) with
+  // realistic announcements, live events, and a handful of promo campaigns so
+  // the new Analytics/Marketing/Live Ops tabs aren't empty on first load.
+  await seedLiveOpsAndMarketing();
+
   // ── Phase 7: MOCK_USERS.md ──────────────────────────────────────────────
   const ownedStudios = [...studios.values()].filter((s) => s.uid);
   writeFileSync(MOCK_USERS_MD_PATH, renderMockUsersMarkdown(ownedStudios), "utf-8");
@@ -691,6 +697,156 @@ async function writeFillPhase<K, V>(
     }
   }
   logTally(label, tally, entries.size);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 6c: live-ops and marketing content
+// ────────────────────────────────────────────────────────────────────────────
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function daysAgoIso(days: number): string {
+  return new Date(Date.now() - days * DAY_MS).toISOString();
+}
+
+function daysFromNowIso(days: number): string {
+  return new Date(Date.now() + days * DAY_MS).toISOString();
+}
+
+async function seedLiveOpsAndMarketing(): Promise<void> {
+  const annTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+  const evtTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+  const promoTally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+
+  let promoCount = 0;
+  for (let i = 0; i < GAME_SEEDS.length; i++) {
+    const seed = GAME_SEEDS[i];
+    const appId = slugify(seed.title);
+    const ownerSlug = slugify(seed.developer);
+    const studio = [...studios.values()].find((s) => s.devSlug === ownerSlug);
+    const ownerUserId = studio?.uid ?? "system-seed";
+
+    // 3 announcements per app: launch news, two patches.
+    const announcements = [
+      {
+        id: `${appId}-launch`,
+        category: "news" as const,
+        title: `${seed.title} is now available`,
+        body: `Years in the making — ${seed.title} is live worldwide today. Thanks to everyone who wishlisted, played the demo, and shared feedback in our Discord. See you in-game.`,
+        publishedAt: daysAgoIso(85),
+      },
+      {
+        id: `${appId}-patch-1`,
+        category: "patch" as const,
+        title: "Patch 1.1 — Balance and quality of life",
+        body: "• Reduced grind for late-game crafting recipes.\n• Improved enemy AI in mid-game zones.\n• Fixed a crash when alt-tabbing during cutscenes.\n• Localization fixes for German and Brazilian Portuguese.",
+        publishedAt: daysAgoIso(45),
+      },
+      {
+        id: `${appId}-patch-2`,
+        category: "patch" as const,
+        title: "Patch 1.2 — Spring update",
+        body: "A new biome, two questlines, and a cosmetic event. Full notes on our news hub. Save backups recommended before updating.",
+        publishedAt: daysAgoIso(12),
+        pinnedUntil: i % 3 === 0 ? daysFromNowIso(7) : undefined,
+      },
+    ];
+
+    for (const a of announcements) {
+      const ref = db.collection("dw_announcements").doc(a.id);
+      const candidate: Record<string, unknown> = {
+        id: a.id,
+        appId,
+        authorUserId: ownerUserId,
+        category: a.category,
+        title: a.title,
+        body: a.body,
+        publishedAt: a.publishedAt,
+        pinnedUntil: a.pinnedUntil,
+        createdAt: a.publishedAt,
+        updatedAt: nowIso(),
+      };
+      try {
+        const r = await fillMissingDoc(ref, candidate);
+        annTally[r.status] += 1;
+      } catch (err) {
+        annTally.failed += 1;
+        console.error(`  ✗ dw_announcements/${a.id}: ${(err as Error).message}`);
+      }
+    }
+
+    // 2 live events per app: one recently ended, one upcoming.
+    const events = [
+      {
+        id: `${appId}-event-free-weekend`,
+        kind: "free-weekend" as const,
+        title: "Free Weekend",
+        description: `Play ${seed.title} free for 72 hours. Progress carries over to a full purchase.`,
+        startsAt: daysAgoIso(7),
+        endsAt: daysAgoIso(4),
+      },
+      {
+        id: `${appId}-event-double-xp`,
+        kind: "double-xp" as const,
+        title: "Double XP Week",
+        description: "All XP gains are doubled across every game mode.",
+        startsAt: daysFromNowIso(3),
+        endsAt: daysFromNowIso(10),
+      },
+    ];
+
+    for (const e of events) {
+      const ref = db.collection("dw_live_events").doc(e.id);
+      const candidate: Record<string, unknown> = {
+        id: e.id,
+        appId,
+        kind: e.kind,
+        title: e.title,
+        description: e.description,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      try {
+        const r = await fillMissingDoc(ref, candidate);
+        evtTally[r.status] += 1;
+      } catch (err) {
+        evtTally.failed += 1;
+        console.error(`  ✗ dw_live_events/${e.id}: ${(err as Error).message}`);
+      }
+    }
+
+    // ~30% of apps get an active promo campaign.
+    if (i % 3 === 0) {
+      const id = `${appId}-spring-sale`;
+      const ref = db.collection("dw_promo_campaigns").doc(id);
+      const startsAt = daysAgoIso(3);
+      const endsAt = daysFromNowIso(11);
+      const candidate: Record<string, unknown> = {
+        id,
+        appId,
+        name: "Spring Sale",
+        discountPct: 25,
+        startsAt,
+        endsAt,
+        status: "active",
+        createdAt: nowIso(),
+      };
+      try {
+        const r = await fillMissingDoc(ref, candidate);
+        promoTally[r.status] += 1;
+        promoCount += 1;
+      } catch (err) {
+        promoTally.failed += 1;
+        console.error(`  ✗ dw_promo_campaigns/${id}: ${(err as Error).message}`);
+      }
+    }
+  }
+
+  logTally("dw_announcements", annTally, GAME_SEEDS.length * 3);
+  logTally("dw_live_events", evtTally, GAME_SEEDS.length * 2);
+  logTally("dw_promo_campaigns", promoTally, promoCount);
 }
 
 main().catch((err) => {

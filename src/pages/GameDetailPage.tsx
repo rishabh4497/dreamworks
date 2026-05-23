@@ -36,6 +36,8 @@ import { useAccentStore } from "@/stores/accent-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
+import { GameLiveOpsSection } from "@/components/store/GameLiveOpsSection";
+import { GameMaintenanceBanner } from "@/components/store/GameMaintenanceBanner";
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
 import { studioBrand } from "@/lib/studio-logos";
@@ -136,6 +138,7 @@ export function GameDetailPage() {
     >
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6">
         <div className="min-w-0">
+        <GameMaintenanceBanner appId={detail.id} />
         {/* Hero / screenshots */}
         <div
           className="overflow-hidden rounded-2xl border border-separator bg-card mb-4 cursor-zoom-in"
@@ -203,6 +206,8 @@ export function GameDetailPage() {
         <p className="mt-6 text-[14px] leading-relaxed text-foreground/85 whitespace-pre-line">
           {detail.shortDescription}
         </p>
+
+        <GameLiveOpsSection appId={detail.id} />
 
         <div className="mt-5">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted/50">
