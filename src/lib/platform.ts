@@ -97,6 +97,25 @@ export async function readTextFileSafe(path: string): Promise<string | null> {
   }
 }
 
+export async function writeTextFileSafe(path: string, contents: string): Promise<boolean> {
+  if (!isDesktop()) return false;
+  try {
+    const { writeTextFile, mkdir } = await import("@tauri-apps/plugin-fs");
+    const parent = path.replace(/\/[^/]*$/, "");
+    if (parent && parent !== path) {
+      try {
+        await mkdir(parent, { recursive: true });
+      } catch {
+        // mkdir may fail if the directory already exists; writeTextFile will surface a real error.
+      }
+    }
+    await writeTextFile(path, contents);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function readDirSafe(path: string): Promise<ReadDirEntry[]> {
   if (!isDesktop()) return [];
   try {

@@ -1,6 +1,7 @@
 import {
   installGameNative,
   moveInstallNative,
+  openInstallFolderNative,
   pauseDownloadNative,
   resumeDownloadNative,
   uninstallGameNative,
@@ -8,6 +9,7 @@ import {
   type MoveInstallResult,
   type VerifyInstallResult,
 } from "../native-launcher";
+import { readTextFileSafe, writeTextFileSafe } from "../platform";
 import type {
   CommandResult,
   DownloadTask,
@@ -15,6 +17,15 @@ import type {
   LauncherSource,
 } from "../types";
 import { wait } from "./_delay";
+
+export interface BackupManifestPayload {
+  id: string;
+  createdAt: string;
+  gameCount: number;
+  sizeBytes: number;
+  targetPath: string;
+  entries?: Array<{ gameId: GameId; sizeBytes: number; installPath?: string }>;
+}
 
 export async function startInstall(input: {
   gameId: GameId;
@@ -90,4 +101,27 @@ export async function moveInstall(input: {
 
 export async function uninstallGame(input: { gameId: GameId; installPath: string }) {
   return uninstallGameNative(input);
+}
+
+export async function openInstallFolder(installPath: string) {
+  return openInstallFolderNative({ installPath });
+}
+
+export async function writeBackupManifest(
+  targetPath: string,
+  manifest: BackupManifestPayload,
+): Promise<boolean> {
+  return writeTextFileSafe(targetPath, JSON.stringify(manifest, null, 2));
+}
+
+export async function readBackupManifest(
+  targetPath: string,
+): Promise<BackupManifestPayload | null> {
+  const text = await readTextFileSafe(targetPath);
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as BackupManifestPayload;
+  } catch {
+    return null;
+  }
 }

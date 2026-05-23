@@ -8,6 +8,7 @@ import {
   orderBy,
   query,
   startAfter,
+  updateDoc,
   where,
   type QueryConstraint,
   type DocumentData,
@@ -28,9 +29,14 @@ import type {
   AuditTargetType,
   CreatorProfileSubmission,
   CreatorSubmissionType,
+  CreatorVerificationStatus,
+  Developer,
+  Publisher,
   SubmissionStatus,
   UserRole,
 } from "@/lib/types";
+
+export type Creator = (Publisher | Developer) & { creatorType: CreatorSubmissionType };
 
 // ── App management (admin) ─────────────────────────────────────────────────
 
