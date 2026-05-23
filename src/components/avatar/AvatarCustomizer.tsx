@@ -68,10 +68,14 @@ export function AvatarCustomizer({ open, onClose, initialOptions }: AvatarCustom
     if (open) setDraft(initialOptions);
   }, [open, initialOptions]);
 
-  const handleSave = () => {
-    updateAvatar(draft);
-    toast.success("Avatar updated");
-    onClose();
+  const handleSave = async () => {
+    try {
+      await updateAvatar(draft);
+      toast.success("Avatar updated");
+      onClose();
+    } catch {
+      toast.error("Couldn't save avatar. Try again.");
+    }
   };
 
   const handleRandomize = () => {

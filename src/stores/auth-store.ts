@@ -287,11 +287,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   updateAvatar: async (options) => {
     const profile = get().profile;
     if (!profile) return;
+    // Optimistic local update so the UI (profile page, settings card,
+    // sidebar, topbar) reflects the new avatar immediately. The Firestore
+    // snapshot listener will reconcile shortly after.
+    set({ profile: { ...profile, avatarOptions: options } });
     const userRef = doc(getDb(), COLLECTIONS.users, profile.uid);
     try {
       await updateDoc(userRef, { avatarOptions: options });
     } catch (err) {
       console.error("Failed to update avatar in Firestore", err);
+      // Roll back so the UI doesn't lie about what's persisted.
+      set({ profile });
+      throw err;
     }
   },
   updateProfile: async (updates) => {

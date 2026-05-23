@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "@/components/common/Toaster";
+import { CommandPalette } from "@/components/common/CommandPalette";
 import { useWishlistAlerts } from "@/hooks/use-wishlist-alerts";
 import { useLibraryImportNotifier } from "@/hooks/use-library-import-notifier";
 import { useAccentStore } from "@/stores/accent-store";
@@ -17,6 +18,19 @@ export function AppLayout() {
   const { langCode } = useTranslation();
   const mainRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0 });
@@ -53,6 +67,7 @@ export function AppLayout() {
         </div>
       </div>
       <Toaster />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

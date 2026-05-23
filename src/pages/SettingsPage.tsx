@@ -24,6 +24,8 @@ import {
   AiTextureUpscaler,
 } from "@/components/features/AiFeatures";
 import { useAuthStore } from "@/stores/auth-store";
+import { UserAvatar } from "@/components/avatar/UserAvatar";
+import { DEFAULT_AVATAR_OPTIONS } from "@/lib/avatar";
 import { usePlatform } from "@/hooks/use-platform";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
@@ -979,9 +981,11 @@ function ProfileCard({ profile, updateProfile, signOut, t }: ProfileCardProps) {
     return (
       <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-cyan to-acid text-lg font-bold text-background shadow-sm">
-            {profile?.displayName?.slice(0, 2).toUpperCase() || "DW"}
-          </div>
+          <UserAvatar
+            options={profile?.avatarOptions ?? DEFAULT_AVATAR_OPTIONS}
+            size={56}
+            className="shrink-0 rounded-full border border-separator bg-card shadow-sm"
+          />
           <div className="flex-1">
             <h3 className="text-[14px] font-semibold text-foreground">{t("Edit profile")}</h3>
             <p className="text-[12px] text-muted/65">{profile?.email}</p>
@@ -1039,9 +1043,11 @@ function ProfileCard({ profile, updateProfile, signOut, t }: ProfileCardProps) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-separator bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-cyan to-acid text-lg font-bold text-background shadow-sm">
-          {profile?.displayName?.slice(0, 2).toUpperCase() || "DW"}
-        </div>
+        <UserAvatar
+          options={profile?.avatarOptions ?? DEFAULT_AVATAR_OPTIONS}
+          size={56}
+          className="shrink-0 rounded-full border border-separator bg-card shadow-sm"
+        />
         <div className="min-w-0">
           <h3 className="text-[14px] font-semibold text-foreground">{profile?.displayName}</h3>
           <p className="text-[12px] text-muted/65">{profile?.email}</p>

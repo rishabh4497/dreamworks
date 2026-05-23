@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { BarChart3, Cloud, Crown, Download, Gamepad2, Globe, Image as ImageIcon, MessageSquare, MonitorPlay, Pencil, Play, ShoppingCart, Sparkles, Tag } from "lucide-react";
@@ -26,8 +26,14 @@ import { FacetRadar } from "@/components/store/FacetRadar";
 import { FacetBars } from "@/components/store/FacetBars";
 import { LfgMatchmaking } from "@/components/store/LfgMatchmaking";
 import { DealForecaster } from "@/components/store/DealForecaster";
-import { PriceHistoryChart } from "@/components/db/PriceHistoryChart";
-import { HistoricalLowsTable } from "@/components/db/HistoricalLowsTable";
+import { MediaPlayer, type MediaItem } from "@/components/store/MediaPlayer";
+import { LazyMount } from "@/components/common/LazyMount";
+const PriceHistoryChart = lazy(() =>
+  import("@/components/db/PriceHistoryChart").then((m) => ({ default: m.PriceHistoryChart })),
+);
+const HistoricalLowsTable = lazy(() =>
+  import("@/components/db/HistoricalLowsTable").then((m) => ({ default: m.HistoricalLowsTable })),
+);
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useCartStore } from "@/stores/cart-store";
@@ -41,11 +47,7 @@ import { GameMaintenanceBanner } from "@/components/store/GameMaintenanceBanner"
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
 import { studioBrand } from "@/lib/studio-logos";
-import type { FacetAverages, Review, GameDetail, Screenshot, Trailer } from "@/lib/types";
-
-type MediaItem =
-  | { kind: "video"; trailer: Trailer }
-  | { kind: "image"; screenshot: Screenshot };
+import type { FacetAverages, Review, GameDetail, Trailer } from "@/lib/types";
 
 function trailerThumb(t: Trailer, fallback: string): string {
   if (t.provider === "youtube" && t.id) {
@@ -53,6 +55,7 @@ function trailerThumb(t: Trailer, fallback: string): string {
   }
   return t.posterUrl || fallback;
 }
+
 import { cn, compactNumber, formatBytes, formatDate, formatHours, slugify } from "@/lib/utils";
 
 function computeFacetAverages(reviews: Review[]): FacetAverages {
@@ -143,7 +146,7 @@ export function GameDetailPage() {
     ...detail.trailers.map((trailer) => ({ kind: "video" as const, trailer })),
     ...detail.screenshots.map((screenshot) => ({ kind: "image" as const, screenshot })),
   ];
-  const activeItem = mediaItems[activeMedia];
+  const activeItem: MediaItem | undefined = mediaItems[activeMedia];
   const heroFallbackImage = detail.screenshots[0]?.url ?? detail.headerUrl;
 
   return (
@@ -161,45 +164,20 @@ export function GameDetailPage() {
             "overflow-hidden rounded-2xl border border-separator bg-card mb-4",
             activeItem?.kind !== "video" && "cursor-zoom-in",
           )}
-          onDoubleClick={() => {
-            if (!activeItem || activeItem.kind === "image") {
-              setLightboxUrl(
-                activeItem?.kind === "image" ? activeItem.screenshot.url : heroFallbackImage,
-              );
-            }
-          }}
           title={activeItem?.kind === "video" ? undefined : "Double-click to enlarge"}
         >
-          {activeItem?.kind === "video" ? (
-            activeItem.trailer.provider === "youtube" && activeItem.trailer.id ? (
-              <iframe
-                key={activeItem.trailer.id}
-                src={`https://www.youtube-nocookie.com/embed/${activeItem.trailer.id}?autoplay=1&mute=1&rel=0&playsinline=1`}
-                title={`${detail.name} trailer`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="aspect-[16/9] w-full"
-              />
-            ) : (
-              <video
-                key={activeItem.trailer.url}
-                src={activeItem.trailer.url}
-                poster={activeItem.trailer.posterUrl || heroFallbackImage}
-                controls
-                autoPlay
-                muted
-                playsInline
-                className="aspect-[16/9] w-full bg-black object-contain"
-              />
-            )
-          ) : (
-            <img
-              src={activeItem?.kind === "image" ? activeItem.screenshot.url : heroFallbackImage}
-              alt={detail.name}
-              className="aspect-[16/9] w-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          )}
+          <MediaPlayer
+            item={activeItem}
+            fallbackImage={heroFallbackImage}
+            altText={detail.name}
+            onImageDoubleClick={() => {
+              if (!activeItem || activeItem.kind === "image") {
+                setLightboxUrl(
+                  activeItem?.kind === "image" ? activeItem.screenshot.url : heroFallbackImage,
+                );
+              }
+            }}
+          />
         </div>
         <div className="mb-6 flex gap-2 overflow-x-auto shelf-scroll">
           {mediaItems.map((item, i) => {
@@ -305,41 +283,53 @@ export function GameDetailPage() {
           </div>
         </div>
 
-        {/* Price history (SteamDB inline) */}
-        <section className="mt-10">
-          <header className="mb-3 flex items-baseline justify-between">
-            <div>
-              <h2 className="text-[16px] font-semibold text-foreground">Price history</h2>
-              <p className="text-[12px] text-muted/60">Last 365 days · USD</p>
+        {/* Price history (SteamDB inline) — deferred until scrolled into view */}
+        <LazyMount placeholderHeight={520}>
+          <section className="mt-10">
+            <header className="mb-3 flex items-baseline justify-between">
+              <div>
+                <h2 className="text-[16px] font-semibold text-foreground">Price history</h2>
+                <p className="text-[12px] text-muted/60">Last 365 days · USD</p>
+              </div>
+              <button
+                onClick={() => navigate(ROUTES.gameDb(detail.id))}
+                className="inline-flex items-center gap-1 text-[12px] text-muted/70 hover:text-foreground/80"
+              >
+                <BarChart3 className="h-3.5 w-3.5" /> View on Dreamworks DB
+              </button>
+            </header>
+            <div className="mb-4">
+              <DealForecaster gameId={detail.id} />
             </div>
-            <button
-              onClick={() => navigate(ROUTES.gameDb(detail.id))}
-              className="inline-flex items-center gap-1 text-[12px] text-muted/70 hover:text-foreground/80"
-            >
-              <BarChart3 className="h-3.5 w-3.5" /> View on Dreamworks DB
-            </button>
-          </header>
-          <div className="mb-4">
-            <DealForecaster gameId={detail.id} />
+            {priceHistory && (
+              <Suspense fallback={<div className="h-[240px] rounded-xl border border-separator bg-card" />}>
+                <PriceHistoryChart data={priceHistory} />
+              </Suspense>
+            )}
+            {lows && (
+              <div className="mt-4">
+                <Suspense fallback={null}>
+                  <HistoricalLowsTable lows={lows} />
+                </Suspense>
+              </div>
+            )}
+          </section>
+        </LazyMount>
+
+        <LazyMount placeholderHeight={260}>
+          <AIGameOverview gameDetail={detail} />
+        </LazyMount>
+
+        <LazyMount placeholderHeight={200}>
+          <div className="mt-6 space-y-4">
+            {detail.developer && (
+              <AIStudioOverview kind="Developer" name={detail.developer} variant="compact" />
+            )}
+            {detail.publisher && detail.publisher !== detail.developer && (
+              <AIStudioOverview kind="Publisher" name={detail.publisher} variant="compact" />
+            )}
           </div>
-          {priceHistory && <PriceHistoryChart data={priceHistory} />}
-          {lows && (
-            <div className="mt-4">
-              <HistoricalLowsTable lows={lows} />
-            </div>
-          )}
-        </section>
-
-        <AIGameOverview gameDetail={detail} />
-
-        <div className="mt-6 space-y-4">
-          {detail.developer && (
-            <AIStudioOverview kind="Developer" name={detail.developer} variant="compact" />
-          )}
-          {detail.publisher && detail.publisher !== detail.developer && (
-            <AIStudioOverview kind="Publisher" name={detail.publisher} variant="compact" />
-          )}
-        </div>
+        </LazyMount>
 
         {/* About */}
         <section className="mt-10">
@@ -375,16 +365,18 @@ export function GameDetailPage() {
 
         {/* Review breakdown (facet radar) */}
         {facetAverages.ratedCount > 0 && (
-          <section className="mt-10">
-            <h2 className="text-[16px] font-semibold text-foreground mb-3">Review breakdown</h2>
-            <div className="rounded-2xl border border-separator bg-card p-4">
-              <FacetRadar averages={facetAverages} />
-              <p className="mt-2 text-center text-[11px] text-muted/60">
-                Based on {compactNumber(facetAverages.ratedCount)} rated review
-                {facetAverages.ratedCount === 1 ? "" : "s"}
-              </p>
-            </div>
-          </section>
+          <LazyMount placeholderHeight={300}>
+            <section className="mt-10">
+              <h2 className="text-[16px] font-semibold text-foreground mb-3">Review breakdown</h2>
+              <div className="rounded-2xl border border-separator bg-card p-4">
+                <FacetRadar averages={facetAverages} />
+                <p className="mt-2 text-center text-[11px] text-muted/60">
+                  Based on {compactNumber(facetAverages.ratedCount)} rated review
+                  {facetAverages.ratedCount === 1 ? "" : "s"}
+                </p>
+              </div>
+            </section>
+          </LazyMount>
         )}
 
         {/* Reviews preview */}
@@ -481,7 +473,9 @@ export function GameDetailPage() {
 
         <PlaytimeBadge playtime={detail.playtime} />
 
-        <CompatibilityPanel gameId={detail.id} />
+        <LazyMount placeholderHeight={160}>
+          <CompatibilityPanel gameId={detail.id} />
+        </LazyMount>
 
         <div className="rounded-2xl border border-separator bg-card p-4 space-y-3 text-[12px]">
           <Row icon={Tag} label="Genres" value={detail.genres.join(", ")} />
@@ -518,8 +512,12 @@ export function GameDetailPage() {
           Discussions
         </button>
 
-        <FriendsWhoOwn gameId={detail.id} />
-        <LfgMatchmaking gameId={detail.id} />
+        <LazyMount placeholderHeight={120}>
+          <FriendsWhoOwn gameId={detail.id} />
+        </LazyMount>
+        <LazyMount placeholderHeight={200}>
+          <LfgMatchmaking gameId={detail.id} />
+        </LazyMount>
       </aside>
       </div>
 
