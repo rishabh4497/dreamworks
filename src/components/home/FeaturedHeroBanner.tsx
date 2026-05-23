@@ -6,6 +6,7 @@ import type { Game } from "@/lib/types";
 import { useGames } from "@/hooks/use-games";
 import { ROUTES } from "@/lib/routes";
 import { gameAccent } from "@/lib/game-accents";
+import { useAccentStore } from "@/stores/accent-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ export function FeaturedHeroBanner() {
   const navigate = useNavigate();
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const isWishlisted = useWishlistStore((s) => s.has);
+  const setAccent = useAccentStore((s) => s.setAccent);
 
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -55,6 +57,16 @@ export function FeaturedHeroBanner() {
   useEffect(() => {
     if (slides.length > 0 && i >= slides.length) setI(0);
   }, [slides.length, i]);
+
+  // Drive the app-wide accent wash (same store the game-detail page uses)
+  // from whichever hero slide is currently visible, so the top-of-app
+  // backdrop animates in colored just like opening a game.
+  const currentId = slides[i]?.id;
+  useEffect(() => {
+    if (!currentId) return;
+    setAccent(gameAccent(currentId) ?? null);
+    return () => setAccent(null);
+  }, [currentId, setAccent]);
 
   if (isLoading || slides.length === 0) {
     return (
@@ -95,7 +107,12 @@ export function FeaturedHeroBanner() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative h-[460px] overflow-hidden rounded-3xl border border-separator bg-card md:h-[540px] lg:h-[600px]">
+      <div
+        className="relative h-[460px] overflow-hidden rounded-3xl border border-separator bg-card transition-shadow duration-700 md:h-[540px] lg:h-[600px]"
+        style={{
+          boxShadow: `0 30px 80px -20px ${accent}66, 0 12px 36px -12px rgba(0,0,0,0.55), 0 0 0 1px ${accent}22`,
+        }}
+      >
         {/* Crossfading hero image with slow ken-burns. */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -189,11 +206,7 @@ export function FeaturedHeroBanner() {
                 )}
               </div>
 
-              {/* Cinematic title with colored stroke shadow. */}
-              <h1
-                className="text-[44px] font-extrabold leading-[0.95] tracking-tight text-foreground drop-shadow-2xl sm:text-[60px] md:text-[72px] lg:text-[84px]"
-                style={{ textShadow: `0 6px 32px ${accent}55, 0 2px 8px rgba(0,0,0,0.5)` }}
-              >
+              <h1 className="text-[44px] font-extrabold leading-[0.95] tracking-tight text-foreground sm:text-[60px] md:text-[72px] lg:text-[84px]">
                 {current.name}
               </h1>
 

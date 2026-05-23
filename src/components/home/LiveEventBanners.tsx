@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Flame, Gift, Sparkles, Tag, Zap } from "lucide-react";
+import { Flame, Gift, Sparkles, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useGames, useTopSellers } from "@/hooks/use-games";
 import { ROUTES } from "@/lib/routes";
@@ -170,5 +170,3 @@ function Banner({ to, kicker, title, subtitle, icon: Icon, art, accent, gradient
   );
 }
 
-/** Tiny inline icon kept for tree-shake safety — re-exported for callers. */
-export const _BannerIcons = { Flame, Gift, Sparkles, Tag, Zap };

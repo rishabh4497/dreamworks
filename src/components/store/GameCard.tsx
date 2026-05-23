@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useWishlistStore } from "@/stores/wishlist-store";
 import { useRecentlyViewedStore } from "@/stores/recently-viewed-store";
 import { toast } from "@/stores/toast-store";
+import { gameAccent } from "@/lib/game-accents";
 import { cn } from "@/lib/utils";
 
 interface GameCardProps {
@@ -76,8 +77,12 @@ export function GameCard({ game, width = 240, reason }: GameCardProps) {
         onClick={onClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.15 }}
+        initial={{ boxShadow: "0 0 0 0 transparent" }}
+        whileHover={{
+          y: -3,
+          boxShadow: `0 22px 50px -18px ${gameAccent(game.id) ?? "var(--color-positive)"}66, 0 10px 26px -10px rgba(0,0,0,0.55), 0 0 0 1px ${gameAccent(game.id) ?? "var(--color-positive)"}33`,
+        }}
+        transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="group cursor-pointer overflow-hidden rounded-xl border border-separator bg-card hover:bg-card-hover"
       >
         <div className="relative aspect-[460/215] overflow-hidden bg-card-active">
