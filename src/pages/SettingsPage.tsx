@@ -29,6 +29,8 @@ import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
 import { pickFolder } from "@/lib/platform";
 import { useTranslation } from "@/lib/i18n";
+import { useCloudSaveSlots } from "@/hooks/use-cloud-saves";
+import { formatBytes } from "@/lib/utils";
 import type {
   NotificationKind,
   StartupLocation,
@@ -88,6 +90,20 @@ const NOTIFICATION_ROWS: { kind: NotificationKind; label: string; description?: 
 
 const LANGUAGE_OPTIONS = ["English", "Français", "Deutsch", "Español", "日本語", "한국어"];
 
+const CLOUD_QUOTA_BYTES = 15 * 1_000_000_000;
+
+function relativeTime(iso: string, t: (k: string, vars?: Record<string, string | number>) => string): string {
+  const elapsedMs = Date.now() - new Date(iso).getTime();
+  const seconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  if (seconds < 60) return t("Just now");
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return t("{n}m ago", { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("{n}h ago", { n: hours });
+  const days = Math.floor(hours / 24);
+  return t("{n}d ago", { n: days });
+}
+
 type SettingsTab =
   | "account"
   | "general"
@@ -123,6 +139,20 @@ export function SettingsPage() {
   const { settings, updateSettings, notificationPrefs, setNotificationPref } = useUiStore();
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [customKeyBinding, setCustomKeyBinding] = useState(false);
+  const { data: cloudSaveSlots = [] } = useCloudSaveSlots(profile?.uid);
+
+  const cloudUsedBytes = cloudSaveSlots.reduce((sum, slot) => sum + (slot.sizeBytes || 0), 0);
+  const cloudUsagePct = Math.min(100, (cloudUsedBytes / CLOUD_QUOTA_BYTES) * 100);
+  const cloudLastSyncedSorted = cloudSaveSlots
+    .map((slot) => slot.remoteUpdatedAt)
+    .filter((v): v is string => Boolean(v))
+    .sort();
+  const cloudLastSyncedIso = cloudLastSyncedSorted[cloudLastSyncedSorted.length - 1];
+  const cloudSyncState = !settings.cloudSavesEnabled
+    ? t("Disabled")
+    : settings.offlineModeEnabled
+      ? t("Offline")
+      : t("Connected");
 
   useEffect(() => {
     if (!customKeyBinding) return;
@@ -159,8 +189,15 @@ export function SettingsPage() {
   };
 
   const handleBrowseFolder = async () => {
-    const picked = await pickFolder("Choose install folder");
-    if (picked) updateSettings({ installPath: picked });
+    if (!isDesktop) {
+      toast.info(t("Folder picker is desktop-only"));
+      return;
+    }
+    const picked = await pickFolder(t("Choose install folder"));
+    if (picked) {
+      updateSettings({ installPath: picked });
+      toast.success(t("Install path updated"));
+    }
   };
 
   const handleExportData = () => {
@@ -644,13 +681,13 @@ export function SettingsPage() {
 
         {activeTab === "downloads" && (
           <SectionStack>
-            <Section title="Bandwidth throttling">
+            <Section title={t("Bandwidth throttling")}>
               <SelectField
-                label="Limit download speed"
+                label={t("Limit download speed")}
                 value={settings.downloadLimit}
                 onChange={(v) => updateSettings({ downloadLimit: v as DownloadLimitOption })}
                 options={[
-                  { value: "unlimited", label: "Unlimited (No Limit)" },
+                  { value: "unlimited", label: t("Unlimited") },
                   { value: "10", label: "10 MB/s" },
                   { value: "25", label: "25 MB/s" },
                   { value: "50", label: "50 MB/s" },
@@ -659,7 +696,7 @@ export function SettingsPage() {
               />
             </Section>
 
-            <Section title="Default installation path">
+            <Section title={t("Default installation path")}>
               <div className="flex gap-2">
                 <div className="flex flex-1 items-center gap-2 rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground">
                   <Folder className="h-4 w-4 text-muted/60" />
@@ -675,37 +712,60 @@ export function SettingsPage() {
                   onClick={handleBrowseFolder}
                   className="rounded-xl border border-separator bg-card px-4 py-2 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
                 >
-                  Browse
+                  {t("Browse")}
                 </button>
               </div>
             </Section>
 
-            <Section title="Dreamworks cloud saves">
+            <Section title={t("Dreamworks cloud saves")}>
               <Card>
                 <ToggleRow
-                  label="Enable cloud synchronization"
-                  description="Keep your game saves, achievements and settings in sync across all devices"
+                  label={t("Enable cloud synchronization")}
+                  description={t(
+                    "Keep your game saves, achievements and settings in sync across all devices",
+                  )}
                   checked={settings.cloudSavesEnabled}
                   onCheckedChange={(next) => updateSettings({ cloudSavesEnabled: next })}
                 />
               </Card>
 
-              <div className="space-y-4 rounded-xl border border-separator bg-card p-4">
-                <div className="flex items-center justify-between text-[13px]">
-                  <span className="font-semibold text-foreground">Cloud storage usage</span>
-                  <span className="text-muted/65">3.4 GB of 15.0 GB used</span>
+              {settings.cloudSavesEnabled ? (
+                <div className="space-y-4 rounded-xl border border-separator bg-card p-4">
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="font-semibold text-foreground">{t("Cloud storage usage")}</span>
+                    <span className="text-muted/65">
+                      {t("{used} of {total} used", {
+                        used: formatBytes(cloudUsedBytes),
+                        total: formatBytes(CLOUD_QUOTA_BYTES),
+                      })}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-input">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan to-acid transition-all duration-300"
+                      style={{ width: `${cloudUsagePct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] leading-relaxed text-muted/55">
+                    <span>{t("Active sync: {state}", { state: cloudSyncState })}</span>
+                    <span>
+                      {t("Last synced: {time}", {
+                        time: cloudLastSyncedIso ? relativeTime(cloudLastSyncedIso, t) : t("Never"),
+                      })}
+                    </span>
+                  </div>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-input">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-cyan to-acid transition-all duration-300"
-                    style={{ width: `${(3.4 / 15.0) * 100}%` }}
-                  />
+              ) : (
+                <div className="rounded-xl border border-dashed border-separator bg-card-active/40 p-6 text-center">
+                  <Database className="mx-auto mb-2 h-7 w-7 text-muted/45" />
+                  <p className="text-[13px] font-semibold text-foreground">
+                    {t("Cloud saves disabled")}
+                  </p>
+                  <p className="mt-1 text-[12px] text-muted/65">
+                    {t("Turn cloud saves on to back up game progress across devices.")}
+                  </p>
                 </div>
-                <div className="flex justify-between text-[11px] leading-relaxed text-muted/55">
-                  <span>Active sync: Connected</span>
-                  <span>Last synced: Just now</span>
-                </div>
-              </div>
+              )}
             </Section>
           </SectionStack>
         )}

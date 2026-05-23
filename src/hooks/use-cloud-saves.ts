@@ -4,6 +4,7 @@ import {
   resolveCloudSaveConflict,
 } from "@/lib/api/cloud-saves";
 import type { CloudSaveResolution, GameId } from "@/lib/types";
+import { useUiStore } from "@/stores/ui-store";
 
 export const cloudSaveKeys = {
   all: ["cloud-saves"] as const,
@@ -13,10 +14,11 @@ export const cloudSaveKeys = {
 };
 
 export function useCloudSaveSlots(userId: string | undefined, gameId?: GameId) {
+  const cloudSavesEnabled = useUiStore((s) => s.settings.cloudSavesEnabled);
   return useQuery({
     queryKey: userId ? cloudSaveKeys.slots(userId, gameId) : ["disabled"],
     queryFn: () => listCloudSaveSlots({ userId: userId!, gameId }),
-    enabled: !!userId,
+    enabled: !!userId && cloudSavesEnabled,
   });
 }
 
