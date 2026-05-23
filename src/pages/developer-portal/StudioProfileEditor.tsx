@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageDropzone } from "@/components/common/ImageDropzone";
+import { VideoDropzone } from "@/components/common/VideoDropzone";
 import { toast } from "@/stores/toast-store";
 import { useMyDeveloper, useSaveDeveloper } from "@/hooks/use-developer";
 import { ROUTES } from "@/lib/routes";
@@ -19,6 +20,7 @@ export function StudioProfileEditor() {
   const [brandColor, setBrandColor] = useState("#66c0f4");
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [promoVideoUrl, setPromoVideoUrl] = useState("");
   const [tagline, setTagline] = useState("");
   const [about, setAbout] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -30,6 +32,7 @@ export function StudioProfileEditor() {
     setBrandColor(dev.brandColor ?? "#66c0f4");
     setLogoUrl(dev.logoUrl ?? "");
     setBannerUrl(dev.bannerUrl ?? "");
+    setPromoVideoUrl(dev.promoVideoUrl ?? "");
     setTagline(dev.tagline ?? "");
     setAbout(dev.about ?? "");
     setWebsiteUrl(dev.websiteUrl ?? "");
@@ -52,6 +55,7 @@ export function StudioProfileEditor() {
         brandColor,
         logoUrl,
         bannerUrl: bannerUrl || undefined,
+        promoVideoUrl: promoVideoUrl || undefined,
         tagline,
         about: about || undefined,
         websiteUrl: websiteUrl || undefined,

@@ -392,6 +392,9 @@ export interface Developer {
   brandColor: string;          // hex, used for storefront wash
   logoUrl: string;
   bannerUrl?: string;
+  /** Optional promo video for the Creator Homepage hero. When set, the hero
+   *  plays this muted/looping in place of the banner image. */
+  promoVideoUrl?: string;
   tagline: string;
   about?: string;
   websiteUrl?: string;
@@ -409,6 +412,7 @@ export interface Publisher {
   brandColor: string;
   logoUrl: string;
   bannerUrl?: string;
+  promoVideoUrl?: string;
   tagline: string;
   about?: string;
   websiteUrl?: string;
