@@ -140,7 +140,11 @@ export function DeveloperPortalPage() {
     }
   }, [draftsList, draft]);
 
-  const targetDeveloperName = draft?.developerName || draftsList?.[0]?.developerName;
+  const [profileTargetMode, setProfileTargetMode] = useState<"publisher" | "developer">("publisher");
+
+  const targetDeveloperName = profileTargetMode === "publisher"
+    ? draft?.publisherName || draftsList?.[0]?.publisherName
+    : draft?.developerName || draftsList?.[0]?.developerName;
   const { data: fetchedProfile } = usePublisherProfile(targetDeveloperName);
   const saveProfileMutation = useSavePublisherProfile(targetDeveloperName);
   // queryClient already declared
@@ -183,7 +187,9 @@ export function DeveloperPortalPage() {
   }, [draft]);
 
   const handleNewProduct = () => {
-    const newDraft = createEmptyDraft(fetchedProfile?.name || draft?.developerName);
+    const defaultDev = fetchedProfile?.name || draft?.developerName || draftsList?.[0]?.developerName;
+    const defaultPub = draft?.publisherName || draftsList?.[0]?.publisherName || defaultDev;
+    const newDraft = createEmptyDraft(defaultDev, defaultPub);
     setDraft(newDraft);
     setViewMode("edit");
     setSaveState("idle");
@@ -320,19 +326,19 @@ export function DeveloperPortalPage() {
         </div>
       </header>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-separator mb-6">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-input p-1.5 mb-8">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabId)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold rounded-t-lg transition-colors border-b-2",
+              "flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium transition-all",
               activeTab === tab.id
-                ? "border-acid text-acid bg-card"
-                : "border-transparent text-muted/70 hover:text-foreground hover:bg-card-hover"
+                ? "bg-card-active text-foreground shadow-sm"
+                : "text-muted hover:text-foreground/80 hover:bg-card-hover/50"
             )}
           >
-            <tab.icon className="h-4 w-4" />
+            <tab.icon className="h-4 w-4 opacity-80" />
             {tab.label}
           </button>
         ))}
@@ -408,6 +414,12 @@ export function DeveloperPortalPage() {
                     <Input
                       value={draft.developerName}
                       onChange={(event) => updateDraft("developerName", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Publisher">
+                    <Input
+                      value={draft.publisherName}
+                      onChange={(event) => updateDraft("publisherName", event.target.value)}
                     />
                   </Field>
                   <Field label="Genre">
@@ -602,12 +614,33 @@ export function DeveloperPortalPage() {
               Customize the public branding, color schemes, and identity displayed on your studio's developer and publisher store pages.
             </p>
 
+            <div className="mt-6 flex items-center gap-2 rounded-xl bg-input p-1 max-w-[240px]">
+              <button
+                onClick={() => setProfileTargetMode("publisher")}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all",
+                  profileTargetMode === "publisher" ? "bg-card-active text-foreground shadow-sm" : "text-muted hover:text-foreground/80"
+                )}
+              >
+                Publisher
+              </button>
+              <button
+                onClick={() => setProfileTargetMode("developer")}
+                className={cn(
+                  "flex-1 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all",
+                  profileTargetMode === "developer" ? "bg-card-active text-foreground shadow-sm" : "text-muted hover:text-foreground/80"
+                )}
+              >
+                Developer
+              </button>
+            </div>
+
             <div className="mt-6 space-y-4">
-              <Field label="Studio / Publisher Name">
+              <Field label={`Managing Profile For (${profileTargetMode === "publisher" ? "Publisher" : "Developer"})`}>
                 <Input
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
-                  placeholder="e.g. Signal Bloom Studio"
+                  placeholder={`e.g. Signal Bloom ${profileTargetMode === "publisher" ? "Publishing" : "Studio"}`}
                 />
               </Field>
 

@@ -5,8 +5,8 @@ import { GreetingStrip } from "@/components/home/GreetingStrip";
 import { FeaturedHeroBanner } from "@/components/home/FeaturedHeroBanner";
 import { ContinuePlayingRail } from "@/components/home/ContinuePlayingRail";
 import { FriendsActivityRail } from "@/components/home/FriendsActivityRail";
-import { EditorialSpotlight } from "@/components/home/EditorialSpotlight";
-import { WeeklyFreeGame } from "@/components/home/WeeklyFreeGame";
+import { BentoGrid } from "@/components/home/BentoGrid";
+import { TrendingLive } from "@/components/home/TrendingLive";
 import { MoodExplorer } from "@/components/home/MoodExplorer";
 import { BookClubs } from "@/components/community/BookClubs";
 import { SpeedrunLeaderboards } from "@/components/community/SpeedrunLeaderboards";
@@ -63,22 +63,34 @@ export function StoreHomePage() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-2"
+    >
+      {/* 1. Welcome — personalized greeting + live stats */}
       <GreetingStrip />
+
+      {/* 2. Cinematic hero — rotating featured games at 480px tall */}
       <FeaturedHeroBanner />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-6">
-        <AiStoreCurator />
-        <div className="flex flex-col gap-4">
-          <AiReviewSummarizer />
-          <HardwareAwareWarnings />
-        </div>
-      </div>
+
+      {/* 3. Continue playing — hidden when library is empty */}
       <ContinuePlayingRail />
+
+      {/* 4. Apple Music-style bento (Spotlight / Free this week / Wrapped / Sale / Gem / Trending tag) */}
+      <BentoGrid />
+
+      {/* 5. Discord-style "live right now" with animated counts */}
+      <TrendingLive />
+
+      {/* 6. Friends activity rail */}
       <FriendsActivityRail />
-      <EditorialSpotlight />
-      <WeeklyFreeGame />
+
+      {/* 7. Mood explorer — colorful tag-jump tiles */}
       <MoodExplorer />
 
+      {/* 8. The existing six shelves, with friendlier titles */}
       {shelves
         ? shelves.map((shelf) => (
             <GameShelf
@@ -104,8 +116,27 @@ export function StoreHomePage() {
           </>
         )}
 
-      <section className="pt-8">
-        <h2 className="mb-4 text-[14px] font-semibold text-foreground">Community Hub</h2>
+      {/* 9. AI features cluster — moved below the discovery zones so they don't crowd the hero */}
+      <section className="pt-4">
+        <div className="mb-3">
+          <h2 className="text-[16px] font-semibold text-foreground">Dreamworks AI</h2>
+          <p className="mt-0.5 text-[12px] text-muted/70">Cuts through reviews, specs, and noise — so you don't have to.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <AiStoreCurator />
+          <div className="flex flex-col gap-4">
+            <AiReviewSummarizer />
+            <HardwareAwareWarnings />
+          </div>
+        </div>
+      </section>
+
+      {/* 10. Community Hub */}
+      <section className="pt-6">
+        <div className="mb-3">
+          <h2 className="text-[16px] font-semibold text-foreground">Community Hub</h2>
+          <p className="mt-0.5 text-[12px] text-muted/70">Tournaments, clubs, leaderboards, and groups to roll with.</p>
+        </div>
         <div className="grid gap-6">
           <MiniTournaments />
           <BookClubs />

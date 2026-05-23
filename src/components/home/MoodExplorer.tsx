@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { motion } from "motion/react";
 import { Brain, Clock, Coffee, Heart, Users, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
@@ -11,7 +12,10 @@ interface Mood {
   icon: LucideIcon;
   /** Color-token utility classes (no raw hex). */
   iconClass: string;
-  gradientClass: string;
+  /** Solid tinted background that bleeds in from one corner. */
+  bgClass: string;
+  /** Radial-blob class added behind the icon for extra depth. */
+  blobClass: string;
 }
 
 const MOODS: Mood[] = [
@@ -21,7 +25,8 @@ const MOODS: Mood[] = [
     tags: ["cozy", "relaxing", "casual"],
     icon: Coffee,
     iconClass: "text-orange",
-    gradientClass: "from-orange/20 via-orange/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-orange/30 via-orange/10 to-card",
+    blobClass: "bg-orange/40",
   },
   {
     title: "Brain burner",
@@ -29,7 +34,8 @@ const MOODS: Mood[] = [
     tags: ["puzzle", "strategy", "deck-builder"],
     icon: Brain,
     iconClass: "text-positive",
-    gradientClass: "from-positive/25 via-positive/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-positive/35 via-positive/10 to-card",
+    blobClass: "bg-positive/40",
   },
   {
     title: "Couch co-op",
@@ -37,7 +43,8 @@ const MOODS: Mood[] = [
     tags: ["local-multiplayer", "coop", "party"],
     icon: Users,
     iconClass: "text-green",
-    gradientClass: "from-green/20 via-green/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-green/30 via-green/10 to-card",
+    blobClass: "bg-green/40",
   },
   {
     title: "Adrenaline rush",
@@ -45,7 +52,8 @@ const MOODS: Mood[] = [
     tags: ["fps", "action", "fast-paced"],
     icon: Zap,
     iconClass: "text-red",
-    gradientClass: "from-red/20 via-red/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-red/30 via-red/10 to-card",
+    blobClass: "bg-red/40",
   },
   {
     title: "Story to cry to",
@@ -53,7 +61,8 @@ const MOODS: Mood[] = [
     tags: ["story-rich", "narrative", "emotional"],
     icon: Heart,
     iconClass: "text-cyan",
-    gradientClass: "from-cyan/20 via-cyan/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-cyan/30 via-cyan/10 to-card",
+    blobClass: "bg-cyan/40",
   },
   {
     title: "Quick session",
@@ -61,49 +70,80 @@ const MOODS: Mood[] = [
     tags: ["roguelike", "short-sessions", "arcade"],
     icon: Clock,
     iconClass: "text-acid",
-    gradientClass: "from-acid/15 via-acid/5 to-transparent",
+    bgClass: "bg-gradient-to-br from-acid/25 via-acid/10 to-card",
+    blobClass: "bg-acid/40",
   },
 ];
 
+const EASE: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
+
 /**
  * Mood-based discovery grid. Each tile links to a pre-filtered search by tag
- * so users can hop into a curated slice of the catalog without typing.
+ * so users can hop into a curated slice of the catalog without typing. Tiles
+ * use bold colored gradients + a soft blob behind the icon to give the
+ * section a glossy, magazine-cover feel.
  */
 export function MoodExplorer() {
   return (
     <section className="mb-10">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-[16px] font-semibold text-foreground">In the mood for…</h2>
+      <div className="mb-4 flex items-baseline justify-between">
+        <div>
+          <h2 className="text-[18px] font-bold leading-tight text-foreground">
+            In the mood for…
+          </h2>
+          <p className="mt-0.5 text-[12px] text-muted/70">
+            Skip the search — jump straight into a vibe.
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-        {MOODS.map((m) => {
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {MOODS.map((m, idx) => {
           const params = new URLSearchParams({ tags: m.tags.join(",") }).toString();
           const Icon = m.icon;
           return (
-            <Link
+            <motion.div
               key={m.title}
-              to={`${ROUTES.storeSearch}?${params}`}
-              className={cn(
-                "group relative flex aspect-[16/9] flex-col justify-between overflow-hidden rounded-xl border border-separator bg-card p-4 transition-all hover:scale-[1.02] hover:bg-card-hover",
-              )}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: EASE, delay: 0.04 * idx }}
+              whileHover={{ y: -3, scale: 1.02 }}
             >
-              <div
+              <Link
+                to={`${ROUTES.storeSearch}?${params}`}
                 className={cn(
-                  "pointer-events-none absolute inset-0 bg-gradient-to-br",
-                  m.gradientClass,
+                  "group relative flex aspect-[3/4] flex-col justify-between overflow-hidden rounded-2xl border border-separator p-4 transition-shadow hover:shadow-lg hover:shadow-black/30",
+                  m.bgClass,
                 )}
-              />
-              <div className="relative">
-                <Icon className={cn("h-5 w-5", m.iconClass)} />
-              </div>
-              <div className="relative">
-                <h3 className="text-[16px] font-bold leading-tight text-foreground">
-                  {m.title}
-                </h3>
-                <p className="mt-0.5 text-[11px] text-muted/70">{m.subtitle}</p>
-              </div>
-            </Link>
+              >
+                <div
+                  className={cn(
+                    "pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full blur-2xl transition-all duration-500 group-hover:scale-125",
+                    m.blobClass,
+                  )}
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-card/85 to-transparent" />
+
+                <div className="relative">
+                  <div
+                    className={cn(
+                      "inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-card/70 backdrop-blur-sm",
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4", m.iconClass)} />
+                  </div>
+                </div>
+
+                <div className="relative space-y-0.5">
+                  <h3 className="text-[15px] font-bold leading-tight text-foreground">
+                    {m.title}
+                  </h3>
+                  <p className="text-[10.5px] leading-snug text-muted/75">
+                    {m.subtitle}
+                  </p>
+                </div>
+              </Link>
+            </motion.div>
           );
         })}
       </div>
