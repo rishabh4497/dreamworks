@@ -24,6 +24,7 @@ export const ROUTES = {
   devAnalytics: "/developer-portal/analytics",
   devMarketing: "/developer-portal/marketing",
   devOps: "/developer-portal/ops",
+  devModeration: "/developer-portal/moderation",
 
   admin: "/admin",
   adminSubmissions: "/admin/submissions",

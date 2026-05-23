@@ -1,6 +1,5 @@
 import { HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { getFirestore, type Transaction, FieldValue } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 
 export const COLLECTIONS = {
   users: "users",
