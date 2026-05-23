@@ -13,3 +13,4 @@ export {
   reviewStudioProfile,
   deleteAppAdmin,
 } from "./admin/index.js";
+export { scanBuild, sdkHandshake } from "./sdk/index.js";
