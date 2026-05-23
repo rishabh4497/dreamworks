@@ -122,7 +122,7 @@ export const useProfileStore = create<ProfileStore>()(
         });
       }
       return {
-        activeThemeId: "cyber",
+        activeThemeId: "theme-cyberpunk-neon",
         setActiveThemeId: (id) => {
           set({ activeThemeId: id });
           firestoreHandle?.push({

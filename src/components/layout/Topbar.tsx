@@ -1,9 +1,8 @@
-import { ChevronLeft, ChevronRight, Clock, Gamepad2, Heart, Search, ShoppingCart, Users, WifiOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Heart, Search, ShoppingCart, Users, WifiOff } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
-import { isDesktop } from "@/lib/platform";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -231,20 +230,6 @@ export function Topbar() {
             {settings.offlineModeEnabled ? t("Offline") : t("Online")}
           </span>
         </button>
-        {settings.handheldMode && isDesktop() && (
-          <button
-            type="button"
-            title={t("Handheld mode active")}
-            aria-label={t("Handheld mode active")}
-            onClick={() => navigate(ROUTES.settings)}
-            className={cn(
-              "rounded-lg border border-separator/70 bg-transparent p-2 text-muted hover:bg-input hover:text-foreground/80",
-              settings.largerFocusTargets && "p-3",
-            )}
-          >
-            <Gamepad2 className="h-4 w-4" />
-          </button>
-        )}
         <IconLink label={t("Wishlist")} onClick={() => navigate(ROUTES.wishlist)} count={wishlistCount}>
           <Heart className="h-4 w-4" />
         </IconLink>

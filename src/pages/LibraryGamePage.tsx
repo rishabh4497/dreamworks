@@ -410,7 +410,7 @@ export function LibraryGamePage() {
             </button>
           </div>
 
-          {(settings.handheldMode || settings.controllerHints) && (
+          {settings.controllerHints && (
             <div className="mt-3 flex flex-wrap justify-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-foreground/70">
               <span className="rounded-md border border-separator bg-background/40 px-2 py-1">
                 A {offlineLaunchBlocked ? "Blocked" : "Play"}

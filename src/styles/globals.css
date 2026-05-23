@@ -109,6 +109,39 @@
   color-scheme: light;
 }
 
+/* ── App themes (selected from Settings → Gameplay → App Themes) ─────────── */
+/* Mode (data-theme dark/light) controls the base palette. App themes layer on
+   top and only retint accent variables — that way every theme works in both
+   light and dark mode. */
+[data-theme="dark"][data-app-theme="theme-cyberpunk-neon"] {
+  --acid-green: #ff3df0;
+  --cyan: #00eeff;
+}
+[data-theme="light"][data-app-theme="theme-cyberpunk-neon"] {
+  --acid-green: #c91fb8;
+  --cyan: #0091a3;
+}
+
+[data-theme="dark"][data-app-theme="theme-paper-white"] {
+  --acid-green: #6ea8d8;
+  --cyan: #66c0f4;
+}
+[data-theme="light"][data-app-theme="theme-paper-white"] {
+  --acid-green: #2a6fa5;
+  --cyan: #1d5384;
+}
+
+[data-theme="dark"][data-app-theme="theme-retro-crt"] {
+  --acid-green: #00ff66;
+  --cyan: #66ffaa;
+  --green: #00ff66;
+}
+[data-theme="light"][data-app-theme="theme-retro-crt"] {
+  --acid-green: #008833;
+  --cyan: #00aa55;
+  --green: #007a2e;
+}
+
 @theme inline {
   --color-background: var(--dark-bg);
   --color-foreground: var(--text-primary);

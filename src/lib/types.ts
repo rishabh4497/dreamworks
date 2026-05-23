@@ -1260,7 +1260,6 @@ export interface ClientSettings {
   scanHistoryRetentionDays: 0 | 30 | 90 | 365;
   privacyDataExportStatus: "idle" | "preparing" | "ready";
   privacyDeleteRequestStatus: "idle" | "scheduled";
-  handheldMode: boolean;
   largerFocusTargets: boolean;
   controllerHints: boolean;
   language: string;
@@ -1737,6 +1736,8 @@ export interface ThemePreset {
   description: string;
   /** True for the curated "active by default" theme. */
   featured: boolean;
+  /** Preview swatches rendered by the theme picker card. */
+  swatches?: { bg: string; surface: string; accent: string };
   createdAt: ISODate;
 }
 

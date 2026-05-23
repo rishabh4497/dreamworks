@@ -120,14 +120,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         run: () => updateSettings({ offlineModeEnabled: !settings.offlineModeEnabled }),
       },
       {
-        id: "cmd-toggle-handheld",
-        label: settings.handheldMode ? "Disable handheld mode" : "Enable handheld mode",
-        keywords: ["steam deck", "controller"],
-        group: "Commands",
-        icon: <Gamepad2 className={ICON_CLS} />,
-        run: () => updateSettings({ handheldMode: !settings.handheldMode }),
-      },
-      {
         id: "cmd-copy-link",
         label: "Copy current page link",
         keywords: ["share", "url"],
@@ -151,7 +143,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       },
     ];
     return [...navs, ...commands];
-  }, [navigate, setTheme, settings.offlineModeEnabled, settings.handheldMode, updateSettings]);
+  }, [navigate, setTheme, settings.offlineModeEnabled, updateSettings]);
 
   const gameActions = useMemo<Action[]>(() => {
     if (!games || query.trim().length < 1) return [];

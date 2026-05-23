@@ -63,7 +63,6 @@ import {
   Settings as SettingsIcon,
   Shield,
   Sliders,
-  Smartphone,
   Trash2,
   User as UserIcon,
   WifiOff,
@@ -612,14 +611,8 @@ export function SettingsPage() {
               </Card>
             </Section>
 
-            <Section title="Handheld mode">
+            <Section title="Controller">
               <Card divide>
-                <ToggleRow
-                  label="Use handheld layout"
-                  description="Prioritize library launch actions, larger spacing, and controller-friendly navigation"
-                  checked={settings.handheldMode}
-                  onCheckedChange={(next) => updateSettings({ handheldMode: next })}
-                />
                 <ToggleRow
                   label="Use larger focus targets"
                   description="Increase hit areas for topbar, settings rows, and launch controls"
@@ -636,10 +629,8 @@ export function SettingsPage() {
 
               <div className="rounded-xl border border-separator bg-card p-4">
                 <div className="flex items-center gap-2 text-foreground">
-                  <Smartphone className="h-4 w-4 text-cyan" />
-                  <p className="text-[13px] font-semibold">
-                    {settings.handheldMode ? "Handheld controls active" : "Desktop controls active"}
-                  </p>
+                  <Gamepad2 className="h-4 w-4 text-cyan" />
+                  <p className="text-[13px] font-semibold">Controller-friendly mode</p>
                 </div>
                 <p className="mt-2 text-[12px] leading-relaxed text-muted/65">
                   Focus targets are {settings.largerFocusTargets ? "expanded" : "standard"} and
@@ -648,15 +639,16 @@ export function SettingsPage() {
               </div>
             </Section>
 
+            <Section title="App appearance">
+              <ThemeCustomizer />
+            </Section>
+
             <Section title="Universal controller hub">
               <div className="grid gap-3 md:grid-cols-2">
                 <LanSyncToggle />
                 <HardwareBenchmarker />
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <ThemeCustomizer />
-                <ControllerProfiles />
-              </div>
+              <ControllerProfiles />
               <ControllerHub />
             </Section>
           </SectionStack>

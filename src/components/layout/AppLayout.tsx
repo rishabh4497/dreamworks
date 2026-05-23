@@ -4,18 +4,30 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "@/components/common/Toaster";
 import { CommandPalette } from "@/components/common/CommandPalette";
+import { FpsOverlay } from "@/components/common/FpsOverlay";
 import { VoiceWidget } from "@/components/voice/VoiceWidget";
 import { useWishlistAlerts } from "@/hooks/use-wishlist-alerts";
 import { useLibraryImportNotifier } from "@/hooks/use-library-import-notifier";
 import { useAccentStore } from "@/stores/accent-store";
 import { useUiStore } from "@/stores/ui-store";
+import { useProfileStore } from "@/stores/profile-store";
 import { useTranslation } from "@/lib/i18n";
+import { toast } from "@/stores/toast-store";
+import {
+  captureViewport,
+  isEditableTarget,
+  matchesShortcut,
+  playShutterSound,
+} from "@/lib/screenshot";
 
 export function AppLayout() {
   useWishlistAlerts();
   useLibraryImportNotifier();
   const accent = useAccentStore((s) => s.accent);
   const dynamicBackgrounds = useUiStore((s) => s.settings.dynamicStoreBackgroundsEnabled);
+  const screenshotKey = useUiStore((s) => s.settings.screenshotKey);
+  const screenshotSound = useUiStore((s) => s.settings.screenshotSound);
+  const activeThemeId = useProfileStore((s) => s.activeThemeId);
   const { langCode } = useTranslation();
   const mainRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -35,6 +47,28 @@ export function AppLayout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!screenshotKey) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+      if (!matchesShortcut(e, screenshotKey)) return;
+      e.preventDefault();
+      captureViewport()
+        .then(() => {
+          if (screenshotSound) playShutterSound();
+          toast.success("Screenshot saved");
+        })
+        .catch(() => toast.error("Couldn't capture screenshot"));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [screenshotKey, screenshotSound]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.setAttribute("data-app-theme", activeThemeId);
+  }, [activeThemeId]);
 
   useLayoutEffect(() => {
     const main = mainRef.current;
@@ -83,6 +117,7 @@ export function AppLayout() {
       </div>
       <Toaster />
       <VoiceWidget />
+      <FpsOverlay />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );

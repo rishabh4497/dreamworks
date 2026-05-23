@@ -43,7 +43,6 @@ const DEFAULT_SETTINGS: ClientSettings = {
   scanHistoryRetentionDays: 90,
   privacyDataExportStatus: "idle",
   privacyDeleteRequestStatus: "idle",
-  handheldMode: false,
   largerFocusTargets: false,
   controllerHints: true,
   language: "English",
