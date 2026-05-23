@@ -16,6 +16,7 @@ import { DemoButton } from "@/components/store/DemoButton";
 import { PreOrderPanel } from "@/components/store/PreOrderPanel";
 import { FriendsWhoOwn } from "@/components/store/FriendsWhoOwn";
 import { AIGameOverview } from "@/components/store/AIGameOverview";
+import { AIStudioOverview } from "@/components/store/AIStudioOverview";
 import { ImageLightbox } from "@/components/store/ImageLightbox";
 import { ReviewComposer } from "@/components/store/ReviewComposer";
 import { PlaytimeBadge } from "@/components/store/PlaytimeBadge";
@@ -245,6 +246,15 @@ export function GameDetailPage() {
         </section>
 
         <AIGameOverview gameDetail={detail} />
+
+        <div className="mt-6 space-y-4">
+          {detail.developer && (
+            <AIStudioOverview kind="Developer" name={detail.developer} variant="compact" />
+          )}
+          {detail.publisher && detail.publisher !== detail.developer && (
+            <AIStudioOverview kind="Publisher" name={detail.publisher} variant="compact" />
+          )}
+        </div>
 
         {/* About */}
         <section className="mt-10">

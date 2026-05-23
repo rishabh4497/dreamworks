@@ -25,7 +25,11 @@ const MAX_REVIEW_EXCERPTS = 8;
 export function AIStudioOverview({ kind, name, variant = "full" }: AIStudioOverviewProps) {
   const slug = slugify(name);
   const isDeveloper = kind === "Developer";
-  const games = isDeveloper ? useGamesByDeveloper(slug) : useGamesByPublisher(slug);
+  // Call both query hooks unconditionally (Rules of Hooks). The inactive one
+  // is gated by passing an empty slug, which flips its `enabled` to false.
+  const devGames = useGamesByDeveloper(isDeveloper ? slug : "");
+  const pubGames = useGamesByPublisher(!isDeveloper ? slug : "");
+  const games = isDeveloper ? devGames : pubGames;
   const dbDev = useDeveloper(isDeveloper ? slug : undefined);
   const dbPub = usePublisher(!isDeveloper ? slug : undefined);
   const dbProfile = isDeveloper ? dbDev.data : dbPub.data;

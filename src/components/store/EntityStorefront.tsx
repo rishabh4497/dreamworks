@@ -12,6 +12,7 @@ import { GameCard } from "@/components/store/GameCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/EmptyState";
 import { EntityNewsRail } from "@/components/store/EntityNewsRail";
+import { AIStudioOverview } from "@/components/store/AIStudioOverview";
 import { toast } from "@/stores/toast-store";
 import { useAccentStore } from "@/stores/accent-store";
 import { studioBrand } from "@/lib/studio-logos";
@@ -281,6 +282,11 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
               <FeaturedHero game={featured} />
             </section>
           )}
+
+          {/* AI studio profile (history / peak / future) */}
+          <section className="mb-8">
+            <AIStudioOverview kind={kind} name={name} variant="full" />
+          </section>
 
           {/* Specialties */}
           {(specialties.topGenres.length > 0 || specialties.topTags.length > 0) && (
