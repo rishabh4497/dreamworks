@@ -15,7 +15,8 @@ import { EntityNewsRail } from "@/components/store/EntityNewsRail";
 import { toast } from "@/stores/toast-store";
 import { useAccentStore } from "@/stores/accent-store";
 import { studioBrand } from "@/lib/studio-logos";
-import { usePublisherProfile } from "@/hooks/use-publisher";
+import { useDeveloper } from "@/hooks/use-developer";
+import { usePublisher } from "@/hooks/use-publisher";
 import { cn, slugify } from "@/lib/utils";
 
 export type EntityKind = "Developer" | "Publisher";
@@ -88,9 +89,12 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
     return { topGenres: top(genres, 4), topTags: top(tags, 6) };
   }, [games]);
 
-  const { data: dbProfile } = usePublisherProfile(name);
-
+  const entitySlug = slugify(name);
   const isDeveloper = kind === "Developer";
+  const { data: developerEntity } = useDeveloper(isDeveloper ? entitySlug : undefined);
+  const { data: publisherEntity } = usePublisher(!isDeveloper ? entitySlug : undefined);
+  const dbProfile = isDeveloper ? developerEntity : publisherEntity;
+
   const Icon = isDeveloper ? Building2 : Building;
   const brand = studioBrand(name);
   // PlayStation blue fallback — neutral enough for any unknown studio.

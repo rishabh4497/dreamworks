@@ -93,7 +93,25 @@ export default function App() {
           <Route path="store/game/:gameId" element={<GameDetailPage />} />
           <Route path="developer/:slug" element={<DeveloperPage />} />
           <Route path="publisher/:slug" element={<PublisherPage />} />
-          <Route path="developer-portal" element={<DeveloperPortalPage />} />
+          <Route path="developer-portal" element={<DeveloperPortalPage />}>
+            <Route index element={<Navigate to="/developer-portal/apps" replace />} />
+            <Route path="apps" element={<AppListPage />} />
+            <Route path="apps/new" element={<AppNewPage />} />
+            <Route path="apps/:appId" element={<AppEditorLayout />}>
+              <Route index element={<Navigate to="store-page" replace />} />
+              <Route path="store-page" element={<StorePageEditor />} />
+              <Route path="builds" element={<BuildsManager />} />
+              <Route path="achievements" element={<AchievementsManager />} />
+              <Route path="pricing" element={<PricingManager />} />
+              <Route path="publish" element={<PublishPage />} />
+            </Route>
+            <Route path="studio" element={<StudioProfileEditor />} />
+            <Route path="publisher" element={<PublisherProfileEditor />} />
+            <Route path="analytics" element={<AnalyticsPanel />} />
+            <Route path="marketing" element={<MarketingPanel />} />
+            <Route path="ops" element={<OpsPanel />} />
+            <Route path="moderation" element={<ModerationQueuePage />} />
+          </Route>
 
           <Route path="db" element={<DbHomePage />} />
           <Route path="db/game/:gameId" element={<GameDbPage />} />
