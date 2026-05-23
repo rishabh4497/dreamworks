@@ -3,6 +3,7 @@ export type OSPlatform = "windows" | "mac" | "linux";
 
 export interface InitOptions {
   appId: string;
+  appSecret: string;
   buildLabel?: string;
   handshakeUrl?: string;
   machineId?: string;

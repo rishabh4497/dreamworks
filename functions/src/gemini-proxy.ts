@@ -8,6 +8,7 @@ import { buildCacheKey, readCache, writeCache, bumpCacheHits } from "./cache.js"
 import { chargeQuota } from "./gemini-quota.js";
 import { estimateMicroCents, logUsage } from "./usage.js";
 import { MODEL_FLASH_LITE, MODEL_FLASH_REASONING } from "./models.js";
+import { checkRateLimit } from "./lib/rate-limit.js";
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
@@ -42,6 +43,7 @@ export const geminiProxy = onCall(
     concurrency: 20,
   },
   async (request: CallableRequest<ProxyRequest>): Promise<ProxyResponse> => {
+    const requestId = Math.random().toString(36).slice(2, 10);
     const uid = request.auth?.uid;
     if (!uid) {
       throw new HttpsError("unauthenticated", "Sign-in required for AI features.");
@@ -55,6 +57,19 @@ export const geminiProxy = onCall(
     const prompt = getPromptModule(featureKey);
     if (!prompt) {
       throw new HttpsError("not-found", `Unknown AI feature: ${featureKey}`);
+    }
+
+    // Per-user rate limit: 30 calls / minute steady-state.
+    const rl = await checkRateLimit({
+      key: `gemini:${uid}`,
+      capacity: 30,
+      refillPerSec: 30 / 60,
+    });
+    if (!rl.allowed) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Too many AI requests. Try again in ${rl.retryAfterSeconds}s.`,
+      );
     }
 
     const cacheKey = buildCacheKey({
@@ -113,28 +128,30 @@ export const geminiProxy = onCall(
         }),
       );
     } catch (err) {
-      logger.error("gemini call failed", { featureKey, err: serialize(err) });
-      throw new HttpsError("internal", "AI provider call failed.");
+      logger.error("gemini call failed", { featureKey, requestId, err: serialize(err) });
+      throw new HttpsError("internal", `AI provider call failed. (ref: ${requestId})`);
     }
 
     const text = response.text ?? "";
     if (!text) {
-      throw new HttpsError("internal", "Empty AI response.");
+      logger.error("gemini returned empty text", { featureKey, requestId });
+      throw new HttpsError("internal", `Empty AI response. (ref: ${requestId})`);
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch {
-      throw new HttpsError("internal", "AI returned invalid JSON.");
+      logger.error("gemini returned invalid JSON", { featureKey, requestId });
+      throw new HttpsError("internal", `AI returned invalid JSON. (ref: ${requestId})`);
     }
 
     let validated: unknown;
     try {
       validated = prompt.validate(parsed);
     } catch (err) {
-      logger.error("validation failed", { featureKey, err: serialize(err) });
-      throw new HttpsError("internal", "AI response failed validation.");
+      logger.error("validation failed", { featureKey, requestId, err: serialize(err) });
+      throw new HttpsError("internal", `AI response failed validation. (ref: ${requestId})`);
     }
 
     const usageMeta = response.usageMetadata ?? {};

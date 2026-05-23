@@ -13,7 +13,6 @@ import {
   getRejectionReasons,
   getSocialPlatforms,
   getTelemetryScaffold,
-  resolveLabel,
 } from "@/lib/api/config";
 import type {
   ConfigDocument,

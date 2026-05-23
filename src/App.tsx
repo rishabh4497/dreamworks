@@ -1,70 +1,85 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { type ReactNode } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DesktopOnly } from "@/components/layout/DesktopOnly";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
-import { LoginPage } from "@/pages/LoginPage";
-import { AuthHelperPage } from "@/pages/AuthHelperPage";
-import { StoreHomePage } from "@/pages/StoreHomePage";
-import { CategoryPage } from "@/pages/CategoryPage";
-import { SearchPage } from "@/pages/SearchPage";
-import { GameDetailPage } from "@/pages/GameDetailPage";
-import { TagPage } from "@/pages/TagPage";
-import { DeveloperPage } from "@/pages/DeveloperPage";
-import { DeveloperPortalPage } from "@/pages/DeveloperPortalPage";
-import { PublisherPage } from "@/pages/PublisherPage";
-import { AppListPage } from "@/pages/developer-portal/AppListPage";
-import { AppNewPage } from "@/pages/developer-portal/AppNewPage";
-import { AppEditorLayout } from "@/pages/developer-portal/AppEditorLayout";
-import { StorePageEditor } from "@/pages/developer-portal/StorePageEditor";
-import { BuildsManager } from "@/pages/developer-portal/BuildsManager";
-import { AchievementsManager } from "@/pages/developer-portal/AchievementsManager";
-import { SdkDocsPage } from "@/pages/developer-portal/SdkDocsPage";
-import { PricingManager } from "@/pages/developer-portal/PricingManager";
-import { PublishPage } from "@/pages/developer-portal/PublishPage";
-import { StudioProfileEditor } from "@/pages/developer-portal/StudioProfileEditor";
-import { PublisherProfileEditor } from "@/pages/developer-portal/PublisherProfileEditor";
-import { AnalyticsPage } from "@/pages/developer-portal/AnalyticsPage";
-import { MarketingPage } from "@/pages/developer-portal/MarketingPage";
-import { LiveOpsPage } from "@/pages/developer-portal/LiveOpsPage";
-import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { RoleGuard } from "@/components/common/RoleGuard";
-import { AdminPortalPage } from "@/pages/admin/AdminPortalPage";
-import { AdminDashboardPage } from "@/pages/admin/AdminDashboardPage";
-import { AppSubmissionsQueuePage } from "@/pages/admin/AppSubmissionsQueuePage";
-import { AppSubmissionDetailPage } from "@/pages/admin/AppSubmissionDetailPage";
-import { AppsAdminPage } from "@/pages/admin/AppsAdminPage";
-import { UsersPage } from "@/pages/admin/UsersPage";
-import { UserDetailPage } from "@/pages/admin/UserDetailPage";
-import { PublisherReviewPage, StudioReviewPage } from "@/pages/admin/CreatorReviewPage";
-import { AuditLogPage } from "@/pages/admin/AuditLogPage";
-import { LibraryPage } from "@/pages/LibraryPage";
-import { LibraryGamePage } from "@/pages/LibraryGamePage";
-import { LibraryCollectionPage } from "@/pages/LibraryCollectionPage";
-import { DownloadsPage } from "@/pages/DownloadsPage";
-import { WishlistPage } from "@/pages/WishlistPage";
-import { CartPage } from "@/pages/CartPage";
-import { CheckoutPage } from "@/pages/CheckoutPage";
-import { OrderConfirmationPage } from "@/pages/OrderConfirmationPage";
-import { FeedPage } from "@/pages/FeedPage";
-import { NewsArticlePage } from "@/pages/NewsArticlePage";
-import { ForumPage } from "@/pages/ForumPage";
-import { ThreadPage } from "@/pages/ThreadPage";
-import { WorkshopHomePage } from "@/pages/workshop/WorkshopHomePage";
-import { DreamworksPlusPage } from "@/pages/DreamworksPlusPage";
-import { ProfilePage } from "@/pages/ProfilePage";
-import { FriendsPage } from "@/pages/FriendsPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { DiagnosticsPage } from "@/pages/DiagnosticsPage";
-import { NotFoundPage } from "@/pages/NotFoundPage";
-import { DbHomePage } from "@/pages/db/DbHomePage";
-import { GameDbPage } from "@/pages/db/GameDbPage";
-import { TopChartsPage } from "@/pages/db/TopChartsPage";
-import { SalesTrackerPage } from "@/pages/db/SalesTrackerPage";
-import { CalendarPage } from "@/pages/db/CalendarPage";
-import { AccountAnalyticsPage } from "@/pages/db/AccountAnalyticsPage";
+import { LoginPage } from "@/pages/LoginPage";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
+
+// Lazy-loaded pages — split into per-page chunks so the initial bundle ships
+// only the auth shell. The helper preserves named exports.
+function lazyNamed<K extends string, M extends Record<K, ComponentType<unknown>>>(
+  loader: () => Promise<M>,
+  name: K,
+) {
+  return lazy(async () => {
+    const mod = await loader();
+    return { default: mod[name] };
+  });
+}
+
+const AuthHelperPage = lazyNamed(() => import("@/pages/AuthHelperPage"), "AuthHelperPage");
+const StoreHomePage = lazyNamed(() => import("@/pages/StoreHomePage"), "StoreHomePage");
+const CategoryPage = lazyNamed(() => import("@/pages/CategoryPage"), "CategoryPage");
+const SearchPage = lazyNamed(() => import("@/pages/SearchPage"), "SearchPage");
+const GameDetailPage = lazyNamed(() => import("@/pages/GameDetailPage"), "GameDetailPage");
+const TagPage = lazyNamed(() => import("@/pages/TagPage"), "TagPage");
+const DeveloperPage = lazyNamed(() => import("@/pages/DeveloperPage"), "DeveloperPage");
+const DeveloperPortalPage = lazyNamed(() => import("@/pages/DeveloperPortalPage"), "DeveloperPortalPage");
+const PublisherPage = lazyNamed(() => import("@/pages/PublisherPage"), "PublisherPage");
+const AppListPage = lazyNamed(() => import("@/pages/developer-portal/AppListPage"), "AppListPage");
+const AppNewPage = lazyNamed(() => import("@/pages/developer-portal/AppNewPage"), "AppNewPage");
+const AppEditorLayout = lazyNamed(() => import("@/pages/developer-portal/AppEditorLayout"), "AppEditorLayout");
+const StorePageEditor = lazyNamed(() => import("@/pages/developer-portal/StorePageEditor"), "StorePageEditor");
+const BuildsManager = lazyNamed(() => import("@/pages/developer-portal/BuildsManager"), "BuildsManager");
+const AchievementsManager = lazyNamed(() => import("@/pages/developer-portal/AchievementsManager"), "AchievementsManager");
+const SdkDocsPage = lazyNamed(() => import("@/pages/developer-portal/SdkDocsPage"), "SdkDocsPage");
+const PricingManager = lazyNamed(() => import("@/pages/developer-portal/PricingManager"), "PricingManager");
+const PublishPage = lazyNamed(() => import("@/pages/developer-portal/PublishPage"), "PublishPage");
+const StudioProfileEditor = lazyNamed(() => import("@/pages/developer-portal/StudioProfileEditor"), "StudioProfileEditor");
+const PublisherProfileEditor = lazyNamed(() => import("@/pages/developer-portal/PublisherProfileEditor"), "PublisherProfileEditor");
+const AnalyticsPage = lazyNamed(() => import("@/pages/developer-portal/AnalyticsPage"), "AnalyticsPage");
+const MarketingPage = lazyNamed(() => import("@/pages/developer-portal/MarketingPage"), "MarketingPage");
+const LiveOpsPage = lazyNamed(() => import("@/pages/developer-portal/LiveOpsPage"), "LiveOpsPage");
+const ModerationQueuePage = lazyNamed(() => import("@/pages/db/ModerationQueuePage"), "ModerationQueuePage");
+const AdminPortalPage = lazyNamed(() => import("@/pages/admin/AdminPortalPage"), "AdminPortalPage");
+const AdminDashboardPage = lazyNamed(() => import("@/pages/admin/AdminDashboardPage"), "AdminDashboardPage");
+const AppSubmissionsQueuePage = lazyNamed(() => import("@/pages/admin/AppSubmissionsQueuePage"), "AppSubmissionsQueuePage");
+const AppSubmissionDetailPage = lazyNamed(() => import("@/pages/admin/AppSubmissionDetailPage"), "AppSubmissionDetailPage");
+const AppsAdminPage = lazyNamed(() => import("@/pages/admin/AppsAdminPage"), "AppsAdminPage");
+const UsersPage = lazyNamed(() => import("@/pages/admin/UsersPage"), "UsersPage");
+const UserDetailPage = lazyNamed(() => import("@/pages/admin/UserDetailPage"), "UserDetailPage");
+const PublisherReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "PublisherReviewPage");
+const StudioReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "StudioReviewPage");
+const AuditLogPage = lazyNamed(() => import("@/pages/admin/AuditLogPage"), "AuditLogPage");
+const LibraryPage = lazyNamed(() => import("@/pages/LibraryPage"), "LibraryPage");
+const LibraryGamePage = lazyNamed(() => import("@/pages/LibraryGamePage"), "LibraryGamePage");
+const LibraryCollectionPage = lazyNamed(() => import("@/pages/LibraryCollectionPage"), "LibraryCollectionPage");
+const DownloadsPage = lazyNamed(() => import("@/pages/DownloadsPage"), "DownloadsPage");
+const WishlistPage = lazyNamed(() => import("@/pages/WishlistPage"), "WishlistPage");
+const CartPage = lazyNamed(() => import("@/pages/CartPage"), "CartPage");
+const CheckoutPage = lazyNamed(() => import("@/pages/CheckoutPage"), "CheckoutPage");
+const OrderConfirmationPage = lazyNamed(() => import("@/pages/OrderConfirmationPage"), "OrderConfirmationPage");
+const FeedPage = lazyNamed(() => import("@/pages/FeedPage"), "FeedPage");
+const NewsArticlePage = lazyNamed(() => import("@/pages/NewsArticlePage"), "NewsArticlePage");
+const ForumPage = lazyNamed(() => import("@/pages/ForumPage"), "ForumPage");
+const ThreadPage = lazyNamed(() => import("@/pages/ThreadPage"), "ThreadPage");
+const WorkshopHomePage = lazyNamed(() => import("@/pages/workshop/WorkshopHomePage"), "WorkshopHomePage");
+const DreamworksPlusPage = lazyNamed(() => import("@/pages/DreamworksPlusPage"), "DreamworksPlusPage");
+const ProfilePage = lazyNamed(() => import("@/pages/ProfilePage"), "ProfilePage");
+const FriendsPage = lazyNamed(() => import("@/pages/FriendsPage"), "FriendsPage");
+const SettingsPage = lazyNamed(() => import("@/pages/SettingsPage"), "SettingsPage");
+const DiagnosticsPage = lazyNamed(() => import("@/pages/DiagnosticsPage"), "DiagnosticsPage");
+const NotFoundPage = lazyNamed(() => import("@/pages/NotFoundPage"), "NotFoundPage");
+const DbHomePage = lazyNamed(() => import("@/pages/db/DbHomePage"), "DbHomePage");
+const GameDbPage = lazyNamed(() => import("@/pages/db/GameDbPage"), "GameDbPage");
+const TopChartsPage = lazyNamed(() => import("@/pages/db/TopChartsPage"), "TopChartsPage");
+const SalesTrackerPage = lazyNamed(() => import("@/pages/db/SalesTrackerPage"), "SalesTrackerPage");
+const CalendarPage = lazyNamed(() => import("@/pages/db/CalendarPage"), "CalendarPage");
+const AccountAnalyticsPage = lazyNamed(() => import("@/pages/db/AccountAnalyticsPage"), "AccountAnalyticsPage");
 
 function IndexRoute() {
   const startupLocation = useUiStore((s) => s.settings?.startupLocation || "store");
@@ -79,122 +94,128 @@ function AuthGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function RouteFallback() {
+  return <LoadingSpinner />;
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth-helper" element={<AuthHelperPage />} />
-        <Route
-          path="/"
-          element={
-            <AuthGuard>
-              <AppLayout />
-              {/* <OverlayBrowser /> Hidden by default, toggled via hotkey in real app */}
-            </AuthGuard>
-          }
-        >
-          <Route index element={<IndexRoute />} />
-          <Route path="store" element={<StoreHomePage />} />
-          <Route path="store/category/:slug" element={<CategoryPage />} />
-          <Route path="store/tag/:slug" element={<TagPage />} />
-          <Route path="store/search" element={<SearchPage />} />
-          <Route path="store/game/:gameId" element={<GameDetailPage />} />
-          <Route path="developer/:slug" element={<DeveloperPage />} />
-          <Route path="publisher/:slug" element={<PublisherPage />} />
-          <Route path="developer-portal" element={<DeveloperPortalPage />}>
-            <Route index element={<Navigate to="/developer-portal/apps" replace />} />
-            <Route path="apps" element={<AppListPage />} />
-            <Route path="apps/new" element={<AppNewPage />} />
-            <Route path="apps/:appId" element={<AppEditorLayout />}>
-              <Route index element={<Navigate to="store-page" replace />} />
-              <Route path="store-page" element={<StorePageEditor />} />
-              <Route path="builds" element={<BuildsManager />} />
-              <Route path="achievements" element={<AchievementsManager />} />
-              <Route path="sdk" element={<SdkDocsPage />} />
-              <Route path="pricing" element={<PricingManager />} />
-              <Route path="publish" element={<PublishPage />} />
-            </Route>
-            <Route path="studio" element={<StudioProfileEditor />} />
-            <Route path="publisher" element={<PublisherProfileEditor />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="marketing" element={<MarketingPage />} />
-            <Route path="ops" element={<LiveOpsPage />} />
-          </Route>
-
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth-helper" element={<AuthHelperPage />} />
           <Route
-            path="admin"
+            path="/"
             element={
-              <RoleGuard roles={["admin"]}>
-                <AdminPortalPage />
-              </RoleGuard>
+              <AuthGuard>
+                <AppLayout />
+                {/* <OverlayBrowser /> Hidden by default, toggled via hotkey in real app */}
+              </AuthGuard>
             }
           >
-            <Route index element={<AdminDashboardPage />} />
-            <Route path="submissions" element={<AppSubmissionsQueuePage />} />
-            <Route path="submissions/:submissionId" element={<AppSubmissionDetailPage />} />
-            <Route path="apps" element={<AppsAdminPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users/:uid" element={<UserDetailPage />} />
-            <Route path="content-moderation" element={<ModerationQueuePage />} />
-            <Route path="publishers" element={<PublisherReviewPage />} />
-            <Route path="publishers/:id" element={<PublisherReviewPage />} />
-            <Route path="studios" element={<StudioReviewPage />} />
-            <Route path="studios/:id" element={<StudioReviewPage />} />
-            <Route path="audit-log" element={<AuditLogPage />} />
+            <Route index element={<IndexRoute />} />
+            <Route path="store" element={<StoreHomePage />} />
+            <Route path="store/category/:slug" element={<CategoryPage />} />
+            <Route path="store/tag/:slug" element={<TagPage />} />
+            <Route path="store/search" element={<SearchPage />} />
+            <Route path="store/game/:gameId" element={<GameDetailPage />} />
+            <Route path="developer/:slug" element={<DeveloperPage />} />
+            <Route path="publisher/:slug" element={<PublisherPage />} />
+            <Route path="developer-portal" element={<DeveloperPortalPage />}>
+              <Route index element={<Navigate to="/developer-portal/apps" replace />} />
+              <Route path="apps" element={<AppListPage />} />
+              <Route path="apps/new" element={<AppNewPage />} />
+              <Route path="apps/:appId" element={<AppEditorLayout />}>
+                <Route index element={<Navigate to="store-page" replace />} />
+                <Route path="store-page" element={<StorePageEditor />} />
+                <Route path="builds" element={<BuildsManager />} />
+                <Route path="achievements" element={<AchievementsManager />} />
+                <Route path="sdk" element={<SdkDocsPage />} />
+                <Route path="pricing" element={<PricingManager />} />
+                <Route path="publish" element={<PublishPage />} />
+              </Route>
+              <Route path="studio" element={<StudioProfileEditor />} />
+              <Route path="publisher" element={<PublisherProfileEditor />} />
+              <Route path="analytics" element={<AnalyticsPage />} />
+              <Route path="marketing" element={<MarketingPage />} />
+              <Route path="ops" element={<LiveOpsPage />} />
+            </Route>
+
+            <Route
+              path="admin"
+              element={
+                <RoleGuard roles={["admin"]}>
+                  <AdminPortalPage />
+                </RoleGuard>
+              }
+            >
+              <Route index element={<AdminDashboardPage />} />
+              <Route path="submissions" element={<AppSubmissionsQueuePage />} />
+              <Route path="submissions/:submissionId" element={<AppSubmissionDetailPage />} />
+              <Route path="apps" element={<AppsAdminPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="users/:uid" element={<UserDetailPage />} />
+              <Route path="content-moderation" element={<ModerationQueuePage />} />
+              <Route path="publishers" element={<PublisherReviewPage />} />
+              <Route path="publishers/:id" element={<PublisherReviewPage />} />
+              <Route path="studios" element={<StudioReviewPage />} />
+              <Route path="studios/:id" element={<StudioReviewPage />} />
+              <Route path="audit-log" element={<AuditLogPage />} />
+            </Route>
+
+            <Route path="db" element={<DbHomePage />} />
+            <Route path="db/game/:gameId" element={<GameDbPage />} />
+            <Route path="db/charts/top-played" element={<TopChartsPage />} />
+            <Route path="db/charts/top-wishlisted" element={<TopChartsPage />} />
+            <Route path="db/charts/trending" element={<TopChartsPage />} />
+            <Route path="db/charts/recently-updated" element={<TopChartsPage />} />
+            <Route path="db/charts/free" element={<TopChartsPage />} />
+            <Route path="db/sales" element={<SalesTrackerPage />} />
+            <Route path="db/calendar" element={<CalendarPage />} />
+            <Route path="db/account" element={<AccountAnalyticsPage />} />
+
+            <Route path="feed" element={<FeedPage />} />
+            <Route path="feed/news/:slug" element={<NewsArticlePage />} />
+            <Route path="feed/forums/:gameId" element={<ForumPage />} />
+            <Route path="feed/forums/:gameId/:threadId" element={<ThreadPage />} />
+
+            <Route path="news" element={<Navigate to="/feed?tab=news" replace />} />
+            <Route path="forums" element={<Navigate to="/feed?tab=forums" replace />} />
+
+            <Route path="plus" element={<DreamworksPlusPage />} />
+
+            <Route path="workshop" element={<WorkshopHomePage />} />
+            <Route path="workshop/:gameId" element={<WorkshopHomePage />} />
+
+            <Route path="library" element={<DesktopOnly><LibraryPage /></DesktopOnly>} />
+            <Route
+              path="library/collection/:collectionId"
+              element={<DesktopOnly><LibraryCollectionPage /></DesktopOnly>}
+            />
+            <Route
+              path="library/:gameId"
+              element={<DesktopOnly><LibraryGamePage /></DesktopOnly>}
+            />
+            <Route path="downloads" element={<DesktopOnly><DownloadsPage /></DesktopOnly>} />
+            <Route path="wishlist" element={<WishlistPage />} />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="cart/checkout" element={<CheckoutPage />} />
+            <Route path="cart/order/:orderId" element={<OrderConfirmationPage />} />
+
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/:userId" element={<ProfilePage />} />
+            <Route path="friends" element={<FriendsPage />} />
+            <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />
+            <Route
+              path="diagnostics"
+              element={<DesktopOnly><DiagnosticsPage /></DesktopOnly>}
+            />
+
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-
-          <Route path="db" element={<DbHomePage />} />
-          <Route path="db/game/:gameId" element={<GameDbPage />} />
-          <Route path="db/charts/top-played" element={<TopChartsPage />} />
-          <Route path="db/charts/top-wishlisted" element={<TopChartsPage />} />
-          <Route path="db/charts/trending" element={<TopChartsPage />} />
-          <Route path="db/charts/recently-updated" element={<TopChartsPage />} />
-          <Route path="db/charts/free" element={<TopChartsPage />} />
-          <Route path="db/sales" element={<SalesTrackerPage />} />
-          <Route path="db/calendar" element={<CalendarPage />} />
-          <Route path="db/account" element={<AccountAnalyticsPage />} />
-
-          <Route path="feed" element={<FeedPage />} />
-          <Route path="feed/news/:slug" element={<NewsArticlePage />} />
-          <Route path="feed/forums/:gameId" element={<ForumPage />} />
-          <Route path="feed/forums/:gameId/:threadId" element={<ThreadPage />} />
-
-          <Route path="news" element={<Navigate to="/feed?tab=news" replace />} />
-          <Route path="forums" element={<Navigate to="/feed?tab=forums" replace />} />
-
-          <Route path="plus" element={<DreamworksPlusPage />} />
-
-          <Route path="workshop" element={<WorkshopHomePage />} />
-          <Route path="workshop/:gameId" element={<WorkshopHomePage />} />
-
-          <Route path="library" element={<DesktopOnly><LibraryPage /></DesktopOnly>} />
-          <Route
-            path="library/collection/:collectionId"
-            element={<DesktopOnly><LibraryCollectionPage /></DesktopOnly>}
-          />
-          <Route
-            path="library/:gameId"
-            element={<DesktopOnly><LibraryGamePage /></DesktopOnly>}
-          />
-          <Route path="downloads" element={<DesktopOnly><DownloadsPage /></DesktopOnly>} />
-          <Route path="wishlist" element={<WishlistPage />} />
-          <Route path="cart" element={<CartPage />} />
-          <Route path="cart/checkout" element={<CheckoutPage />} />
-          <Route path="cart/order/:orderId" element={<OrderConfirmationPage />} />
-
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="profile/:userId" element={<ProfilePage />} />
-          <Route path="friends" element={<FriendsPage />} />
-          <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />
-          <Route
-            path="diagnostics"
-            element={<DesktopOnly><DiagnosticsPage /></DesktopOnly>}
-          />
-
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

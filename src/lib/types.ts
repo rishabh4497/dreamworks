@@ -1729,3 +1729,71 @@ export interface ThemePreset {
   featured: boolean;
   createdAt: ISODate;
 }
+
+// ── App config (dw_config/*) ────────────────────────────────────────────────
+//
+// One document per "kind" (countries, languages, card_brands, …) so every
+// dropdown / enum the storefront renders can be edited by an admin without a
+// code release. Each entry carries i18n-keyed labels so the same doc serves
+// every locale; the `useConfig*` hooks resolve to the active locale.
+
+/** Locale-keyed display strings, with `en` mandatory as the fallback. */
+export type ConfigLabel = { en: string } & Partial<Record<string, string>>;
+
+export interface ConfigEntry {
+  id: string;
+  labels: ConfigLabel;
+  /** Lower numbers sort first; ties broken by `id` ascending. */
+  sortOrder: number;
+  /** When false, the entry is hidden in dropdowns but kept for legacy data. */
+  enabled: boolean;
+  /** Free-form per-entry data — icon name, color, country code, etc. */
+  meta?: Record<string, unknown>;
+}
+
+export interface ConfigDocument<E extends ConfigEntry = ConfigEntry> {
+  id: string;
+  entries: E[];
+  updatedAt: ISODate;
+}
+
+/** Rejection reasons doc has a nested grouping that the flat `entries` shape
+ *  doesn't model cleanly; this is its dedicated payload. */
+export interface RejectionReasonsDoc {
+  id: "rejection_reasons";
+  categoryGroups: Array<{
+    id: string;
+    label: ConfigLabel;
+    reasons: Array<{ id: string; label: ConfigLabel }>;
+  }>;
+  assetFields: Array<{ id: string; label: ConfigLabel }>;
+  updatedAt: ISODate;
+}
+
+/** Notification kinds need a few extra display fields (icon name, default
+ *  enabled, category) so we tighten the entry shape just for this doc. */
+export interface NotificationKindEntry extends ConfigEntry {
+  meta?: {
+    /** Lucide icon name used in NotificationPanel. */
+    icon?: string;
+    /** Filter bucket — "all" / "wishlist" / "friends" / "system". */
+    category?: "wishlist" | "friends" | "system" | "other";
+    /** Default toggle state for new users. */
+    defaultEnabled?: boolean;
+    /** Long-form description shown under the toggle. */
+    description?: ConfigLabel;
+  };
+}
+
+export type ConfigKey =
+  | "countries"
+  | "languages"
+  | "card_brands"
+  | "family_relationships"
+  | "lfg_session_types"
+  | "announcement_kinds"
+  | "social_platforms"
+  | "platforms"
+  | "notification_kinds"
+  | "telemetry_scaffold"
+  | "rejection_reasons";

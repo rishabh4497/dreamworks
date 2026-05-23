@@ -95,6 +95,8 @@ export const COLLECTIONS = {
   // Community catalogs
   controllerLayouts: "dw_controller_layouts",
   themes: "dw_themes",
+  // Global app config — admin-tunable enums (countries, languages, brands…)
+  config: "dw_config",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

@@ -7,6 +7,7 @@ import { useLibraryStore } from "@/stores/library-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGiftRecipientsStore } from "@/stores/gift-recipients-store";
 import { useGames } from "@/hooks/use-games";
+import { useCountries, resolveLabel } from "@/hooks/use-config";
 import { placeMockOrder } from "@/lib/api/orders";
 import { Input } from "@/components/ui/input";
 import { ROUTES } from "@/lib/routes";
@@ -24,8 +25,6 @@ interface Form {
 }
 type Errors = Partial<Record<keyof Form, string>>;
 type ApprovalStatus = FamilyApprovalMetadata["status"];
-
-const COUNTRIES = ["United States", "United Kingdom", "Canada", "Australia", "India", "Germany", "Japan", "Brazil"];
 
 export function CheckoutPage() {
   const items = useCartStore((s) => s.items);
@@ -71,12 +70,14 @@ export function CheckoutPage() {
   const giftItems = baseList.filter((item) => item.cartItem.asGift);
   const approvalItems = baseList.filter((item) => item.cartItem.familyApproval?.required);
 
+  const countries = useCountries();
   const [form, setForm] = useState<Form>({
     name: "",
     card: "",
     expiry: "",
     cvc: "",
-    country: "United States",
+    // ISO-3166 alpha-2; resolved label is rendered next to the dropdown.
+    country: "US",
   });
   const [errors, setErrors] = useState<Errors>({});
   const [approvalStatuses, setApprovalStatuses] = useState<Record<GameId, ApprovalStatus>>(() =>
@@ -285,9 +286,12 @@ export function CheckoutPage() {
                 value={form.country}
                 onChange={(e) => update("country", e.target.value)}
                 className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground"
+                disabled={countries.isLoading}
               >
-                {COUNTRIES.map((c) => (
-                  <option key={c}>{c}</option>
+                {(countries.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {resolveLabel(c.labels)}
+                  </option>
                 ))}
               </select>
             </Field>

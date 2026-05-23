@@ -38,6 +38,9 @@ export const DreamworksAPI = {
     if (!opts?.appId) {
       throw new Error("DreamworksAPI.init: appId is required.");
     }
+    if (!opts?.appSecret) {
+      throw new Error("DreamworksAPI.init: appSecret is required.");
+    }
     state.initialized = true;
     state.appId = opts.appId;
     state.buildLabel = opts.buildLabel;
@@ -46,6 +49,7 @@ export const DreamworksAPI = {
     state.marker = SDK_MARKER;
     void sendHandshake({
       appId: opts.appId,
+      appSecret: opts.appSecret,
       buildLabel: opts.buildLabel,
       machineId: opts.machineId,
       url: opts.handshakeUrl,
