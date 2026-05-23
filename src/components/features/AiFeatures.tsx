@@ -25,6 +25,14 @@ import type {
   ReviewSummarizerPayload,
   DynamicPatchNotesPayload,
 } from "@/lib/ai/payload-types";
+import { useProfileStore } from "@/stores/profile-store";
+
+/** Parse "32 GB RAM" / "16 GB DDR5" / "16" → 16. Falls back to 16 GB if blank. */
+function parseRamGB(raw: string): number {
+  const m = raw?.match(/(\d+(?:\.\d+)?)/);
+  const n = m ? parseFloat(m[1]) : NaN;
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 16;
+}
 
 // ── 1. Stuck Assistant ──────────────────────────────────────────────────────
 
@@ -391,21 +399,30 @@ interface HardwareProps {
 
 export function AiHardwareOptimizer({
   gameName = "Current Game",
-  cpuModel = "Ryzen 7 5800X",
-  gpuModel = "RTX 4070",
-  ramGB = 32,
+  cpuModel,
+  gpuModel,
+  ramGB,
   targetFps = 60,
-  resolution = "1920x1080",
+  resolution,
 }: HardwareProps) {
+  const systemRig = useProfileStore((s) => s.systemRig);
   const optimize = useAIHardwareOptimizer();
+
+  // Defaults derive from the user's detected rig (populated by detectSystemRig
+  // + Tauri's read_hardware_info on desktop). Callers can still override via props.
+  const resolvedCpu = cpuModel ?? systemRig.cpu;
+  const resolvedGpu = gpuModel ?? systemRig.gpu;
+  const resolvedRam = ramGB ?? parseRamGB(systemRig.ram);
+  const resolvedResolution = resolution ?? systemRig.display ?? "1920x1080";
+
   const onOptimize = () => {
     const payload: HardwareOptimizerPayload = {
       gameName,
-      cpuModel,
-      gpuModel,
-      ramGB,
+      cpuModel: resolvedCpu,
+      gpuModel: resolvedGpu,
+      ramGB: resolvedRam,
       targetFps,
-      resolution,
+      resolution: resolvedResolution,
     };
     optimize.mutate(payload);
   };
@@ -420,6 +437,9 @@ export function AiHardwareOptimizer({
           <h3 className="text-sm font-semibold text-foreground">AI Hardware Optimizer</h3>
           <p className="text-xs text-muted/60 mt-0.5">
             Auto-tweaks .ini settings to guarantee {targetFps}fps.
+          </p>
+          <p className="text-[10.5px] text-muted/50 mt-1 truncate">
+            Detected: {resolvedCpu} · {resolvedGpu} · {resolvedRam}GB · {resolvedResolution}
           </p>
           {optimize.data && (
             <p className="text-[11px] text-foreground/75 mt-1.5">

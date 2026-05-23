@@ -614,6 +614,195 @@ fn read_system_capabilities() -> CommandResult<SystemCapabilities> {
     })
 }
 
+// ── Storage manager: real drive enumeration & cache cleanup ───────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StorageDriveData {
+    id: String,
+    name: String,
+    mount_point: String,
+    total_bytes: u64,
+    available_bytes: u64,
+    used_bytes: u64,
+    file_system: String,
+    is_removable: bool,
+}
+
+#[tauri::command]
+fn list_storage_drives() -> CommandResult<Vec<StorageDriveData>> {
+    let disks = Disks::new_with_refreshed_list();
+    let mut seen_mounts = std::collections::HashSet::new();
+    let mut result: Vec<StorageDriveData> = Vec::new();
+    for disk in disks.iter() {
+        let total = disk.total_space();
+        if total < 1_000_000_000 {
+            continue; // skip <1GB virtual/recovery partitions
+        }
+        let mount = disk.mount_point().to_string_lossy().to_string();
+        if !seen_mounts.insert(mount.clone()) {
+            continue;
+        }
+        let raw_name = disk.name().to_string_lossy().to_string();
+        let display_name = if raw_name.trim().is_empty() {
+            mount.clone()
+        } else {
+            raw_name
+        };
+        let available = disk.available_space();
+        result.push(StorageDriveData {
+            id: mount.clone(),
+            name: display_name,
+            mount_point: mount,
+            total_bytes: total,
+            available_bytes: available,
+            used_bytes: total.saturating_sub(available),
+            file_system: disk.file_system().to_string_lossy().to_string(),
+            is_removable: disk.is_removable(),
+        });
+    }
+    result.sort_by(|a, b| b.total_bytes.cmp(&a.total_bytes));
+    ok(result)
+}
+
+const CACHE_DIR_NAMES: &[(&str, &str)] = &[
+    ("shaders", "Shader cache"),
+    ("shader_cache", "Shader cache"),
+    ("shadercache", "Shader cache"),
+    ("temp", "Temp files"),
+    ("tmp", "Temp files"),
+    ("cache", "Cache"),
+    ("logs", "Log files"),
+    ("crash_dumps", "Crash dumps"),
+    ("crashdumps", "Crash dumps"),
+];
+
+fn dir_size(path: &Path) -> u64 {
+    let mut total = 0u64;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_file() {
+                    total = total.saturating_add(meta.len());
+                } else if meta.is_dir() {
+                    total = total.saturating_add(dir_size(&entry_path));
+                }
+            }
+        }
+    }
+    total
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CleanupInstallEntry {
+    game_id: String,
+    install_path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CleanupScanRequest {
+    install_paths: Vec<CleanupInstallEntry>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CleanupCandidateData {
+    id: String,
+    label: String,
+    source: String,
+    path: String,
+    size_bytes: u64,
+    kind: String,
+}
+
+#[tauri::command]
+fn scan_cleanup_candidates(
+    request: CleanupScanRequest,
+) -> CommandResult<Vec<CleanupCandidateData>> {
+    let mut candidates: Vec<CleanupCandidateData> = Vec::new();
+    for entry in &request.install_paths {
+        let root = Path::new(&entry.install_path);
+        if !root.exists() {
+            continue;
+        }
+        for (dir_name, label) in CACHE_DIR_NAMES {
+            let cache_path = root.join(dir_name);
+            if cache_path.is_dir() {
+                let size = dir_size(&cache_path);
+                if size > 0 {
+                    candidates.push(CleanupCandidateData {
+                        id: format!("{}:{}", entry.game_id, dir_name),
+                        label: (*label).to_string(),
+                        source: entry.game_id.clone(),
+                        path: cache_path.to_string_lossy().to_string(),
+                        size_bytes: size,
+                        kind: (*dir_name).to_string(),
+                    });
+                }
+            }
+        }
+    }
+    candidates.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    ok(candidates)
+}
+
+fn is_safe_cache_path(path: &Path) -> bool {
+    let normalized = normalize_path(&path.to_string_lossy()).to_lowercase();
+    let inside_dw_root =
+        normalized.contains("/dreamworks/") || normalized.contains("/.dreamworks/");
+    let ends_in_known = CACHE_DIR_NAMES
+        .iter()
+        .any(|(name, _)| normalized.ends_with(&format!("/{}", name)));
+    inside_dw_root && ends_in_known
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DeleteCachePathRequest {
+    path: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeleteCachePathData {
+    path: String,
+    deleted_bytes: u64,
+    deleted_at: String,
+}
+
+#[tauri::command]
+fn delete_cache_path(
+    request: DeleteCachePathRequest,
+) -> CommandResult<DeleteCachePathData> {
+    let path = Path::new(&request.path);
+    if !path.exists() {
+        return ok(DeleteCachePathData {
+            path: request.path,
+            deleted_bytes: 0,
+            deleted_at: now_stamp(),
+        });
+    }
+    if !is_safe_cache_path(path) {
+        return err(
+            "unsafe_cache_path",
+            "Dreamworks will only delete cache folders inside a Dreamworks install root.",
+            true,
+        );
+    }
+    let bytes = dir_size(path);
+    match fs::remove_dir_all(path) {
+        Ok(()) => ok(DeleteCachePathData {
+            path: request.path,
+            deleted_bytes: bytes,
+            deleted_at: now_stamp(),
+        }),
+        Err(error) => err("delete_cache_failed", error.to_string(), true),
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HardwareInfo {
@@ -1089,6 +1278,9 @@ pub fn run() {
             uninstall_game,
             open_install_folder,
             read_system_capabilities,
+            list_storage_drives,
+            scan_cleanup_candidates,
+            delete_cache_path,
             read_hardware_info,
             run_hardware_snapshot,
             start_resource_monitor,

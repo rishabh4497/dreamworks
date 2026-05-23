@@ -13,6 +13,34 @@ import { isDesktop, openExternal } from "@/lib/platform";
 useThemeStore.getState();
 useAuthStore.getState().initialize();
 
+// Hydrate the system rig once on startup. detectSystemRig() runs synchronously
+// (browser APIs only), then on desktop we async-merge in the exact CPU/RAM/
+// storage from Tauri's read_hardware_info command. This means features like
+// the AI System Compatibility card and AI Hardware Optimizer get real specs
+// without depending on the profile page being mounted first.
+void (async () => {
+  try {
+    const { useProfileStore, detectSystemRig } = await import("@/stores/profile-store");
+    useProfileStore.getState().setSystemRig(detectSystemRig());
+    if (isDesktop()) {
+      const { invokeDesktop } = await import("@/lib/platform");
+      const res = await invokeDesktop<{
+        ok: boolean;
+        data?: { cpu?: string; ram?: string; storage?: string };
+      }>("read_hardware_info");
+      if (res?.ok && res.data) {
+        useProfileStore.getState().setSystemRig({
+          cpu: res.data.cpu,
+          ram: res.data.ram,
+          storage: res.data.storage,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("system rig hydration skipped:", err);
+  }
+})();
+
 
 // On desktop, route external links through the OS browser rather than letting
 // the Tauri webview open them inside the app window.
