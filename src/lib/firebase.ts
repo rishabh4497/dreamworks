@@ -15,6 +15,7 @@ const config = {
 let app: FirebaseApp | null = null;
 let firestoreInstance: Firestore | null = null;
 let authInstance: Auth | null = null;
+let functionsInstance: Functions | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (app) return app;
@@ -33,6 +34,12 @@ export function getFirebaseAuth(): Auth {
   if (authInstance) return authInstance;
   authInstance = getAuth(getFirebaseApp());
   return authInstance;
+}
+
+export function getFirebaseFunctions(): Functions {
+  if (functionsInstance) return functionsInstance;
+  functionsInstance = getFunctions(getFirebaseApp(), "us-central1");
+  return functionsInstance;
 }
 
 export const db = new Proxy({} as Firestore, {
@@ -58,6 +65,9 @@ export const COLLECTIONS = {
   developers: "dw_developers",
   publishers: "dw_publishers",
   apps: "dw_apps",
+  aiCache: "dw_ai_cache",
+  aiQuotas: "dw_ai_quotas",
+  aiUsage: "dw_ai_usage",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

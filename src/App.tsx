@@ -13,6 +13,22 @@ import { TagPage } from "@/pages/TagPage";
 import { DeveloperPage } from "@/pages/DeveloperPage";
 import { DeveloperPortalPage } from "@/pages/DeveloperPortalPage";
 import { PublisherPage } from "@/pages/PublisherPage";
+import { AppListPage } from "@/pages/developer-portal/AppListPage";
+import { AppNewPage } from "@/pages/developer-portal/AppNewPage";
+import { AppEditorLayout } from "@/pages/developer-portal/AppEditorLayout";
+import { StorePageEditor } from "@/pages/developer-portal/StorePageEditor";
+import { BuildsManager } from "@/pages/developer-portal/BuildsManager";
+import { AchievementsManager } from "@/pages/developer-portal/AchievementsManager";
+import { PricingManager } from "@/pages/developer-portal/PricingManager";
+import { PublishPage } from "@/pages/developer-portal/PublishPage";
+import { StudioProfileEditor } from "@/pages/developer-portal/StudioProfileEditor";
+import { PublisherProfileEditor } from "@/pages/developer-portal/PublisherProfileEditor";
+import {
+  AnalyticsPanel,
+  MarketingPanel,
+  OpsPanel,
+} from "@/pages/developer-portal/LegacyPanels";
+import { ModerationQueuePage } from "@/pages/db/ModerationQueuePage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LibraryGamePage } from "@/pages/LibraryGamePage";
 import { LibraryCollectionPage } from "@/pages/LibraryCollectionPage";
