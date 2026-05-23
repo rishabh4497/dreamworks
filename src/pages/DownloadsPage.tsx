@@ -43,7 +43,6 @@ import {
   moveInstall,
   openInstallFolder,
   readBackupManifest,
-  uninstallGame,
   verifyInstall,
   writeBackupManifest,
 } from "@/lib/api/downloads";
@@ -198,25 +197,40 @@ export function DownloadsPage() {
         .reduce((sum, task) => sum + Math.max(0, task.totalBytes - task.downloadedBytes), 0),
     [tasks],
   );
-  const storagePct = Math.min(100, Math.round((installedBytes / MOCK_DISK_BYTES) * 100));
   const activeSpeed = runningTasks.length ? bytesPerSecond(settings.downloadLimit) : 0;
-  const cleanupCandidates = useMemo(
+
+  const primaryDrive = useMemo(() => {
+    if (drives.length === 0) return null;
+    const installPathDrive = resolveDriveForPath(settings.installPath, drives);
+    return installPathDrive.id !== "unknown" ? installPathDrive : drives[0];
+  }, [drives, settings.installPath]);
+
+  const totalCapacityBytes = primaryDrive?.totalBytes ?? 0;
+  const totalFreeBytes = primaryDrive?.availableBytes ?? 0;
+  const storagePct =
+    totalCapacityBytes > 0
+      ? Math.min(
+          100,
+          Math.round(((totalCapacityBytes - totalFreeBytes) / totalCapacityBytes) * 100),
+        )
+      : 0;
+
+  const cleanupScanInput = useMemo(
     () =>
-      buildCleanupCandidates(installedEntries, (entry) =>
-        installPathForGame(entry.gameId, entry.installPath, settings.installPath),
-      ),
+      installedEntries.map((entry) => ({
+        gameId: entry.gameId,
+        installPath: installPathForGame(
+          entry.gameId,
+          entry.installPath,
+          settings.installPath,
+        ),
+      })),
     [installedEntries, settings.installPath],
   );
-  useEffect(() => {
-    if (cleanupSeededRef.current || cleanupCandidates.length === 0) return;
-    cleanupSeededRef.current = true;
-    setSelectedCleanupIds(
-      new Set(
-        cleanupCandidates.filter((c) => c.selected).map((c) => c.id),
-      ),
-    );
-  }, [cleanupCandidates]);
-
+  const { data: cleanupCandidates = [] } = useCleanupCandidates(
+    cleanupScanInput,
+    drives,
+  );
   const selectedCleanupBytes = useMemo(
     () =>
       cleanupCandidates
@@ -237,55 +251,73 @@ export function DownloadsPage() {
   const handleCleanup = async () => {
     const selected = cleanupCandidates.filter((c) => selectedCleanupIds.has(c.id));
     if (selected.length === 0) return;
-    const bytes = selected.reduce((sum, c) => sum + c.sizeBytes, 0);
 
-    if (desktop) {
-      const gameCandidates = selected.filter((c) =>
-        installedEntries.some((e) => e.gameId === c.source),
-      );
-      for (const candidate of gameCandidates) {
-        const entry = installedEntries.find((e) => e.gameId === candidate.source);
-        if (!entry) continue;
-        const installPath = installPathForGame(
-          entry.gameId,
-          entry.installPath,
-          settings.installPath,
-        );
-        await uninstallGame({ gameId: entry.gameId, installPath });
+    let reclaimed = 0;
+    let failures = 0;
+    for (const candidate of selected) {
+      if (!desktop) {
+        reclaimed += candidate.sizeBytes;
+        continue;
+      }
+      const result = await deleteCacheCandidate(candidate.path);
+      if (result.ok) {
+        reclaimed += result.data.deletedBytes;
+      } else {
+        failures += 1;
       }
     }
 
     setSelectedCleanupIds(new Set());
-    toast.success(`Reclaimed ${formatBytes(bytes)}`);
+    await queryClient.invalidateQueries({ queryKey: ["storage", "cleanup"] });
+    await queryClient.invalidateQueries({ queryKey: ["storage", "drives"] });
+    if (failures > 0) {
+      toast.error(
+        `Cleaned ${formatBytes(reclaimed)} — ${failures} item${failures > 1 ? "s" : ""} failed`,
+      );
+    } else {
+      toast.success(`Reclaimed ${formatBytes(reclaimed)}`);
+    }
   };
+
   const driveStats = useMemo(
     () =>
-      STORAGE_DRIVES.map((drive) => {
+      drives.map((drive) => {
         const installedOnDrive = installedEntries.reduce((sum, entry) => {
-          const path = installPathForGame(entry.gameId, entry.installPath, settings.installPath);
-          return resolveDriveForPath(path).id === drive.id ? sum + entry.sizeBytes : sum;
+          const path = installPathForGame(
+            entry.gameId,
+            entry.installPath,
+            settings.installPath,
+          );
+          return resolveDriveForPath(path, drives).id === drive.id
+            ? sum + entry.sizeBytes
+            : sum;
         }, 0);
         const queuedOnDrive = tasks.reduce((sum, task) => {
           const path = task.installPath ?? settings.installPath;
-          return resolveDriveForPath(path).id === drive.id
+          return resolveDriveForPath(path, drives).id === drive.id
             ? sum + Math.max(0, task.totalBytes - task.downloadedBytes)
             : sum;
         }, 0);
         const cleanupOnDrive = cleanupCandidates
           .filter((candidate) => candidate.driveId === drive.id)
           .reduce((sum, candidate) => sum + candidate.sizeBytes, 0);
-        const usedBytes = drive.reservedBytes + installedOnDrive + queuedOnDrive;
 
         return {
           ...drive,
           installedBytes: installedOnDrive,
           queuedBytes: queuedOnDrive,
           cleanupBytes: cleanupOnDrive,
-          freeBytes: Math.max(0, drive.totalBytes - usedBytes),
-          usedPct: Math.min(100, Math.round((usedBytes / drive.totalBytes) * 100)),
+          freeBytes: drive.availableBytes,
+          usedPct:
+            drive.totalBytes > 0
+              ? Math.min(
+                  100,
+                  Math.round((drive.usedBytes / drive.totalBytes) * 100),
+                )
+              : 0,
         };
       }),
-    [cleanupCandidates, installedEntries, settings.installPath, tasks],
+    [cleanupCandidates, drives, installedEntries, settings.installPath, tasks],
   );
 
   const handleStartEngine = () => {
