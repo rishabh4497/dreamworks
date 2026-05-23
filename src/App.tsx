@@ -19,6 +19,7 @@ import { AppEditorLayout } from "@/pages/developer-portal/AppEditorLayout";
 import { StorePageEditor } from "@/pages/developer-portal/StorePageEditor";
 import { BuildsManager } from "@/pages/developer-portal/BuildsManager";
 import { AchievementsManager } from "@/pages/developer-portal/AchievementsManager";
+import { SdkDocsPage } from "@/pages/developer-portal/SdkDocsPage";
 import { PricingManager } from "@/pages/developer-portal/PricingManager";
 import { PublishPage } from "@/pages/developer-portal/PublishPage";
 import { StudioProfileEditor } from "@/pages/developer-portal/StudioProfileEditor";
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="store-page" element={<StorePageEditor />} />
               <Route path="builds" element={<BuildsManager />} />
               <Route path="achievements" element={<AchievementsManager />} />
+              <Route path="sdk" element={<SdkDocsPage />} />
               <Route path="pricing" element={<PricingManager />} />
               <Route path="publish" element={<PublishPage />} />
             </Route>

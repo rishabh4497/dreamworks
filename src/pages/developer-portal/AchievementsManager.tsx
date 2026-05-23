@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { Eye, EyeOff, Pencil, Plus, Trash2, Trophy } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { ArrowRight, Eye, EyeOff, Pencil, Plus, Trash2, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   useDeleteAchievement,
   useUpsertAchievement,
 } from "@/hooks/use-app-achievements";
+import { ROUTES } from "@/lib/routes";
 import type { Achievement } from "@/lib/types";
 
 type Draft = Omit<Achievement, "id"> & { id?: string };
@@ -64,6 +65,17 @@ export function AchievementsManager() {
           Add achievement
         </Button>
       </div>
+
+      <Link
+        to={ROUTES.devAppSdk(appId)}
+        className="flex items-center justify-between rounded-xl border border-separator bg-card px-3.5 py-2.5 text-[12.5px] text-foreground/80 transition-colors hover:border-acid/30 hover:text-foreground"
+      >
+        <span>
+          Defined achievements only count once you wire them up in code —{" "}
+          <span className="text-acid">see SDK Integration</span> for the snippet.
+        </span>
+        <ArrowRight className="h-3.5 w-3.5 text-muted/60" />
+      </Link>
 
       <Card className="overflow-hidden">
         {achievements.length === 0 ? (

@@ -17,6 +17,7 @@ export const ROUTES = {
   devAppStorePage: (id: string) => `/developer-portal/apps/${id}/store-page`,
   devAppBuilds: (id: string) => `/developer-portal/apps/${id}/builds`,
   devAppAchievements: (id: string) => `/developer-portal/apps/${id}/achievements`,
+  devAppSdk: (id: string) => `/developer-portal/apps/${id}/sdk`,
   devAppPricing: (id: string) => `/developer-portal/apps/${id}/pricing`,
   devAppPublish: (id: string) => `/developer-portal/apps/${id}/publish`,
   devStudio: "/developer-portal/studio",

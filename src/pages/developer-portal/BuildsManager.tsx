@@ -1,6 +1,16 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { CheckCircle2, GitBranch, Package, Trash2, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  GitBranch,
+  Loader2,
+  Package,
+  ShieldAlert,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,8 +24,11 @@ import {
   useDeleteBuild,
   useSetBranchLive,
 } from "@/hooks/use-app-builds";
+import { useAchievements } from "@/hooks/use-app-achievements";
+import { useValidateBuildClient } from "@/hooks/use-build-validation";
+import { BuildValidationCard } from "@/components/developer-portal/BuildValidationCard";
 import { formatBytes, formatDate } from "@/lib/utils";
-import type { OSPlatform } from "@/lib/types";
+import type { BuildValidation, OSPlatform, ValidationStatus } from "@/lib/types";
 
 const PLATFORMS: OSPlatform[] = ["windows", "mac", "linux"];
 
@@ -23,9 +36,11 @@ export function BuildsManager() {
   const { appId = "" } = useParams();
   const { data: app } = useApp(appId);
   const { data: builds, isLoading } = useAppBuilds(appId);
+  const { data: achievements } = useAchievements(appId);
   const createBuild = useCreateBuild(appId);
   const deleteBuild = useDeleteBuild(appId);
   const setBranchLive = useSetBranchLive(appId);
+  const validator = useValidateBuildClient();
 
   const [showUpload, setShowUpload] = useState(false);
   const [label, setLabel] = useState("");
@@ -33,6 +48,19 @@ export function BuildsManager() {
   const [platforms, setPlatforms] = useState<OSPlatform[]>(["windows"]);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!file || !app) {
+      validator.reset();
+      return;
+    }
+    void validator.run({
+      file,
+      app: { id: app.id },
+      achievements: (achievements ?? []).map((a) => ({ id: a.id })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, app?.id]);
 
   const togglePlatform = (p: OSPlatform) =>
     setPlatforms((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
@@ -42,8 +70,11 @@ export function BuildsManager() {
     setNotes("");
     setPlatforms(["windows"]);
     setFile(null);
+    validator.reset();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const hardFail = validator.report?.overall === "fail";
 
   const handleUpload = async () => {
     if (!label.trim()) {
@@ -54,14 +85,24 @@ export function BuildsManager() {
       toast.error("Pick at least one platform.");
       return;
     }
+    if (hardFail) {
+      toast.error("Fix the SDK validation errors before uploading.");
+      return;
+    }
     try {
       await createBuild.mutateAsync({
         buildLabel: label.trim(),
         notes: notes.trim(),
         platforms,
         file: file ?? undefined,
+        validation: validator.report ?? undefined,
       });
-      toast.success(`Build ${label.trim()} uploaded.`);
+      const warned = validator.report?.overall === "warn";
+      if (warned) {
+        toast.success(`Build ${label.trim()} uploaded with warnings.`);
+      } else {
+        toast.success(`Build ${label.trim()} uploaded.`);
+      }
       setShowUpload(false);
       reset();
     } catch (err: unknown) {
@@ -100,6 +141,7 @@ export function BuildsManager() {
                 <th className="px-4 py-2">Platforms</th>
                 <th className="px-4 py-2">Size</th>
                 <th className="px-4 py-2">Uploaded</th>
+                <th className="px-4 py-2">SDK</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2"></th>
               </tr>
@@ -114,6 +156,9 @@ export function BuildsManager() {
                   <td className="px-4 py-2.5 text-foreground/80">{b.platforms.join(", ")}</td>
                   <td className="px-4 py-2.5 text-foreground/80">{formatBytes(b.sizeBytes)}</td>
                   <td className="px-4 py-2.5 text-foreground/80">{formatDate(b.uploadedAt)}</td>
+                  <td className="px-4 py-2.5">
+                    <ValidationChip validation={b.validation} />
+                  </td>
                   <td className="px-4 py-2.5">
                     <Badge variant={b.status === "ready" ? "free" : "soon"}>{b.status}</Badge>
                   </td>
@@ -253,18 +298,29 @@ export function BuildsManager() {
             <input
               ref={fileInputRef}
               type="file"
+              accept=".zip,application/zip"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="w-full text-[12px] text-foreground/80 file:mr-3 file:rounded-md file:border file:border-separator file:bg-card-active file:px-3 file:py-1.5 file:text-foreground/80 file:transition-colors file:hover:bg-card-hover"
             />
             <p className="mt-1 text-[11px] text-muted/55">
-              Stored to Firebase Storage when configured, otherwise inlined as a data URL for preview.
+              Upload a .zip containing your executable and a <code>dreamworks.manifest.json</code> at the root.
             </p>
           </Field>
+          {(file || validator.isRunning) && (
+            <BuildValidationCard
+              validation={validator.report}
+              isRunning={validator.isRunning}
+              error={validator.error}
+            />
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setShowUpload(false)}>
               Cancel
             </Button>
-            <Button onClick={handleUpload} disabled={createBuild.isPending}>
+            <Button
+              onClick={handleUpload}
+              disabled={createBuild.isPending || validator.isRunning || hardFail}
+            >
               <Upload className="h-4 w-4" />
               {createBuild.isPending ? "Uploading…" : "Upload"}
             </Button>
@@ -273,6 +329,60 @@ export function BuildsManager() {
       </Modal>
     </div>
   );
+}
+
+function ValidationChip({ validation }: { validation: BuildValidation | undefined }) {
+  if (!validation) {
+    return <span className="text-[11px] text-muted/45">—</span>;
+  }
+  const visual = chipVisuals(validation.overall);
+  return (
+    <span
+      className={
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-medium " +
+        visual.classes
+      }
+      title={validation.manifest.message}
+    >
+      {visual.icon}
+      {visual.label}
+    </span>
+  );
+}
+
+function chipVisuals(status: ValidationStatus) {
+  switch (status) {
+    case "pass":
+      return {
+        icon: <ShieldCheck className="h-3 w-3" />,
+        label: "verified",
+        classes: "border-green/40 bg-green/10 text-green",
+      };
+    case "fail":
+      return {
+        icon: <XCircle className="h-3 w-3" />,
+        label: "failed",
+        classes: "border-red/40 bg-red/10 text-red",
+      };
+    case "warn":
+      return {
+        icon: <ShieldAlert className="h-3 w-3" />,
+        label: "warnings",
+        classes: "border-acid/40 bg-acid/10 text-acid",
+      };
+    case "pending":
+      return {
+        icon: <Loader2 className="h-3 w-3 animate-spin" />,
+        label: "pending",
+        classes: "border-separator bg-card-active text-muted/70",
+      };
+    case "skipped":
+      return {
+        icon: <CheckCircle2 className="h-3 w-3" />,
+        label: "skipped",
+        classes: "border-separator bg-card-active text-muted/55",
+      };
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

@@ -47,6 +47,19 @@ export function PublishPage() {
       ok: Boolean(liveBuild),
       hint: liveBuild ? `live: ${liveBuild.buildLabel}` : "set in Builds & Branches",
     },
+    {
+      label: "Live build passes SDK validation",
+      ok: liveBuild?.validation?.overall === "pass",
+      hint: !liveBuild
+        ? "set a live build first"
+        : liveBuild.validation?.overall === "pending"
+          ? "cloud check still running"
+          : liveBuild.validation?.overall === "warn"
+            ? "warnings present — see Builds tab"
+            : liveBuild.validation?.overall === "fail"
+              ? "validation failed — see Builds tab"
+              : "no validation report yet",
+    },
     { label: "Base price set (or marked free)", ok: app.basePriceCents >= 0 },
   ];
 

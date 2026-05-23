@@ -12,6 +12,9 @@ use tauri::{AppHandle, Emitter};
 use tauri::async_runtime::{spawn, JoinHandle};
 use tokio::time::sleep;
 
+mod build_scanner;
+use build_scanner::{scan_build_archive, scan_local_executable};
+
 // ... (skip down to the end to add read_hardware_info and add to invoke_handler)
 
 #[derive(Serialize)]
@@ -1286,7 +1289,9 @@ pub fn run() {
             run_hardware_snapshot,
             start_resource_monitor,
             stop_resource_monitor,
-            scan_launchers_report
+            scan_launchers_report,
+            scan_build_archive,
+            scan_local_executable
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

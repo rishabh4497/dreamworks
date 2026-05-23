@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useParams } from "react-router-dom";
-import { FileText, Package, Trophy, Tag, Rocket, ArrowLeft } from "lucide-react";
+import { Code2, FileText, Package, Trophy, Tag, Rocket, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -12,6 +12,7 @@ const SECTIONS = (id: string) => [
   { to: ROUTES.devAppStorePage(id), label: "Store Page", icon: FileText },
   { to: ROUTES.devAppBuilds(id), label: "Builds & Branches", icon: Package },
   { to: ROUTES.devAppAchievements(id), label: "Achievements", icon: Trophy },
+  { to: ROUTES.devAppSdk(id), label: "SDK Integration", icon: Code2 },
   { to: ROUTES.devAppPricing(id), label: "Pricing", icon: Tag },
   { to: ROUTES.devAppPublish(id), label: "Publish", icon: Rocket },
 ];
