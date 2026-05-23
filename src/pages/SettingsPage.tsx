@@ -33,6 +33,13 @@ import { useCloudSaveSlots } from "@/hooks/use-cloud-saves";
 import { formatBytes, relativeTime } from "@/lib/utils";
 import { usePaymentMethodsStore } from "@/stores/payment-methods-store";
 import { useFamilyStore } from "@/stores/family-store";
+import {
+  useCardBrands,
+  useFamilyRelationships,
+  useLanguages,
+  useNotificationKinds,
+  resolveLabel,
+} from "@/hooks/use-config";
 import type {
   NotificationKind,
   StartupLocation,
@@ -60,41 +67,6 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
-
-const NOTIFICATION_ROWS: { kind: NotificationKind; label: string; description?: string }[] = [
-  {
-    kind: "wishlist-alert",
-    label: "Wishlist price alerts",
-    description: "When a wishlisted game hits your threshold.",
-  },
-  {
-    kind: "sale-ending",
-    label: "Sale ending reminders",
-    description: "24-hour warning before a wishlisted sale ends.",
-  },
-  {
-    kind: "friend-activity",
-    label: "Friend activity",
-    description: "When friends play or review games you care about.",
-  },
-  {
-    kind: "achievement-unlock",
-    label: "Achievement unlocks",
-    description: "Celebrate every milestone in your library.",
-  },
-  {
-    kind: "library-import",
-    label: "Library imports",
-    description: "After a purchase or launcher scan finishes.",
-  },
-  {
-    kind: "system",
-    label: "Dreamworks announcements",
-    description: "Release notes, status updates, platform news.",
-  },
-];
-
-const LANGUAGE_OPTIONS = ["English", "Français", "Deutsch", "Español", "日本語", "한국어"];
 
 const CLOUD_QUOTA_BYTES = 15 * 1_000_000_000;
 
@@ -135,6 +107,8 @@ export function SettingsPage() {
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [customKeyBinding, setCustomKeyBinding] = useState(false);
   const { data: cloudSaveSlots = [] } = useCloudSaveSlots(profile?.uid);
+  const { data: notificationKinds = [] } = useNotificationKinds();
+  const { data: languages = [] } = useLanguages();
 
   const cloudUsedBytes = cloudSaveSlots.reduce((sum, slot) => sum + (slot.sizeBytes || 0), 0);
   const cloudUsagePct = Math.min(100, (cloudUsedBytes / CLOUD_QUOTA_BYTES) * 100);
@@ -324,7 +298,10 @@ export function SettingsPage() {
                 label={t("Client language")}
                 value={settings.language}
                 onChange={(v) => updateSettings({ language: v })}
-                options={LANGUAGE_OPTIONS.map((l) => ({ value: l, label: l }))}
+                options={languages.map((l) => ({
+                  value: (l.meta?.nativeName as string) ?? resolveLabel(l.labels),
+                  label: (l.meta?.nativeName as string) ?? resolveLabel(l.labels),
+                }))}
               />
 
               <SelectField
@@ -735,15 +712,21 @@ export function SettingsPage() {
 
             <Section title="In-app alert subscriptions">
               <Card divide>
-                {NOTIFICATION_ROWS.map((row) => (
-                  <ToggleRow
-                    key={row.kind}
-                    label={row.label}
-                    description={row.description}
-                    checked={notificationPrefs[row.kind] !== false}
-                    onCheckedChange={(next) => setNotificationPref(row.kind, next)}
-                  />
-                ))}
+                {notificationKinds.map((row) => {
+                  const kind = row.id as NotificationKind;
+                  const description = row.meta?.description
+                    ? resolveLabel(row.meta.description)
+                    : undefined;
+                  return (
+                    <ToggleRow
+                      key={kind}
+                      label={resolveLabel(row.labels)}
+                      description={description}
+                      checked={notificationPrefs[kind] !== false}
+                      onCheckedChange={(next) => setNotificationPref(kind, next)}
+                    />
+                  );
+                })}
               </Card>
             </Section>
 
@@ -1134,16 +1117,7 @@ function FamilyList({ t }: { t: Translator }) {
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState<FamilyRelationship>("Friend");
 
-  const RELATIONSHIPS: FamilyRelationship[] = [
-    "Sister",
-    "Brother",
-    "Mother",
-    "Father",
-    "Spouse",
-    "Child",
-    "Friend",
-    "Other",
-  ];
+  const { data: relationships = [] } = useFamilyRelationships();
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -1232,9 +1206,9 @@ function FamilyList({ t }: { t: Translator }) {
                 onChange={(e) => setRelationship(e.target.value as FamilyRelationship)}
                 className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
               >
-                {RELATIONSHIPS.map((r) => (
-                  <option key={r} value={r}>
-                    {t(r)}
+                {relationships.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {t(resolveLabel(r.labels))}
                   </option>
                 ))}
               </select>
@@ -1285,7 +1259,7 @@ function PaymentMethods({ t }: { t: Translator }) {
   const [year, setYear] = useState(new Date().getFullYear() + 2);
   const [holder, setHolder] = useState("");
 
-  const BRANDS: PaymentBrand[] = ["Visa", "Mastercard", "Amex", "Discover"];
+  const { data: brands = [] } = useCardBrands();
   const last4Valid = /^\d{4}$/.test(last4);
 
   const submit = () => {
@@ -1371,9 +1345,9 @@ function PaymentMethods({ t }: { t: Translator }) {
                 onChange={(e) => setBrand(e.target.value as PaymentBrand)}
                 className="w-full rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15"
               >
-                {BRANDS.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {resolveLabel(b.labels)}
                   </option>
                 ))}
               </select>

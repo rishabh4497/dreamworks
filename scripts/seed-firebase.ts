@@ -1019,17 +1019,18 @@ async function seedConfig(): Promise<void> {
     ]),
   });
 
-  // LFG session types — used by the looking-for-group filter dropdown.
+  // LFG session types — populates the looking-for-group filter dropdown.
+  // IDs use the display label so they round-trip into the `lfgPost.type` field
+  // unchanged. Adding a new locale to an existing entry is safe; renaming an
+  // ID would orphan historical posts, so introduce new entries instead.
   await writeConfig("lfg_session_types", {
     entries: buildEntries([
-      { id: "co-op", en: "Co-op", more: { es: "Cooperativo", fr: "Coopératif", de: "Koop", ja: "協力", ko: "협동" } },
-      { id: "ranked", en: "Ranked", more: { es: "Clasificatorio", fr: "Classé", de: "Rangliste", ja: "ランク", ko: "랭크" } },
-      { id: "casual", en: "Casual", more: { es: "Casual", fr: "Décontracté", de: "Casual", ja: "カジュアル", ko: "캐주얼" } },
-      { id: "raid", en: "Raid", more: { es: "Incursión", fr: "Raid", de: "Raid", ja: "レイド", ko: "레이드" } },
-      { id: "campaign", en: "Campaign", more: { es: "Campaña", fr: "Campagne", de: "Kampagne", ja: "キャンペーン", ko: "캠페인" } },
-      { id: "trade", en: "Trade", more: { es: "Intercambio", fr: "Échange", de: "Handel", ja: "取引", ko: "거래" } },
-      { id: "achievement", en: "Achievement Hunt", more: { es: "Logros", fr: "Succès", de: "Erfolge", ja: "実績", ko: "도전과제" } },
-      { id: "speedrun", en: "Speedrun", more: { ja: "スピードラン", ko: "스피드런" } },
+      { id: "Co-op", en: "Co-op", more: { es: "Cooperativo", fr: "Coopératif", de: "Koop", ja: "協力", ko: "협동" } },
+      { id: "Ranked", en: "Ranked", more: { es: "Clasificatorio", fr: "Classé", de: "Rangliste", ja: "ランク", ko: "랭크" } },
+      { id: "Raid", en: "Raid", more: { es: "Incursión", fr: "Raid", de: "Raid", ja: "レイド", ko: "레이드" } },
+      { id: "Campaign", en: "Campaign", more: { es: "Campaña", fr: "Campagne", de: "Kampagne", ja: "キャンペーン", ko: "캠페인" } },
+      { id: "Trade", en: "Trade", more: { es: "Intercambio", fr: "Échange", de: "Handel", ja: "取引", ko: "거래" } },
+      { id: "Achievement", en: "Achievement Hunt", more: { es: "Logros", fr: "Succès", de: "Erfolge", ja: "実績", ko: "도전과제" } },
     ]),
   });
 
@@ -1045,31 +1046,25 @@ async function seedConfig(): Promise<void> {
   });
 
   // Social platforms — outbound marketing channels for the developer portal.
-  // `meta.icon` is a lucide-react identifier; `meta.color` is a Tailwind token.
+  // IDs match the `SocialPlatform` union in `src/lib/types.ts`; expanding the
+  // list requires both a new entry here and a corresponding union member.
   await writeConfig("social_platforms", {
     entries: buildEntries([
       { id: "twitter", en: "Twitter / X", meta: { icon: "twitter", color: "text-foreground" } },
       { id: "discord", en: "Discord", meta: { icon: "message-circle", color: "text-cyan" } },
       { id: "bluesky", en: "Bluesky", meta: { icon: "cloud", color: "text-acid" } },
-      { id: "youtube", en: "YouTube", meta: { icon: "youtube", color: "text-red" } },
-      { id: "twitch", en: "Twitch", meta: { icon: "twitch", color: "text-purple" } },
-      { id: "reddit", en: "Reddit", meta: { icon: "message-square", color: "text-orange" } },
     ]),
   });
 
   // External gaming platforms — for the "Linked platforms" settings card.
-  // `meta` carries the badge string, color token, and i18n label key.
+  // IDs match the `LinkedPlatformId` union in `src/lib/types.ts`. `meta.bg`
+  // is a Tailwind arbitrary-value class so admins can adjust without code.
   await writeConfig("platforms", {
     entries: buildEntries([
-      { id: "psn", en: "PlayStation Network", meta: { badge: "PSN", color: "#006FCD", labelKey: "settings.platform.psn" } },
-      { id: "xbox-live", en: "Xbox Live", meta: { badge: "Xbox", color: "#107C10", labelKey: "settings.platform.xbox" } },
-      { id: "steam", en: "Steam", meta: { badge: "Steam", color: "#66c0f4", labelKey: "settings.platform.steam" } },
-      { id: "epic", en: "Epic Games Store", meta: { badge: "Epic", color: "#FFFFFF", labelKey: "settings.platform.epic" } },
-      { id: "gog", en: "GOG", meta: { badge: "GOG", color: "#86328A", labelKey: "settings.platform.gog" } },
-      { id: "battlenet", en: "Battle.net", meta: { badge: "Battle.net", color: "#148EFF", labelKey: "settings.platform.battlenet" } },
-      { id: "ea-app", en: "EA App", meta: { badge: "EA", color: "#FF4747", labelKey: "settings.platform.ea" } },
-      { id: "ubisoft", en: "Ubisoft Connect", meta: { badge: "Ubisoft", color: "#0080FF", labelKey: "settings.platform.ubisoft" } },
-      { id: "nintendo", en: "Nintendo Account", meta: { badge: "Nintendo", color: "#E60012", labelKey: "settings.platform.nintendo" } },
+      { id: "psn", en: "PlayStation Network", meta: { badge: "PSN", bg: "bg-[#00439C]" } },
+      { id: "xbox-live", en: "Xbox Live", meta: { badge: "XBL", bg: "bg-[#107C10]" } },
+      { id: "steam", en: "Steam", meta: { badge: "STM", bg: "bg-[#171a21]" } },
+      { id: "epic", en: "Epic Games", meta: { badge: "EPC", bg: "bg-[#313131]" } },
     ]),
   });
 
@@ -1179,75 +1174,73 @@ async function seedConfig(): Promise<void> {
     ]),
   });
 
-  // Rejection reasons — admin moderation modal. Bespoke nested shape so the
-  // categories render as section headers in the picker.
+  // Rejection reasons — admin moderation modal. Reason IDs match the
+  // `SubmissionRejectionReason` union in `src/lib/types.ts` so payloads
+  // round-trip into `dw_moderation_records` without translation.
   await writeConfig("rejection_reasons", {
     categoryGroups: [
       {
         id: "visual",
         label: { en: "Visual accuracy" },
         reasons: [
-          { id: "capsule-mismatch", label: { en: "Capsule art does not match in-game content" } },
-          { id: "screenshot-mismatch", label: { en: "Screenshots do not reflect actual gameplay" } },
-          { id: "trailer-mismatch", label: { en: "Trailer is misleading or pre-rendered without disclosure" } },
-          { id: "low-quality-art", label: { en: "Cover/header art is low resolution or watermarked" } },
-          { id: "third-party-ip", label: { en: "Uses IP or branding the developer does not own" } },
-          { id: "ai-generated-art", label: { en: "AI-generated art is not disclosed in the listing" } },
+          { id: "capsule_art_missing", label: { en: "Capsule art missing" } },
+          { id: "capsule_art_low_quality", label: { en: "Capsule art low quality" } },
+          { id: "screenshots_insufficient", label: { en: "Screenshots insufficient" } },
+          { id: "screenshots_misleading", label: { en: "Screenshots misleading" } },
+          { id: "trailer_broken", label: { en: "Trailer broken / unplayable" } },
+          { id: "trailer_misleading", label: { en: "Trailer misleading" } },
         ],
       },
       {
         id: "technical",
         label: { en: "Technical stability" },
         reasons: [
-          { id: "fails-launch", label: { en: "Build fails to launch on supported platforms" } },
-          { id: "crashes-frequently", label: { en: "Crashes within the first 10 minutes of play" } },
-          { id: "broken-saves", label: { en: "Cloud or local saves do not persist" } },
+          { id: "build_missing", label: { en: "No live build on default branch" } },
+          { id: "build_unverified", label: { en: "Build unverified" } },
+          { id: "build_crashes", label: { en: "Build crashes / fails to launch" } },
         ],
       },
       {
         id: "metadata",
-        label: { en: "Metadata and descriptions" },
+        label: { en: "Metadata & descriptions" },
         reasons: [
-          { id: "missing-description", label: { en: "Missing short or long description" } },
-          { id: "missing-system-reqs", label: { en: "Missing or incorrect system requirements" } },
-          { id: "missing-age-rating", label: { en: "Missing age rating or wrong region rating" } },
-          { id: "wrong-genres", label: { en: "Genres or tags do not match the gameplay" } },
-          { id: "missing-languages", label: { en: "Claimed language support cannot be verified" } },
-          { id: "missing-accessibility", label: { en: "Accessibility tags do not match in-game options" } },
+          { id: "description_too_short", label: { en: "Description too short" } },
+          { id: "description_misleading", label: { en: "Description misleading" } },
+          { id: "description_prohibited_content", label: { en: "Prohibited content in description" } },
+          { id: "age_rating_mismatch", label: { en: "Age rating mismatch" } },
+          { id: "tags_misleading", label: { en: "Tags misleading" } },
+          { id: "metadata_incomplete", label: { en: "Metadata incomplete" } },
         ],
       },
       {
         id: "pricing",
-        label: { en: "Pricing and release" },
+        label: { en: "Pricing & release" },
         reasons: [
-          { id: "regional-price-gap", label: { en: "Regional pricing falls outside the platform's bounds" } },
-          { id: "release-conflict", label: { en: "Release date conflicts with platform policy or storefront" } },
+          { id: "pricing_outside_band", label: { en: "Pricing outside accepted band" } },
+          { id: "release_date_invalid", label: { en: "Release date invalid" } },
         ],
       },
       {
         id: "policy",
         label: { en: "Policy" },
         reasons: [
-          { id: "prohibited-content", label: { en: "Contains prohibited content (hateful, illegal, sexual minors)" } },
-          { id: "gambling-mechanics", label: { en: "Loot box / gambling mechanics without disclosure" } },
-          { id: "spam-or-asset-flip", label: { en: "Asset flip or low-effort spam submission" } },
-          { id: "duplicate-listing", label: { en: "Duplicate of an existing app on the storefront" } },
-          { id: "tos-violation", label: { en: "Violates Dreamworks Terms of Service" } },
-          { id: "missing-rights", label: { en: "Developer cannot prove rights to redistribute included assets" } },
+          { id: "policy_violation", label: { en: "Policy violation" } },
+          { id: "ip_infringement", label: { en: "IP infringement" } },
+          { id: "duplicate_submission", label: { en: "Duplicate submission" } },
           { id: "other", label: { en: "Other (specify in notes)" } },
         ],
       },
     ],
     assetFields: [
       { id: "capsuleUrl", label: { en: "Capsule art" } },
-      { id: "headerUrl", label: { en: "Header image" } },
-      { id: "coverUrl", label: { en: "Cover image" } },
-      { id: "screenshots", label: { en: "Screenshots" } },
-      { id: "trailers", label: { en: "Trailers" } },
+      { id: "headerUrl", label: { en: "Header art" } },
+      { id: "coverUrl", label: { en: "Cover art" } },
+      { id: "screenshots", label: { en: "Screenshot" } },
+      { id: "trailers", label: { en: "Trailer" } },
       { id: "shortDescription", label: { en: "Short description" } },
       { id: "longDescription", label: { en: "Long description" } },
       { id: "ageRating", label: { en: "Age rating" } },
-      { id: "latestBuildId", label: { en: "Latest build" } },
+      { id: "latestBuildId", label: { en: "Build" } },
       { id: "pricing", label: { en: "Pricing" } },
     ],
   });

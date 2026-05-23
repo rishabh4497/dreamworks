@@ -3,58 +3,44 @@ import { CheckCircle2, Link as LinkIcon, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, relativeTime } from "@/lib/utils";
 import { useLinkedPlatformsStore } from "@/stores/linked-platforms-store";
+import { usePlatforms, resolveLabel } from "@/hooks/use-config";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/stores/toast-store";
 import type { LinkedPlatformId } from "@/lib/types";
 
-const PLATFORM_COLORS: Record<LinkedPlatformId, string> = {
-  psn: "bg-[#00439C]",
-  "xbox-live": "bg-[#107C10]",
-  steam: "bg-[#171a21]",
-  epic: "bg-[#313131]",
-};
-
-const PLATFORM_BADGE: Record<LinkedPlatformId, string> = {
-  psn: "PSN",
-  "xbox-live": "XBL",
-  steam: "STM",
-  epic: "EPC",
-};
-
-const PLATFORM_LABEL_KEY: Record<LinkedPlatformId, string> = {
-  psn: "PlayStation Network",
-  "xbox-live": "Xbox Live",
-  steam: "Steam",
-  epic: "Epic Games",
-};
-
-const PLATFORM_ORDER: LinkedPlatformId[] = ["psn", "xbox-live", "steam", "epic"];
+const DEFAULT_BG = "bg-input";
 
 export function PlatformIntegrations() {
   const platforms = useLinkedPlatformsStore((s) => s.platforms);
   const connect = useLinkedPlatformsStore((s) => s.connect);
   const unlink = useLinkedPlatformsStore((s) => s.unlink);
   const sync = useLinkedPlatformsStore((s) => s.sync);
+  const { data: platformConfig = [] } = usePlatforms();
   const { t } = useTranslation();
   const [syncing, setSyncing] = useState<LinkedPlatformId | null>(null);
+
+  const labelFor = (id: LinkedPlatformId): string => {
+    const cfg = platformConfig.find((p) => p.id === id);
+    return cfg ? resolveLabel(cfg.labels) : id;
+  };
 
   const handleSync = (id: LinkedPlatformId) => {
     setSyncing(id);
     sync(id);
     window.setTimeout(() => {
       setSyncing(null);
-      toast.success(t("Synced {platform}", { platform: t(PLATFORM_LABEL_KEY[id]) }));
+      toast.success(t("Synced {platform}", { platform: t(labelFor(id)) }));
     }, 1200);
   };
 
   const handleConnect = (id: LinkedPlatformId) => {
     connect(id);
-    toast.success(t("Connected to {platform}", { platform: t(PLATFORM_LABEL_KEY[id]) }));
+    toast.success(t("Connected to {platform}", { platform: t(labelFor(id)) }));
   };
 
   const handleUnlink = (id: LinkedPlatformId) => {
     unlink(id);
-    toast.info(t("Unlinked {platform}", { platform: t(PLATFORM_LABEL_KEY[id]) }));
+    toast.info(t("Unlinked {platform}", { platform: t(labelFor(id)) }));
   };
 
   return (
@@ -64,8 +50,12 @@ export function PlatformIntegrations() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {PLATFORM_ORDER.map((id) => {
+        {platformConfig.map((cfg) => {
+          const id = cfg.id as LinkedPlatformId;
           const p = platforms[id];
+          if (!p) return null;
+          const bg = (cfg.meta?.bg as string) ?? DEFAULT_BG;
+          const badge = (cfg.meta?.badge as string) ?? id.toUpperCase();
           return (
             <div
               key={id}
@@ -80,16 +70,16 @@ export function PlatformIntegrations() {
                 <div
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-inner",
-                    PLATFORM_COLORS[id],
+                    bg,
                   )}
                 >
                   <span className="text-[12px] font-bold text-white uppercase">
-                    {PLATFORM_BADGE[id]}
+                    {badge}
                   </span>
                 </div>
                 <div>
                   <p className="text-[14px] font-semibold text-foreground">
-                    {t(PLATFORM_LABEL_KEY[id])}
+                    {t(labelFor(id))}
                   </p>
                   {p.connected ? (
                     <p className="flex items-center gap-1 text-[11px] text-green">

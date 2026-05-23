@@ -10,17 +10,21 @@ import {
   useDeleteAnnouncement,
   useSaveAnnouncement,
 } from "@/hooks/use-announcements";
+import { useAnnouncementKinds, resolveLabel } from "@/hooks/use-config";
 import type { Announcement, AnnouncementCategory } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
-const CATEGORIES: AnnouncementCategory[] = ["patch", "event", "news", "maintenance"];
-
-const CAT_STYLES: Record<AnnouncementCategory, string> = {
-  patch: "bg-cyan/10 text-cyan",
-  event: "bg-acid/10 text-acid",
-  news: "bg-green/10 text-green",
-  maintenance: "bg-orange/10 text-orange",
+// Map config `meta.tone` → Tailwind class. Lives in code (not config) because
+// the colors are part of the design system and shouldn't be admin-editable.
+const TONE_STYLES: Record<string, string> = {
+  cyan: "bg-cyan/10 text-cyan",
+  acid: "bg-acid/10 text-acid",
+  green: "bg-green/10 text-green",
+  orange: "bg-orange/10 text-orange",
+  red: "bg-red/10 text-red",
 };
+
+const FALLBACK_TONE = "bg-input text-muted";
 
 function toLocalInput(iso: string | undefined): string {
   if (!iso) return "";
@@ -51,11 +55,22 @@ export function AnnouncementsCard({ appId }: { appId: string }) {
   const list = useAnnouncementsByApp(appId);
   const save = useSaveAnnouncement();
   const del = useDeleteAnnouncement(appId);
+  const { data: kinds = [] } = useAnnouncementKinds();
 
   const [filter, setFilter] = useState<"all" | AnnouncementCategory>("all");
   const [edit, setEdit] = useState<EditState>(EMPTY);
 
   const filtered = (list.data ?? []).filter((a) => filter === "all" || a.category === filter);
+
+  const toneFor = (id: string): string => {
+    const kind = kinds.find((k) => k.id === id);
+    const tone = (kind?.meta?.tone as string) ?? "";
+    return TONE_STYLES[tone] ?? FALLBACK_TONE;
+  };
+  const labelFor = (id: string): string => {
+    const kind = kinds.find((k) => k.id === id);
+    return kind ? resolveLabel(kind.labels) : id;
+  };
 
   const handleSave = async () => {
     try {
@@ -101,9 +116,14 @@ export function AnnouncementsCard({ appId }: { appId: string }) {
           <FilterChip current={filter} value="all" onClick={() => setFilter("all")}>
             All
           </FilterChip>
-          {CATEGORIES.map((c) => (
-            <FilterChip key={c} current={filter} value={c} onClick={() => setFilter(c)}>
-              {c}
+          {kinds.map((c) => (
+            <FilterChip
+              key={c.id}
+              current={filter}
+              value={c.id as AnnouncementCategory}
+              onClick={() => setFilter(c.id as AnnouncementCategory)}
+            >
+              {resolveLabel(c.labels)}
             </FilterChip>
           ))}
         </div>
@@ -121,9 +141,9 @@ export function AnnouncementsCard({ appId }: { appId: string }) {
             }
             className="h-9 rounded-xl border border-separator bg-input px-3 text-[13px] text-foreground"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {kinds.map((c) => (
+              <option key={c.id} value={c.id}>
+                {resolveLabel(c.labels)}
               </option>
             ))}
           </select>
@@ -190,9 +210,9 @@ export function AnnouncementsCard({ appId }: { appId: string }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${CAT_STYLES[a.category]}`}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${toneFor(a.category)}`}
                   >
-                    {a.category}
+                    {labelFor(a.category)}
                   </span>
                   {isPinned && (
                     <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-acid">

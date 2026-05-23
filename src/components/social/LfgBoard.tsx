@@ -16,17 +16,22 @@ import {
   useLfgGuides,
   useLfgPosts,
 } from "@/hooks/use-lfg-board";
+import { useLfgSessionTypes, resolveLabel } from "@/hooks/use-config";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "@/stores/toast-store";
 import { cn, relativeDate } from "@/lib/utils";
 
-const SESSION_TYPES = ["Co-op", "Ranked", "Raid", "Campaign", "Trade", "Achievement"];
+// The "Invite" dropdown is a sample of recent friends to filter the board.
+// The friend graph migration (see Phase 4 plan) will replace this with a live
+// `useFollowing()` slice once `dw_friends` lands. Until then the list stays in
+// code so the dropdown doesn't render empty before that migration.
 const FRIENDS = ["Any friend", "Maya", "Aarav", "Leo", "Sarah"];
 
 export function LfgBoard() {
   const { data: games = [] } = useGames();
   const { data: posts = [] } = useLfgPosts();
   const { data: guides = [] } = useLfgGuides();
+  const { data: sessionTypes = [] } = useLfgSessionTypes();
   const createPostMut = useCreateLfgPost();
   const createGuideMut = useCreateLfgGuide();
   const profile = useAuthStore((s) => s.profile);
@@ -123,8 +128,10 @@ export function LfgBoard() {
             ))}
           </Select>
           <Select value={type} onChange={setType}>
-            {SESSION_TYPES.map((sessionType) => (
-              <option key={sessionType}>{sessionType}</option>
+            {sessionTypes.map((sessionType) => (
+              <option key={sessionType.id} value={sessionType.id}>
+                {resolveLabel(sessionType.labels)}
+              </option>
             ))}
           </Select>
           <Select value={friend} onChange={setFriend}>

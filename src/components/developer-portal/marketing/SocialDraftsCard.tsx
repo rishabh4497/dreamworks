@@ -8,16 +8,16 @@ import {
   useSaveSocialDraft,
   useSocialDraftsByApp,
 } from "@/hooks/use-social-drafts";
+import { useSocialPlatforms, resolveLabel } from "@/hooks/use-config";
 import { PLATFORM_LIMITS } from "@/lib/api/social-drafts";
 import type { SocialPlatform } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-
-const PLATFORMS: SocialPlatform[] = ["twitter", "discord", "bluesky"];
 
 export function SocialDraftsCard({ appId }: { appId: string }) {
   const list = useSocialDraftsByApp(appId);
   const save = useSaveSocialDraft();
   const del = useDeleteSocialDraft(appId);
+  const { data: platforms = [] } = useSocialPlatforms();
 
   const [platform, setPlatform] = useState<SocialPlatform>("twitter");
   const [body, setBody] = useState("");
@@ -47,20 +47,23 @@ export function SocialDraftsCard({ appId }: { appId: string }) {
 
       <div className="mb-4 rounded-xl border border-separator bg-input/30 p-3">
         <div className="mb-2 flex items-center gap-2">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPlatform(p)}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest transition-all ${
-                platform === p
-                  ? "bg-card-active text-foreground"
-                  : "text-muted/65 hover:bg-card-hover/50 hover:text-foreground/80"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+          {platforms.map((p) => {
+            const id = p.id as SocialPlatform;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPlatform(id)}
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-widest transition-all ${
+                  platform === id
+                    ? "bg-card-active text-foreground"
+                    : "text-muted/65 hover:bg-card-hover/50 hover:text-foreground/80"
+                }`}
+              >
+                {resolveLabel(p.labels)}
+              </button>
+            );
+          })}
         </div>
         <textarea
           value={body}

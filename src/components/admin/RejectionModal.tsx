@@ -2,77 +2,13 @@ import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { useRejectionReasons, resolveLabel } from "@/hooks/use-config";
 import { cn } from "@/lib/utils";
 import type {
   SubmissionAssetComment,
   SubmissionAssetField,
   SubmissionRejectionReason,
 } from "@/lib/types";
-
-const CATEGORY_GROUPS: Array<{
-  group: string;
-  items: { value: SubmissionRejectionReason; label: string }[];
-}> = [
-  {
-    group: "Visual accuracy",
-    items: [
-      { value: "capsule_art_missing", label: "Capsule art missing" },
-      { value: "capsule_art_low_quality", label: "Capsule art low quality" },
-      { value: "screenshots_insufficient", label: "Screenshots insufficient" },
-      { value: "screenshots_misleading", label: "Screenshots misleading" },
-      { value: "trailer_broken", label: "Trailer broken / unplayable" },
-      { value: "trailer_misleading", label: "Trailer misleading" },
-    ],
-  },
-  {
-    group: "Technical stability",
-    items: [
-      { value: "build_missing", label: "No live build on default branch" },
-      { value: "build_unverified", label: "Build unverified" },
-      { value: "build_crashes", label: "Build crashes / fails to launch" },
-    ],
-  },
-  {
-    group: "Metadata & descriptions",
-    items: [
-      { value: "description_too_short", label: "Description too short" },
-      { value: "description_misleading", label: "Description misleading" },
-      { value: "description_prohibited_content", label: "Prohibited content in description" },
-      { value: "age_rating_mismatch", label: "Age rating mismatch" },
-      { value: "tags_misleading", label: "Tags misleading" },
-      { value: "metadata_incomplete", label: "Metadata incomplete" },
-    ],
-  },
-  {
-    group: "Pricing & release",
-    items: [
-      { value: "pricing_outside_band", label: "Pricing outside accepted band" },
-      { value: "release_date_invalid", label: "Release date invalid" },
-    ],
-  },
-  {
-    group: "Policy",
-    items: [
-      { value: "policy_violation", label: "Policy violation" },
-      { value: "ip_infringement", label: "IP infringement" },
-      { value: "duplicate_submission", label: "Duplicate submission" },
-      { value: "other", label: "Other" },
-    ],
-  },
-];
-
-const ASSET_FIELDS: { value: SubmissionAssetField; label: string }[] = [
-  { value: "capsuleUrl", label: "Capsule art" },
-  { value: "headerUrl", label: "Header art" },
-  { value: "coverUrl", label: "Cover art" },
-  { value: "screenshots", label: "Screenshot" },
-  { value: "trailers", label: "Trailer" },
-  { value: "shortDescription", label: "Short description" },
-  { value: "longDescription", label: "Long description" },
-  { value: "ageRating", label: "Age rating" },
-  { value: "latestBuildId", label: "Build" },
-  { value: "pricing", label: "Pricing" },
-];
 
 export type RejectionOutcome = "reject" | "request_changes";
 
@@ -98,6 +34,10 @@ export function RejectionModal({ open, onClose, outcome, onSubmit, busy }: Rejec
   const [draftField, setDraftField] = useState<SubmissionAssetField>("screenshots");
   const [draftIndex, setDraftIndex] = useState<string>("");
   const [draftComment, setDraftComment] = useState("");
+
+  const { data: rejectionConfig } = useRejectionReasons();
+  const categoryGroups = rejectionConfig?.categoryGroups ?? [];
+  const assetFields = rejectionConfig?.assetFields ?? [];
 
   const title = outcome === "reject" ? "Reject submission" : "Request changes";
   const submitLabel =
@@ -163,19 +103,20 @@ export function RejectionModal({ open, onClose, outcome, onSubmit, busy }: Rejec
             Failure categories
           </h3>
           <div className="space-y-3">
-            {CATEGORY_GROUPS.map((group) => (
-              <div key={group.group}>
+            {categoryGroups.map((group) => (
+              <div key={group.id}>
                 <p className="mb-1.5 text-[11px] font-semibold text-foreground/80">
-                  {group.group}
+                  {resolveLabel(group.label)}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {group.items.map((item) => {
-                    const active = reasons.has(item.value);
+                  {group.reasons.map((item) => {
+                    const value = item.id as SubmissionRejectionReason;
+                    const active = reasons.has(value);
                     return (
                       <button
-                        key={item.value}
+                        key={item.id}
                         type="button"
-                        onClick={() => toggle(item.value)}
+                        onClick={() => toggle(value)}
                         className={cn(
                           "rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all",
                           active
@@ -183,7 +124,7 @@ export function RejectionModal({ open, onClose, outcome, onSubmit, busy }: Rejec
                             : "border-separator bg-card text-muted hover:bg-card-hover hover:text-foreground/80",
                         )}
                       >
-                        {item.label}
+                        {resolveLabel(item.label)}
                       </button>
                     );
                   })}
@@ -205,7 +146,10 @@ export function RejectionModal({ open, onClose, outcome, onSubmit, busy }: Rejec
               >
                 <div className="flex-1">
                   <p className="font-semibold text-foreground/90">
-                    {ASSET_FIELDS.find((f) => f.value === c.field)?.label ?? c.field}
+                    {(() => {
+                      const f = assetFields.find((af) => af.id === c.field);
+                      return f ? resolveLabel(f.label) : c.field;
+                    })()}
                     {c.index !== undefined && (
                       <span className="text-muted/55"> · #{c.index}</span>
                     )}
@@ -227,9 +171,9 @@ export function RejectionModal({ open, onClose, outcome, onSubmit, busy }: Rejec
                 onChange={(event) => setDraftField(event.target.value as SubmissionAssetField)}
                 className="h-8 rounded-lg border border-separator bg-input px-2 text-[12px] text-foreground focus:outline-none focus:ring-1 focus:ring-acid/15"
               >
-                {ASSET_FIELDS.map((f) => (
-                  <option key={f.value} value={f.value}>
-                    {f.label}
+                {assetFields.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {resolveLabel(f.label)}
                   </option>
                 ))}
               </select>
