@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { type ReactNode } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { DesktopOnly } from "@/components/layout/DesktopOnly";
 import { StuckHelperOverlay } from "@/components/social/StuckHelperOverlay";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { LoginPage } from "@/pages/LoginPage";
@@ -46,6 +47,7 @@ import { DreamworksPlusPage } from "@/pages/DreamworksPlusPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { FriendsPage } from "@/pages/FriendsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { DiagnosticsPage } from "@/pages/DiagnosticsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { DbHomePage } from "@/pages/db/DbHomePage";
 import { GameDbPage } from "@/pages/db/GameDbPage";

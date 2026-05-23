@@ -60,4 +60,23 @@ export const ROUTES = {
   friends: "/friends",
 
   settings: "/settings",
+  cloudSaves: "/cloud-saves",
+  compatibility: "/compatibility",
+  diagnostics: "/diagnostics",
 } as const;
+
+export const DESKTOP_ONLY_ROUTES: ReadonlySet<string> = new Set([
+  ROUTES.library,
+  ROUTES.downloads,
+  ROUTES.settings,
+  ROUTES.cloudSaves,
+  ROUTES.compatibility,
+  ROUTES.diagnostics,
+]);
+
+export function isDesktopOnlyPath(pathname: string): boolean {
+  for (const route of DESKTOP_ONLY_ROUTES) {
+    if (pathname === route || pathname.startsWith(`${route}/`)) return true;
+  }
+  return false;
+}

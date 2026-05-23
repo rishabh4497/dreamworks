@@ -58,21 +58,65 @@ export async function ensureGamesSeeded(): Promise<void> {
   return seedingPromise;
 }
 
-async function fetchAllFromDb(): Promise<GameDetail[]> {
+// ── Catalog snapshot cache ────────────────────────────────────────────────
+//
+// Every storefront screen needs the games catalog and most need it sliced
+// many different ways. Without this layer, a single Store Home visit fires
+// 8+ full-collection reads against Firestore (one per shelf/list hook).
+//
+// Strategy: one in-memory snapshot, refreshed at most every CATALOG_TTL_MS.
+// All concurrent callers share the same in-flight promise.
+
+const CATALOG_TTL_MS = 5 * 60 * 1000;
+
+let catalogCache: GameDetail[] | null = null;
+let catalogCachedAt = 0;
+let catalogInflight: Promise<GameDetail[]> | null = null;
+
+async function loadCatalog(): Promise<GameDetail[]> {
   await ensureGamesSeeded();
   const snap = await getDocs(collection(getDb(), COLLECTIONS.games));
   const results: GameDetail[] = [];
-  snap.forEach((doc) => {
-    results.push(doc.data() as GameDetail);
-  });
+  snap.forEach((d) => results.push(d.data() as GameDetail));
   return results;
 }
 
+async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
+  const now = Date.now();
+  if (!force && catalogCache && now - catalogCachedAt < CATALOG_TTL_MS) {
+    return catalogCache;
+  }
+  if (catalogInflight) return catalogInflight;
+  catalogInflight = (async () => {
+    try {
+      const data = await loadCatalog();
+      catalogCache = data;
+      catalogCachedAt = Date.now();
+      return data;
+    } finally {
+      catalogInflight = null;
+    }
+  })();
+  return catalogInflight;
+}
+
+/** Invalidate the in-memory catalog cache (call after publishing a new game). */
+export function invalidateCatalogCache(): void {
+  catalogCache = null;
+  catalogCachedAt = 0;
+}
+
 export async function listGames(): Promise<Game[]> {
-  return await fetchAllFromDb();
+  return fetchAllFromDb();
 }
 
 export async function getGame(id: GameId): Promise<Game | undefined> {
+  // Prefer the shared snapshot — avoids a per-card extra round trip when the
+  // catalog is already loaded.
+  if (catalogCache) {
+    const hit = catalogCache.find((g) => g.id === id);
+    if (hit) return hit;
+  }
   await ensureGamesSeeded();
   const docRef = doc(getDb(), COLLECTIONS.games, id);
   const snap = await getDoc(docRef);
@@ -81,6 +125,10 @@ export async function getGame(id: GameId): Promise<Game | undefined> {
 }
 
 export async function getGameDetail(id: GameId): Promise<GameDetail | undefined> {
+  if (catalogCache) {
+    const hit = catalogCache.find((g) => g.id === id);
+    if (hit) return hit;
+  }
   await ensureGamesSeeded();
   const docRef = doc(getDb(), COLLECTIONS.games, id);
   const snap = await getDoc(docRef);

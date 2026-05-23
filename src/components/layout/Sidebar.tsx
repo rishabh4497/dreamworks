@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 const logoSrc = "/internal-logo.png";
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES, DESKTOP_ONLY_ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { useWishlistStore } from "@/stores/wishlist-store";
@@ -66,17 +66,18 @@ export function Sidebar() {
     { to: ROUTES.developerPortal, label: "Developer Portal", icon: Package },
   ];
 
-  // Steam parity: the full Library experience is desktop-only. Web users still
-  // have wishlist, cart, and profile — matching how Steam ships today.
-  const youNav: NavItem[] = [
-    ...(isDesktop
-      ? [{ to: ROUTES.library, label: "Library", icon: Library, badge: installedCount }]
-      : []),
-    { to: ROUTES.downloads, label: "Downloads", icon: Download, badge: activeDownloads },
-    { to: ROUTES.wishlist, label: "Wishlist", icon: Heart, badge: wishlistCount },
-    { to: ROUTES.cart, label: "Cart", icon: ShoppingCart, badge: cartCount },
-    { to: ROUTES.profile, label: "Profile", icon: User },
-  ];
+  // Steam parity: the full Library experience and download queue are
+  // desktop-only. Web users still have wishlist, cart, and profile.
+  const youNav: NavItem[] = filterByPlatform(
+    [
+      { to: ROUTES.library, label: "Library", icon: Library, badge: installedCount },
+      { to: ROUTES.downloads, label: "Downloads", icon: Download, badge: activeDownloads },
+      { to: ROUTES.wishlist, label: "Wishlist", icon: Heart, badge: wishlistCount },
+      { to: ROUTES.cart, label: "Cart", icon: ShoppingCart, badge: cartCount },
+      { to: ROUTES.profile, label: "Profile", icon: User },
+    ],
+    isDesktop,
+  );
 
   const dbNav: NavItem[] = [
     { to: ROUTES.db, label: "Overview", icon: BarChart3 },
@@ -110,16 +111,24 @@ export function Sidebar() {
 
         {isDesktop && (
           <div className="mt-4 pt-3">
-            <NavGroup items={[{ to: ROUTES.settings, label: "Settings", icon: Settings }]} currentPath={location.pathname} />
+            <NavGroup
+              items={[
+                { to: ROUTES.diagnostics, label: "Diagnostics", icon: Activity },
+                { to: ROUTES.settings, label: "Settings", icon: Settings },
+              ]}
+              currentPath={location.pathname}
+            />
           </div>
         )}
       </nav>
 
-      <div className="px-3 pb-3 pt-3">
-        <DreamsEngineWidget />
-      </div>
+      {isDesktop && (
+        <div className="px-3 pb-3 pt-3">
+          <DreamsEngineWidget />
+        </div>
+      )}
 
-      <DownloadsQueue />
+      {isDesktop && <DownloadsQueue />}
 
       {profile && (
         <div className="px-3 py-3">
@@ -155,6 +164,11 @@ export function Sidebar() {
       )}
     </aside>
   );
+}
+
+function filterByPlatform(items: NavItem[], isDesktop: boolean): NavItem[] {
+  if (isDesktop) return items;
+  return items.filter((item) => !DESKTOP_ONLY_ROUTES.has(item.to));
 }
 
 function NavGroup({
