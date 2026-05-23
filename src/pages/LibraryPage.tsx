@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useGames } from "@/hooks/use-games";
 import { useLibraryStore } from "@/stores/library-store";
-import { useDownloadStore } from "@/stores/download-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { cn, formatHours, relativeDate } from "@/lib/utils";
@@ -71,7 +71,7 @@ export function LibraryPage() {
   const { data: games } = useGames();
   const { data: collections } = useCollections();
   const toggleInstalled = useLibraryStore((s) => s.toggleInstalled);
-  const startDownload = useDownloadStore((s) => s.start);
+  const startDownload = useStartDownload();
   const navigate = useNavigate();
   const { isDesktop } = usePlatform();
 
@@ -191,7 +191,7 @@ export function LibraryPage() {
   const handleInstallToggle = (e: LibraryEntry) => {
     toggleInstalled(e.gameId);
     if (!e.installed) {
-      startDownload(e.gameId, 8_000_000_000);
+      startDownload(e.gameId, 8_000_000_000, { silent: true });
       toast.success("Install started");
     } else {
       toast.info("Uninstalled (mock)");

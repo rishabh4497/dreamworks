@@ -563,7 +563,9 @@ export function DownloadsPage() {
             <button
               type="button"
               onClick={() => handleOpenFolder()}
-              className="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium text-muted hover:bg-input hover:text-foreground/80"
+              disabled={!desktop}
+              title={desktop ? "Open install folder" : "Desktop only"}
+              className="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-[12px] font-medium text-muted hover:bg-input hover:text-foreground/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted"
             >
               <FolderOpen className="h-3.5 w-3.5" />
               Folder
@@ -753,7 +755,13 @@ export function DownloadsPage() {
                   {installedEntries.length} installed games across {STORAGE_DRIVES.length} drives
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => handleOpenFolder()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleOpenFolder()}
+                disabled={!desktop}
+                title={desktop ? "Open install folder" : "Desktop only"}
+              >
                 <FolderOpen className="h-3.5 w-3.5" />
                 Folder
               </Button>

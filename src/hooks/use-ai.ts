@@ -65,6 +65,7 @@ import type {
   InfluencerDiscoveryPayload,
   StuckAssistantPayload,
   StoreCuratorPayload,
+  StudioOverviewPayload,
 } from "@/lib/ai/payload-types";
 
 export function useAIGameOverview(payload: GameOverviewPayload | null | undefined) {
@@ -117,4 +118,12 @@ export function useAIStuckAssistant() {
 
 export function useAIStoreCurator() {
   return useAIAction<"store-curator", StoreCuratorPayload>("store-curator");
+}
+
+export function useAIDeveloperOverview(payload: StudioOverviewPayload | null | undefined) {
+  return useAIFeature("developer-overview", payload);
+}
+
+export function useAIPublisherOverview(payload: StudioOverviewPayload | null | undefined) {
+  return useAIFeature("publisher-overview", payload);
 }

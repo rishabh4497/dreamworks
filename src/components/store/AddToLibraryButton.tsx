@@ -3,7 +3,7 @@ import { Check, Download, ShoppingCart } from "lucide-react";
 import type { Game } from "@/lib/types";
 import { useCartStore } from "@/stores/cart-store";
 import { useLibraryStore } from "@/stores/library-store";
-import { useDownloadStore } from "@/stores/download-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 
@@ -14,7 +14,7 @@ export function AddToLibraryButton({ game }: { game: Game }) {
   const owned = useLibraryStore((s) => s.has(game.id));
   const entry = useLibraryStore((s) => s.entries.find((e) => e.gameId === game.id));
   const toggleInstalled = useLibraryStore((s) => s.toggleInstalled);
-  const startDownload = useDownloadStore((s) => s.start);
+  const startDownload = useStartDownload();
 
   if (owned) {
     const installed = entry?.installed;
@@ -25,7 +25,7 @@ export function AddToLibraryButton({ game }: { game: Game }) {
             toast.info("Launching would happen here in the desktop client");
           } else {
             toggleInstalled(game.id);
-            startDownload(game.id, 8_000_000_000);
+            startDownload(game.id, 8_000_000_000, { silent: true });
             toast.success("Install started");
           }
         }}

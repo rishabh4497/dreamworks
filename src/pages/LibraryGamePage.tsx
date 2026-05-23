@@ -14,7 +14,7 @@ import {
 import { useGameDetail } from "@/hooks/use-games";
 import { useCloudSaveSlots, useResolveCloudSaveConflict } from "@/hooks/use-cloud-saves";
 import { useLibraryStore } from "@/stores/library-store";
-import { useDownloadStore } from "@/stores/download-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
@@ -89,7 +89,7 @@ export function LibraryGamePage() {
   const userId = useAuthStore((s) => s.profile?.uid);
   const toggleInstalled = useLibraryStore((s) => s.toggleInstalled);
   const moveInstallPath = useLibraryStore((s) => s.moveInstallPath);
-  const startDownload = useDownloadStore((s) => s.start);
+  const startDownload = useStartDownload();
   const settings = useUiStore((s) => s.settings);
   const { data: cloudSaveSlots = [] } = useCloudSaveSlots(userId, gameId);
   const resolveCloudSaveConflict = useResolveCloudSaveConflict(userId, gameId);
@@ -187,7 +187,11 @@ export function LibraryGamePage() {
         canLaunchOffline: entry.canLaunchOffline,
         drmType: entry.drmType,
       });
-      startDownload(entry.gameId, detail.estimatedSizeBytes);
+      startDownload(entry.gameId, detail.estimatedSizeBytes, {
+        installPath: resolvedPath,
+        sourceLauncher: entry.sourceLauncher,
+        silent: true,
+      });
       toast.success(native.ok ? "Install started" : "Install queued in local manifest");
     } else {
       const native = await uninstallGameNative({ gameId: entry.gameId, installPath });

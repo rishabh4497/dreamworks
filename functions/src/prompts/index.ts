@@ -14,6 +14,7 @@ import { hardwareOptimizer } from "./hardware-optimizer.js";
 import { influencerDiscovery } from "./influencer-discovery.js";
 import { stuckAssistant } from "./stuck-assistant.js";
 import { storeCurator } from "./store-curator.js";
+import { developerOverview, publisherOverview } from "./studio-overview.js";
 
 export const PROMPT_REGISTRY: Record<AIFeatureKey, PromptModule<unknown, unknown>> = {
   "game-overview": gameOverview as PromptModule<unknown, unknown>,
@@ -29,6 +30,8 @@ export const PROMPT_REGISTRY: Record<AIFeatureKey, PromptModule<unknown, unknown
   "influencer-discovery": influencerDiscovery as PromptModule<unknown, unknown>,
   "stuck-assistant": stuckAssistant as PromptModule<unknown, unknown>,
   "store-curator": storeCurator as PromptModule<unknown, unknown>,
+  "publisher-overview": publisherOverview as PromptModule<unknown, unknown>,
+  "developer-overview": developerOverview as PromptModule<unknown, unknown>,
 };
 
 export function getPromptModule(key: string): PromptModule<unknown, unknown> | null {

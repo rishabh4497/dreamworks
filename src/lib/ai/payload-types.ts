@@ -97,3 +97,20 @@ export interface StoreCuratorPayload {
     shortDesc: string;
   }[];
 }
+
+export interface StudioOverviewPayload {
+  kind: "developer" | "publisher";
+  name: string;
+  tagline?: string;
+  catalog: {
+    id: string;
+    name: string;
+    genres: string[];
+    tags: string[];
+    releaseDate?: string;
+    scorePct: number;
+    totalReviews: number;
+    comingSoon: boolean;
+  }[];
+  reviewSamples?: { gameId: string; excerpts: string[] };
+}

@@ -18,6 +18,8 @@ export const AI_FEATURE_KEYS = [
   "influencer-discovery",
   "stuck-assistant",
   "store-curator",
+  "publisher-overview",
+  "developer-overview",
 ] as const;
 
 export type AIFeatureKey = (typeof AI_FEATURE_KEYS)[number];

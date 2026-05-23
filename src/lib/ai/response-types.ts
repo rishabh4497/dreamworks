@@ -108,6 +108,14 @@ export interface StoreCuratorResult {
   suggestedGameIds: string[];
 }
 
+export interface StudioOverviewResult {
+  history: string;
+  currentPeak: string;
+  futureOutlook: string;
+  mustPlayGameIds: string[];
+  signatureThemes: string[];
+}
+
 /** Mapping from feature key → response type. Drives `useAI*` hook typing. */
 export type AIResponseMap = {
   "game-overview": AIOverview;
@@ -123,4 +131,6 @@ export type AIResponseMap = {
   "influencer-discovery": InfluencerDiscoveryResult;
   "stuck-assistant": StuckAssistantResult;
   "store-curator": StoreCuratorResult;
+  "publisher-overview": StudioOverviewResult;
+  "developer-overview": StudioOverviewResult;
 };

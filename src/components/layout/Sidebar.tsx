@@ -32,6 +32,7 @@ import { usePlatform } from "@/hooks/use-platform";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { DownloadsQueue } from "./DownloadsQueue";
 import { useDownloadStore } from "@/stores/download-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
 
 type NavItem = {
@@ -234,14 +235,14 @@ function NavGroup({
 
 function DreamsEngineWidget() {
   const navigate = useNavigate();
-  const startDownload = useDownloadStore((s) => s.start);
+  const startDownload = useStartDownload();
   const tasks = useDownloadStore((s) => s.tasks);
-  
+
   const engineTask = tasks.find((t) => t.gameId === "Dreams Engine");
-  
+
   const handleAction = () => {
     if (!engineTask || engineTask.status === "cancelled" || engineTask.status === "error") {
-      startDownload("Dreams Engine", 4_500_000_000);
+      startDownload("Dreams Engine", 4_500_000_000, { silent: true });
       toast.success("Starting Dreams Engine download...");
       navigate(ROUTES.downloads);
     } else if (engineTask.status === "complete") {
