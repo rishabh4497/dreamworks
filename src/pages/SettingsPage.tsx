@@ -31,11 +31,15 @@ import { pickFolder } from "@/lib/platform";
 import { useTranslation } from "@/lib/i18n";
 import { useCloudSaveSlots } from "@/hooks/use-cloud-saves";
 import { formatBytes, relativeTime } from "@/lib/utils";
+import { usePaymentMethodsStore } from "@/stores/payment-methods-store";
+import { useFamilyStore } from "@/stores/family-store";
 import type {
   NotificationKind,
   StartupLocation,
   FpsCounterLocation,
   DownloadLimitOption,
+  PaymentBrand,
+  FamilyRelationship,
 } from "@/lib/types";
 import {
   Bell,
@@ -45,6 +49,7 @@ import {
   Folder,
   Gamepad2,
   Lock,
+  Plus,
   RefreshCw,
   Settings as SettingsIcon,
   Shield,
@@ -53,6 +58,7 @@ import {
   Trash2,
   User as UserIcon,
   WifiOff,
+  X,
 } from "lucide-react";
 
 const NOTIFICATION_ROWS: { kind: NotificationKind; label: string; description?: string }[] = [
@@ -121,6 +127,7 @@ export function SettingsPage() {
   const setMode = useThemeStore((s) => s.setMode);
   const profile = useAuthStore((s) => s.profile);
   const signOut = useAuthStore((s) => s.signOut);
+  const updateProfile = useAuthStore((s) => s.updateProfile);
   const { isDesktop, os } = usePlatform();
   const { t } = useTranslation();
 
@@ -258,104 +265,48 @@ export function SettingsPage() {
       >
         {activeTab === "account" && (
           <SectionStack>
-            <Section title="Account profile">
-              <div className="flex flex-col gap-3 rounded-xl border border-separator bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-cyan to-acid text-lg font-bold text-background shadow-sm">
-                    {profile?.displayName?.slice(0, 2).toUpperCase() || "DW"}
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-[14px] font-semibold text-foreground">
-                      {profile?.displayName}
-                    </h3>
-                    <p className="text-[12px] text-muted/65">{profile?.email}</p>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green" />
-                      <span className="text-[10px] font-medium text-muted/55">Online</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void signOut()}
-                  className="rounded-lg border border-separator bg-card px-4 py-2 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
-                >
-                  Sign out
-                </button>
-              </div>
-
-              <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
-                <div className="flex items-center gap-2 text-green">
-                  <Shield className="h-4 w-4" />
-                  <span className="text-[13px] font-semibold">Dreamworks Guard protected</span>
-                </div>
-                <p className="text-[12px] leading-relaxed text-muted/65">
-                  Your account is secured with Dreamworks Guard. Two-factor authentication (2FA)
-                  is active. To change your security method or update your password, contact
-                  system support.
-                </p>
-              </div>
+            <Section title={t("Account profile")}>
+              <ProfileCard
+                profile={profile}
+                updateProfile={updateProfile}
+                signOut={signOut}
+                t={t}
+              />
+              <GuardCard
+                enabled={settings.twoFactorEnabled}
+                onCheckedChange={(next) => updateSettings({ twoFactorEnabled: next })}
+                t={t}
+              />
             </Section>
 
-            <Section title="Linked platforms">
+            <Section title={t("Linked platforms")}>
               <CrossPlatformWishlistSync />
               <PlatformIntegrations />
             </Section>
 
-            <Section title="Billing & refunds">
+            <Section title={t("Billing & refunds")}>
               <SubscriptionPausing />
               <RefundMeter />
-              <PaymentMethods />
+              <PaymentMethods t={t} />
             </Section>
 
-            <Section title="Family library sharing">
+            <Section title={t("Family library sharing")}>
               <Card>
                 <ToggleRow
-                  label="Authorize library sharing on this device"
-                  description="Allows authorized family members access to your installed games"
+                  label={t("Authorize library sharing on this device")}
+                  description={t("Allows authorized family members access to your installed games")}
                   checked={settings.librarySharingEnabled}
                   onCheckedChange={(next) => updateSettings({ librarySharingEnabled: next })}
                 />
               </Card>
 
               {settings.librarySharingEnabled ? (
-                <div className="space-y-3 rounded-xl border border-separator bg-card p-4">
-                  <p className="text-[12px] text-muted/65">
-                    Select family members to share your collection with:
-                  </p>
-                  <div className="divide-y divide-separator/50">
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="text-[13px] font-semibold text-foreground">
-                          Sarah (Sister)
-                        </p>
-                        <p className="text-[11px] text-muted/55">Last active 2 hours ago</p>
-                      </div>
-                      <span className="inline-flex items-center gap-1 rounded-md bg-green/15 px-2 py-0.5 text-[10px] font-semibold text-green">
-                        <Check className="h-3 w-3" /> Authorized
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between py-2">
-                      <div>
-                        <p className="text-[13px] font-semibold text-foreground">
-                          Leo (Brother)
-                        </p>
-                        <p className="text-[11px] text-muted/55">Last active 3 days ago</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-separator bg-card px-2.5 py-1 text-[11px] font-medium text-muted hover:bg-card-active hover:text-foreground"
-                      >
-                        Authorize
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <FamilyList t={t} />
               ) : (
                 <div className="rounded-xl border border-dashed border-separator bg-card-active/40 p-6 text-center">
                   <Shield className="mx-auto mb-2 h-7 w-7 text-muted/45" />
                   <p className="text-[12px] text-muted/65">
-                    Library sharing is disabled. Turn it on above to manage family member access.
+                    {t("Library sharing is disabled. Turn it on above to manage family member access.")}
                   </p>
                 </div>
               )}

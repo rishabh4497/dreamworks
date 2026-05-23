@@ -1,69 +1,82 @@
-import type { GameId, WorkshopItem, WorkshopMod } from "../types";
+import type { GameId, WorkshopMod } from "../types";
 import { WORKSHOP_MODS } from "../mock/workshop-mods";
-import { wait } from "./_delay";
+import { COLLECTIONS, getDb } from "../firebase";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 
-const STORAGE_KEY = "dreamworks-workshop-items";
+let modsSeedingPromise: Promise<void> | null = null;
 
-const SEED_ITEMS: WorkshopItem[] = [
-  {
-    id: "workshop:elden-ring:seamless-coop",
-    gameId: "elden-ring",
-    title: "Seamless Co-op",
-    authorId: "modder:luke",
-    authorName: "LukeYui",
-    version: "2.0",
-    sizeBytes: 512_000_000,
-    rating: 4.9,
-    subscribers: 3_500_000,
-    tags: ["co-op", "multiplayer"],
-    status: "available",
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9).toISOString(),
-  },
-];
-
-function readStored(): WorkshopItem[] {
-  if (typeof localStorage === "undefined") return SEED_ITEMS;
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return SEED_ITEMS;
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as WorkshopItem[]) : SEED_ITEMS;
-  } catch {
-    return SEED_ITEMS;
-  }
-}
-
-function writeStored(items: WorkshopItem[]) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
-
-export async function listWorkshopItems(gameId?: GameId): Promise<WorkshopItem[]> {
-  await wait();
-  const items = readStored();
-  return gameId ? items.filter((item) => item.gameId === gameId) : items;
+async function ensureWorkshopModsSeeded(): Promise<void> {
+  if (modsSeedingPromise) return modsSeedingPromise;
+  modsSeedingPromise = (async () => {
+    const snap = await getDocs(collection(getDb(), COLLECTIONS.workshopMods));
+    if (!snap.empty) return;
+    const batch = writeBatch(getDb());
+    for (const mod of WORKSHOP_MODS) {
+      batch.set(doc(getDb(), COLLECTIONS.workshopMods, mod.id), mod);
+    }
+    await batch.commit();
+  })();
+  return modsSeedingPromise;
 }
 
 export async function listWorkshopMods(gameId?: GameId): Promise<WorkshopMod[]> {
-  await wait();
-  return gameId ? WORKSHOP_MODS.filter((mod) => mod.gameId === gameId) : WORKSHOP_MODS;
+  await ensureWorkshopModsSeeded();
+  const colRef = collection(getDb(), COLLECTIONS.workshopMods);
+  const snap = gameId
+    ? await getDocs(query(colRef, where("gameId", "==", gameId)))
+    : await getDocs(colRef);
+  const out: WorkshopMod[] = [];
+  snap.forEach((d) => out.push(d.data() as WorkshopMod));
+  return out.sort((a, b) => b.downloads - a.downloads);
+}
+
+interface WorkshopSubDoc {
+  userId: string;
+  modId: string;
+  createdAt: string;
+}
+
+function subDocId(userId: string, modId: string): string {
+  return `${userId}__${modId}`;
+}
+
+export async function listWorkshopSubscriptions(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  const q = query(
+    collection(getDb(), COLLECTIONS.workshopSubs),
+    where("userId", "==", userId),
+  );
+  const snap = await getDocs(q);
+  const out: string[] = [];
+  snap.forEach((d) => out.push((d.data() as WorkshopSubDoc).modId));
+  return out;
 }
 
 export async function setWorkshopSubscription(input: {
-  itemId: string;
+  userId: string;
+  modId: string;
   subscribed: boolean;
-}): Promise<WorkshopItem | null> {
-  await wait();
-  const items = readStored();
-  const next = items.map((item) =>
-    item.id === input.itemId
-      ? {
-          ...item,
-          status: input.subscribed ? ("subscribed" as const) : ("available" as const),
-          subscribers: Math.max(0, item.subscribers + (input.subscribed ? 1 : -1)),
-        }
-      : item,
-  );
-  writeStored(next);
-  return next.find((item) => item.id === input.itemId) ?? null;
+}): Promise<void> {
+  const { userId, modId, subscribed } = input;
+  if (!userId) return;
+  const ref = doc(getDb(), COLLECTIONS.workshopSubs, subDocId(userId, modId));
+  if (subscribed) {
+    const entry: WorkshopSubDoc = {
+      userId,
+      modId,
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(ref, entry);
+  } else {
+    await deleteDoc(ref);
+  }
 }

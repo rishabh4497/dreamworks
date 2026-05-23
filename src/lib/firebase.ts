@@ -80,6 +80,11 @@ export const COLLECTIONS = {
   promoCampaigns: "dw_promo_campaigns",
   promoKeys: "dw_promo_keys",
   socialDrafts: "dw_social_drafts",
+  workshopMods: "dw_workshop_mods",
+  workshopSubs: "dw_workshop_subs",
+  lfgPosts: "dw_lfg_posts",
+  lfgGuides: "dw_lfg_guides",
+  followSuggestions: "dw_follow_suggestions",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

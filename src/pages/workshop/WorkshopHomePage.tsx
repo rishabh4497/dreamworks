@@ -6,6 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGames } from "@/hooks/use-games";
 import { useWorkshopMods } from "@/hooks/use-workshop-mods";
+import {
+  useWorkshopSubscriptions,
+  useToggleWorkshopSubscription,
+} from "@/hooks/use-workshop-subscriptions";
 import { ROUTES } from "@/lib/routes";
 import { toast } from "@/stores/toast-store";
 import { cn } from "@/lib/utils";
@@ -14,22 +18,28 @@ export function WorkshopHomePage() {
   const { gameId } = useParams();
   const { data: games } = useGames();
   const { data: mods = [] } = useWorkshopMods();
+  const { data: subscribed = new Set<string>() } = useWorkshopSubscriptions();
+  const toggleSub = useToggleWorkshopSubscription();
   const [search, setSearch] = useState("");
-  const [subscribed, setSubscribed] = useState<Set<string>>(new Set());
   const [showSubscribedOnly, setShowSubscribedOnly] = useState(false);
-  
+
   const handleSubscribe = (modId: string) => {
-    setSubscribed(prev => {
-      const next = new Set(prev);
-      if (next.has(modId)) {
-        next.delete(modId);
-        toast.info("Unsubscribed from mod");
-      } else {
-        next.add(modId);
-        toast.success("Subscribed! Mod will be downloaded");
-      }
-      return next;
-    });
+    const isSubscribed = subscribed.has(modId);
+    toggleSub.mutate(
+      { modId, subscribed: !isSubscribed },
+      {
+        onSuccess: () => {
+          if (isSubscribed) {
+            toast.info("Unsubscribed from mod");
+          } else {
+            toast.success("Subscribed! Mod will be downloaded");
+          }
+        },
+        onError: () => {
+          toast.error("Couldn't update subscription. Try again.");
+        },
+      },
+    );
   };
   
   const selectedGame = gameId ? games?.find(g => g.id === gameId) : null;

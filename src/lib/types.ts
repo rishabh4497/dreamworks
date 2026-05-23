@@ -1490,6 +1490,28 @@ export interface LfgGroup {
   avatar: string;
 }
 
+// ── LFG Board (Feed page LFG tab) ──
+export interface LfgPost {
+  id: string;
+  gameId: GameId;
+  game: string;
+  author: string;
+  type: string;
+  desc: string;
+  createdAt: ISODate;
+  friend: string;
+  tags: string[];
+}
+
+export interface LfgGuide {
+  id: string;
+  game: string;
+  title: string;
+  author: string;
+  kind: "Build" | "Guide" | "Walkthrough";
+  votes: number;
+}
+
 // ── Speedrun leaderboard runs ──
 export interface SpeedrunRun {
   rank: number;

@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Camera, PlaySquare, FileCode2, Users, Trophy, RefreshCcw, HardDrive, Smartphone, BookOpen, MonitorPlay } from "lucide-react";
 import { useUiStore } from "@/stores/ui-store";
 import { useTranslation } from "@/lib/i18n";
 import { toast } from "@/stores/toast-store";
-import { cn } from "@/lib/utils";
+import { cn, relativeTime } from "@/lib/utils";
 
 export function UniversalPhotoGallery() {
   return (
@@ -115,19 +116,44 @@ export function InteractiveAchievementRooms() {
 }
 
 export function CrossPlatformWishlistSync() {
+  const lastSyncedAt = useUiStore((s) => s.settings.lastWishlistSyncAt);
+  const updateSettings = useUiStore((s) => s.updateSettings);
+  const { t } = useTranslation();
+  const [syncing, setSyncing] = useState(false);
+
+  const onClick = () => {
+    if (syncing) return;
+    setSyncing(true);
+    window.setTimeout(() => {
+      const now = new Date().toISOString();
+      updateSettings({ lastWishlistSyncAt: now });
+      setSyncing(false);
+      toast.success(t("Wishlists synced"));
+    }, 1500);
+  };
+
+  const subtitle = lastSyncedAt
+    ? t("Last synced: {time}", { time: relativeTime(lastSyncedAt, t) })
+    : t("Mirror wishlists across PlayStation, Xbox, and Steam.");
+
   return (
     <div className="flex items-center justify-between p-4 rounded-xl border border-separator bg-card">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
-          <RefreshCcw className="h-5 w-5" />
+          <RefreshCcw className={cn("h-5 w-5", syncing && "animate-spin")} />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Cross-Platform Wishlist Sync</h3>
-          <p className="text-xs text-muted/60 mt-0.5">Mirror wishlists across PlayStation, Xbox, and Steam.</p>
+          <h3 className="text-sm font-semibold text-foreground">{t("Cross-Platform Wishlist Sync")}</h3>
+          <p className="text-xs text-muted/60 mt-0.5">{subtitle}</p>
         </div>
       </div>
-      <button className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover">
-        Sync Now
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={syncing}
+        className="px-3 py-1.5 rounded-lg bg-card-active border border-separator text-xs font-medium hover:bg-card-hover disabled:opacity-60"
+      >
+        {syncing ? t("Syncing") : t("Sync Now")}
       </button>
     </div>
   );
