@@ -13,7 +13,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-export function CommunitiesPage() {
+export function CommunitiesTab() {
   const uid = useAuthStore((s) => s.profile?.uid);
   const { data: communities, isLoading } = useCommunities();
   const { data: myIds } = useUserCommunityIds(uid);
@@ -25,33 +25,16 @@ export function CommunitiesPage() {
 
   if (!communities || communities.length === 0) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-1">
-          <h1 className="text-[20px] font-semibold text-foreground">Communities</h1>
-          <p className="text-[13px] text-muted/80">
-            Topic-based groups around your favorite games. Posts, members, and trending all live in
-            Firestore.
-          </p>
-        </header>
-        <EmptyState
-          icon={Users}
-          title="No communities yet"
-          description="Communities will appear here once they're created."
-        />
-      </div>
+      <EmptyState
+        icon={Users}
+        title="No communities yet"
+        description="Communities will appear here once they're created."
+      />
     );
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-[20px] font-semibold text-foreground">Communities</h1>
-        <p className="text-[13px] text-muted/80">
-          Topic-based groups around your favorite games. Posts, members, and trending all live in
-          Firestore.
-        </p>
-      </header>
-
+    <div className="space-y-4">
       {counters && (
         <Card className="grid grid-cols-3 divide-x divide-separator/60 overflow-hidden">
           <div className="px-4 py-3">
@@ -75,7 +58,7 @@ export function CommunitiesPage() {
         </Card>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {communities.map((c) => {
           const isMember = joinedSet.has(c.id);
           return (

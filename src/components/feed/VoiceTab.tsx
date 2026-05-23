@@ -69,7 +69,7 @@ function ChannelCard({ channel }: { channel: VoiceChannel }) {
   );
 }
 
-export function VoicePage() {
+export function VoiceTab() {
   const { data: channels, isLoading } = useVoiceChannels();
 
   const grouped = useMemo(() => {
@@ -86,43 +86,31 @@ export function VoicePage() {
 
   if (!channels || channels.length === 0) {
     return (
-      <div className="space-y-6">
-        <header className="space-y-1">
-          <h1 className="text-[20px] font-semibold text-foreground">Voice</h1>
-          <p className="text-[13px] text-muted/80">
-            Drop into a voice channel for parties, guilds, communities, or per-game chat.
-          </p>
-        </header>
-        <EmptyState
-          icon={Users}
-          title="No voice channels yet"
-          description="Channels appear here once they're created."
-        />
-      </div>
+      <EmptyState
+        icon={Users}
+        title="No voice channels yet"
+        description="Channels appear here once they're created."
+      />
     );
   }
 
   const order: VoiceChannelKind[] = ["party", "guild", "community", "game"];
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-[20px] font-semibold text-foreground">Voice</h1>
-        <p className="text-[13px] text-muted/80">
-          Real-time voice channels backed by cloud signaling. Audio media is mock — presence and
-          mute/deafen state sync live via Firestore.
-        </p>
-      </header>
-
+    <div className="space-y-5">
+      <p className="text-[12px] text-muted/75">
+        Real-time voice channels backed by cloud signaling. Audio media is mock — presence and
+        mute/deafen state sync live via Firestore.
+      </p>
       {order.map((kind) => {
         const list = grouped.get(kind);
         if (!list || list.length === 0) return null;
         return (
-          <section key={kind} className="space-y-3">
-            <h2 className="text-[12px] font-semibold uppercase tracking-widest text-muted/55">
+          <section key={kind} className="space-y-2.5">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted/55">
               {KIND_LABELS[kind]} channels
             </h2>
-            <div className="grid gap-3 lg:grid-cols-2">
+            <div className="grid gap-2.5">
               {list.map((channel) => (
                 <ChannelCard key={channel.id} channel={channel} />
               ))}

@@ -8,7 +8,6 @@ import {
   Home,
   Library,
   LogOut,
-  Mic,
   Search,
   Settings,
   ShieldCheck,
@@ -16,7 +15,6 @@ import {
   Tag,
   TrendingUp,
   User,
-  Users,
   Puzzle,
   Download,
   Package,
@@ -68,8 +66,6 @@ export function Sidebar() {
     { to: ROUTES.plus, label: t("Dreamworks+"), icon: Sparkles },
     { to: ROUTES.feed, label: t("Feed"), icon: Globe },
     { to: ROUTES.workshop, label: t("Workshop"), icon: Puzzle },
-    { to: ROUTES.communities, label: t("Communities"), icon: Users },
-    { to: ROUTES.voice, label: t("Voice"), icon: Mic },
   ];
 
   const devNav: NavItem[] = [

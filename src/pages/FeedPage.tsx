@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   Heart,
   MessageCircle,
+  Mic,
   Repeat2,
   Send,
   Image as ImageIcon,
@@ -33,6 +34,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ThreadRow } from "@/components/forums/ThreadRow";
 import { LfgBoard } from "@/components/social/LfgBoard";
+import { CommunitiesTab } from "@/components/feed/CommunitiesTab";
+import { VoiceTab } from "@/components/feed/VoiceTab";
 import { ROUTES } from "@/lib/routes";
 import { cn, relativeDate, formatDate } from "@/lib/utils";
 
@@ -264,6 +267,30 @@ export function FeedPage() {
           >
             <Users className="h-3.5 w-3.5" />
             LFG
+          </button>
+          <button
+            onClick={() => handleTabChange("communities")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all",
+              activeTab === "communities"
+                ? "bg-card-active text-foreground shadow-sm font-semibold border border-separator/50"
+                : "text-muted hover:text-foreground/80"
+            )}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Communities
+          </button>
+          <button
+            onClick={() => handleTabChange("voice")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-all",
+              activeTab === "voice"
+                ? "bg-card-active text-foreground shadow-sm font-semibold border border-separator/50"
+                : "text-muted hover:text-foreground/80"
+            )}
+          >
+            <Mic className="h-3.5 w-3.5" />
+            Voice
           </button>
         </div>
       </header>
@@ -743,6 +770,28 @@ export function FeedPage() {
                 exit={{ opacity: 0, x: 8 }}
               >
                 <LfgBoard />
+              </motion.div>
+            )}
+
+            {activeTab === "communities" && (
+              <motion.div
+                key="communities"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+              >
+                <CommunitiesTab />
+              </motion.div>
+            )}
+
+            {activeTab === "voice" && (
+              <motion.div
+                key="voice"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+              >
+                <VoiceTab />
               </motion.div>
             )}
           </AnimatePresence>

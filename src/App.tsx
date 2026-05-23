@@ -83,8 +83,6 @@ const SalesTrackerPage = lazyNamed(() => import("@/pages/db/SalesTrackerPage"), 
 const CalendarPage = lazyNamed(() => import("@/pages/db/CalendarPage"), "CalendarPage");
 const AccountAnalyticsPage = lazyNamed(() => import("@/pages/db/AccountAnalyticsPage"), "AccountAnalyticsPage");
 const LicensesPage = lazyNamed(() => import("@/pages/LicensesPage"), "LicensesPage");
-const VoicePage = lazyNamed(() => import("@/pages/VoicePage"), "VoicePage");
-const CommunitiesPage = lazyNamed(() => import("@/pages/CommunitiesPage"), "CommunitiesPage");
 const CommunityDetailPage = lazyNamed(() => import("@/pages/CommunityDetailPage"), "CommunityDetailPage");
 
 function IndexRoute() {
@@ -217,10 +215,8 @@ export default function App() {
             <Route path="settings" element={<DesktopOnly><SettingsPage /></DesktopOnly>} />
             <Route path="settings/licenses" element={<LicensesPage />} />
 
-            <Route path="voice" element={<VoicePage />} />
-            <Route path="voice/:channelId" element={<VoicePage />} />
-
-            <Route path="communities" element={<CommunitiesPage />} />
+            <Route path="voice" element={<Navigate to="/feed?tab=voice" replace />} />
+            <Route path="communities" element={<Navigate to="/feed?tab=communities" replace />} />
             <Route path="communities/:slug" element={<CommunityDetailPage />} />
             <Route
               path="diagnostics"

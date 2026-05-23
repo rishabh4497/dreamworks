@@ -82,12 +82,10 @@ export const ROUTES = {
   // CDN admin
   adminCdn: "/admin/cdn",
 
-  // Voice
-  voice: "/voice",
-  voiceChannel: (id: string) => `/voice/${id}`,
-
-  // Communities
-  communities: "/communities",
+  // Voice + Communities live as tabs inside the Feed page.
+  voice: "/feed?tab=voice",
+  communities: "/feed?tab=communities",
+  // Community detail still has its own route.
   community: (slug: string) => `/communities/${slug}`,
 } as const;
 
