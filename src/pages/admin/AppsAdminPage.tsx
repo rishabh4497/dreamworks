@@ -91,14 +91,22 @@ export function AppsAdminPage() {
         appId: confirmDelete.id,
         alsoDeleteGame,
       });
-      toast.success(
-        `Deleted ${confirmDelete.gameTitle} (${result.deletedSubmissions} submission${
-          result.deletedSubmissions === 1 ? "" : "s"
-        } purged${result.deletedGame ? ", store entry removed" : ""}).`,
-      );
+      if (result.clientFallback) {
+        toast.success(
+          `Deleted ${confirmDelete.gameTitle}. (Submission history kept; deploy deleteAppAdmin function for a full server-side purge with audit.)`,
+        );
+      } else {
+        toast.success(
+          `Deleted ${confirmDelete.gameTitle} (${result.deletedSubmissions} submission${
+            result.deletedSubmissions === 1 ? "" : "s"
+          } purged${result.deletedGame ? ", store entry removed" : ""}).`,
+        );
+      }
       setConfirmDelete(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Delete failed.");
+      const message = err instanceof Error ? err.message : "Delete failed.";
+      console.error("deleteAppAdmin failed", err);
+      toast.error(message);
     }
   };
 

@@ -68,18 +68,86 @@ export interface DeleteAppAdminResult {
   deletedSubmissions: number;
   deletedBuilds: number;
   deletedAchievements: number;
+  /** True when we fell back to a client-only delete (no audit, no submission purge). */
+  clientFallback?: boolean;
 }
 
 export async function deleteAppAdmin(input: {
   appId: string;
   alsoDeleteGame?: boolean;
 }): Promise<DeleteAppAdminResult> {
-  const fn = httpsCallable<typeof input, DeleteAppAdminResult>(
-    getFirebaseFunctions(),
-    "deleteAppAdmin",
-  );
-  const res = await fn(input);
-  return res.data;
+  // Preferred path: server-side cascade with audit log + submission purge.
+  try {
+    const fn = httpsCallable<typeof input, DeleteAppAdminResult>(
+      getFirebaseFunctions(),
+      "deleteAppAdmin",
+    );
+    const res = await fn(input);
+    return res.data;
+  } catch (err) {
+    if (!shouldFallback(err)) throw err;
+    console.warn(
+      "deleteAppAdmin callable unavailable; falling back to client-side cascade.",
+      err,
+    );
+    return clientSideDeleteApp(input);
+  }
+}
+
+function shouldFallback(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code ?? "";
+  const message = (err as { message?: string } | null)?.message ?? "";
+  // Treat "not deployed", "internal", and "unavailable" as fallback signals.
+  // Permission errors should bubble up so the caller knows they aren't admin.
+  if (code === "functions/not-found" || code === "functions/unavailable" || code === "functions/internal") {
+    return true;
+  }
+  if (/not found|unavailable|cors|network/i.test(message) && !/permission/i.test(message)) {
+    return true;
+  }
+  return false;
+}
+
+async function clientSideDeleteApp(input: {
+  appId: string;
+  alsoDeleteGame?: boolean;
+}): Promise<DeleteAppAdminResult> {
+  const db = getDb();
+  const { appId, alsoDeleteGame = true } = input;
+
+  const [buildsSnap, achSnap] = await Promise.all([
+    getDocs(collection(db, COLLECTIONS.apps, appId, "builds")),
+    getDocs(collection(db, COLLECTIONS.apps, appId, "achievements")),
+  ]);
+  await Promise.all([
+    ...buildsSnap.docs.map((d) => deleteDoc(d.ref)),
+    ...achSnap.docs.map((d) => deleteDoc(d.ref)),
+  ]);
+
+  let deletedGame = false;
+  if (alsoDeleteGame) {
+    try {
+      const gameRef = doc(db, COLLECTIONS.games, appId);
+      const gameSnap = await getDoc(gameRef);
+      if (gameSnap.exists()) {
+        await deleteDoc(gameRef);
+        deletedGame = true;
+      }
+    } catch (err) {
+      console.warn("Could not delete dw_games entry", err);
+    }
+  }
+
+  await deleteDoc(doc(db, COLLECTIONS.apps, appId));
+
+  return {
+    deletedApp: true,
+    deletedGame,
+    deletedSubmissions: 0,
+    deletedBuilds: buildsSnap.size,
+    deletedAchievements: achSnap.size,
+    clientFallback: true,
+  };
 }
 
 // ── Bootstrap callable (used by auth-store) ────────────────────────────────
