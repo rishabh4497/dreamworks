@@ -325,6 +325,50 @@ export interface AIOverview {
   updatedAt: ISODate;
 }
 
+// ── Gemini AI proxy ─────────────────────────────────────────────────────────
+//
+// Shapes used by the geminiProxy callable Cloud Function. The function
+// dispatches by `featureKey` to per-feature prompt modules in
+// `functions/src/prompts/`. Response types live in `src/lib/ai/response-types`.
+
+export interface AIProxyRequest<TPayload = unknown> {
+  featureKey: string;
+  payload: TPayload;
+  /** Bumping the prompt version on the server invalidates the response cache. */
+  promptVersion?: string;
+}
+
+export interface AIProxyResponse<TResult = unknown> {
+  result: TResult;
+  cacheHit: boolean;
+  /** Server-reported usage for client-side telemetry display (not billing). */
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  };
+}
+
+export interface AICacheEntry<TResult = unknown> {
+  featureKey: string;
+  promptVersion: string;
+  model: string;
+  payloadHash: string;
+  response: TResult;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  createdAt: ISODate;
+  hits: number;
+}
+
+export interface AIQuotaState {
+  hourlyCount: number;
+  hourlyResetAt: ISODate;
+  dailyCount: number;
+  dailyResetAt: ISODate;
+}
+
 // ── Developer Portal (Steamworks-style) ────────────────────────────────────
 //
 // Developer ≠ Publisher. Each is a first-class entity with its own Creator
