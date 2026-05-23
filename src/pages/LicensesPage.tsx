@@ -75,10 +75,9 @@ function LicenseRow({ license }: { license: DrmLicense }) {
           <p className="mt-0.5 text-foreground/85">
             {license.activations.length
               ? formatDate(
-                  license.activations
-                    .map((a) => a.lastSeenAt)
-                    .sort()
-                    .at(-1)!,
+                  [...license.activations.map((a) => a.lastSeenAt)].sort()[
+                    license.activations.length - 1
+                  ],
                 )
               : "—"}
           </p>

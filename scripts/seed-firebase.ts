@@ -38,6 +38,14 @@ import { THEME_SEEDS } from "../src/lib/mock/themes.js";
 import { CONTROLLER_LAYOUT_SEEDS } from "../src/lib/mock/controller-layouts.js";
 import { WORKSHOP_MODS } from "../src/lib/mock/workshop-mods.js";
 import {
+  CDN_NODES,
+  DELTA_PATCHES,
+  DISTRIBUTION_STATS,
+  GAME_MANIFESTS,
+} from "../src/lib/mock/cdn.js";
+import { VOICE_CHANNELS } from "../src/lib/mock/voice.js";
+import { COMMUNITIES, COMMUNITY_POSTS } from "../src/lib/mock/communities.js";
+import {
   LFG_BOARD_SEED_POSTS,
   LFG_BOARD_SEED_GUIDES,
 } from "../src/lib/mock/lfg-board.js";
@@ -1287,6 +1295,22 @@ async function seedConfig(): Promise<void> {
 // home and a separate tally line in the seed output. All writes are
 // fill-missing-doc so manual edits in the console are preserved on re-run.
 
+function makeLicenseKey(seed: string): string {
+  // Deterministic 16-char key in AAAA-BBBB-CCCC-DDDD form, derived from seed.
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // omit ambiguous I,O,0,1
+  const chars: string[] = [];
+  for (let i = 0; i < 16; i++) {
+    chars.push(alphabet[(hash + i * 17) % alphabet.length]);
+  }
+  return `${chars.slice(0, 4).join("")}-${chars.slice(4, 8).join("")}-${chars
+    .slice(8, 12)
+    .join("")}-${chars.slice(12, 16).join("")}`;
+}
+
 async function seedCatalogAndCommunity(
   studios: Map<string, StudioIdentity>,
 ): Promise<void> {
@@ -1429,6 +1453,68 @@ async function seedCatalogAndCommunity(
     },
   ];
   await seedById(db, "dw_cosmetics", cosmetics, (c) => c.id);
+
+  // ── CDN / distribution backbone ──────────────────────────────────────────
+  await seedById(db, "dw_cdn_nodes", CDN_NODES, (n) => n.id);
+  await seedById(db, "dw_distribution_stats", DISTRIBUTION_STATS, (s) => s.region);
+  await seedById(db, "dw_game_manifests", GAME_MANIFESTS, (m) => m.id);
+  await seedById(db, "dw_delta_patches", DELTA_PATCHES, (p) => p.id);
+
+  // ── Voice channels (sessions are created on-demand when users join) ──────
+  await seedById(db, "dw_voice_channels", VOICE_CHANNELS, (c) => c.id);
+
+  // ── Communities + sample posts (memberships are created on-demand) ───────
+  await seedById(db, "dw_communities", COMMUNITIES, (c) => c.id);
+  await seedById(db, "dw_community_posts", COMMUNITY_POSTS, (p) => p.id);
+
+  // ── DRM licenses — one license per studio owner for each of their games ──
+  const studioOwners = [...studios.values()].filter(
+    (s): s is StudioIdentity & { uid: string } => Boolean(s.uid),
+  );
+  const drmLicenses: Record<string, unknown>[] = [];
+  const counters: Record<string, unknown>[] = [];
+  const drmIssuedAt = new Date().toISOString();
+  for (const studio of studioOwners) {
+    // Each studio owner gets a license for each game associated with their studio.
+    const studioGameIds = GAME_SEEDS.filter(
+      (g) => slugify(g.developer) === studio.slug || slugify(g.publisher) === studio.slug,
+    ).map((g) => g.id);
+    for (const gameId of studioGameIds) {
+      const licenseId = `lic_${studio.uid}_${gameId}`;
+      drmLicenses.push({
+        id: licenseId,
+        userId: studio.uid,
+        gameId,
+        key: makeLicenseKey(licenseId),
+        status: "active",
+        issuedAt: drmIssuedAt,
+        expiresAt: null,
+        maxActivations: 3,
+        activations: [
+          {
+            hash: `hwfp_${studio.uid.slice(0, 8)}_workstation`,
+            hostname: `${studio.slug}-dev-workstation`,
+            os: "windows",
+            firstSeenAt: drmIssuedAt,
+            lastSeenAt: drmIssuedAt,
+          },
+        ],
+      });
+    }
+    counters.push({
+      userId: studio.uid,
+      followers: 0,
+      following: 0,
+      communities: 0,
+    });
+  }
+  await seedById(db, "dw_drm_licenses", drmLicenses, (l) => (l as { id: string }).id);
+  await seedById(
+    db,
+    "dw_social_graph_counters",
+    counters,
+    (c) => (c as { userId: string }).userId,
+  );
 
   // dw_notifications — seed one entry per studio owner so signed-in users on
   // a fresh project see something in the bell. Keyed by ${uid}__${seedId} so
