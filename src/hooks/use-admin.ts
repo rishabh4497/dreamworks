@@ -5,9 +5,11 @@ import {
   getAdminUser,
   listAdminUsers,
   listAllApps,
+  listAllCreators,
   listCreatorSubmissionQueue,
   reviewPublisherProfile,
   reviewStudioProfile,
+  setCreatorVerification,
   setUserRole,
 } from "@/lib/api/admin";
 import { appKeys } from "@/hooks/use-apps";
@@ -15,6 +17,7 @@ import { invalidateCatalogCache } from "@/lib/api/games";
 import type {
   AppStage,
   CreatorSubmissionType,
+  CreatorVerificationStatus,
   SubmissionStatus,
   UserRole,
 } from "@/lib/types";
@@ -27,9 +30,29 @@ export const adminKeys = {
   user: (uid: string) => [...adminKeys.all, "user", uid] as const,
   creatorQueue: (type: CreatorSubmissionType, status?: SubmissionStatus | "all") =>
     [...adminKeys.all, "creator", type, status ?? "all"] as const,
+  creators: (type: CreatorSubmissionType, verification?: CreatorVerificationStatus | "all") =>
+    [...adminKeys.all, "creators", type, verification ?? "all"] as const,
   apps: (filter: { stage?: AppStage | "all"; search?: string }) =>
     [...adminKeys.all, "apps", filter] as const,
 };
+
+export function useAllCreators(
+  type: CreatorSubmissionType,
+  filter: { verification?: CreatorVerificationStatus | "all" } = {},
+) {
+  return useQuery({
+    queryKey: adminKeys.creators(type, filter.verification),
+    queryFn: () => listAllCreators(type, filter),
+  });
+}
+
+export function useSetCreatorVerification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setCreatorVerification,
+    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+  });
+}
 
 export function useAllApps(filter: { stage?: AppStage | "all"; search?: string } = {}) {
   return useQuery({

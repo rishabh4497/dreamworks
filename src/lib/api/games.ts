@@ -69,19 +69,31 @@ export async function ensureGamesSeeded(): Promise<void> {
 //   2. Concurrent callers share the same in-flight promise.
 //   3. Successful loads are mirrored into sessionStorage so a tab reload
 //      (or a new tab in the same session) skips Firestore entirely.
+//   4. A tiny `dw_meta/catalog.version` doc (bumped by the seed script and
+//      by mutations like publishApp) is checked on cache hit; if the
+//      version drifted, the snapshot is busted in the background and the
+//      next call returns fresh data. Stale-while-revalidate — the current
+//      render still uses cache so the UX isn't blocked on the metadata
+//      round trip.
 
 const CATALOG_TTL_MS = 30 * 60 * 1000;
-const CATALOG_STORAGE_KEY = "dw_catalog_v1";
+// Bumped from v1 → v2 so any browser still holding the pre-versioning
+// snapshot is automatically migrated on first load.
+const CATALOG_STORAGE_KEY = "dw_catalog_v2";
 
 interface CatalogSnapshot {
   data: GameDetail[];
   cachedAt: number;
+  /** Version stamp from `dw_meta/catalog`; null if metadata wasn't reachable. */
+  version: number | null;
 }
 
 let catalogCache: GameDetail[] | null = null;
 let catalogCachedAt = 0;
+let catalogVersion: number | null = null;
 let catalogInflight: Promise<GameDetail[]> | null = null;
 let hydrationAttempted = false;
+let revalidateInflight: Promise<void> | null = null;
 
 function hydrateFromStorage(): void {
   if (hydrationAttempted) return;
@@ -95,15 +107,16 @@ function hydrateFromStorage(): void {
     if (Date.now() - parsed.cachedAt >= CATALOG_TTL_MS) return;
     catalogCache = parsed.data;
     catalogCachedAt = parsed.cachedAt;
+    catalogVersion = typeof parsed.version === "number" ? parsed.version : null;
   } catch {
     // Corrupt entry or quota issue — ignore and re-fetch.
   }
 }
 
-function persistToStorage(data: GameDetail[], cachedAt: number): void {
+function persistToStorage(data: GameDetail[], cachedAt: number, version: number | null): void {
   if (typeof window === "undefined") return;
   try {
-    const snap: CatalogSnapshot = { data, cachedAt };
+    const snap: CatalogSnapshot = { data, cachedAt, version };
     window.sessionStorage.setItem(CATALOG_STORAGE_KEY, JSON.stringify(snap));
   } catch {
     // QuotaExceededError or private-mode browser — non-fatal, we just lose
@@ -111,28 +124,70 @@ function persistToStorage(data: GameDetail[], cachedAt: number): void {
   }
 }
 
-async function loadCatalog(): Promise<GameDetail[]> {
+async function fetchCatalogVersion(): Promise<number | null> {
+  try {
+    const ref = doc(getDb(), COLLECTIONS.meta, "catalog");
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    const v = (snap.data() as { version?: number }).version;
+    return typeof v === "number" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadCatalog(): Promise<{ data: GameDetail[]; version: number | null }> {
   await ensureGamesSeeded();
-  const snap = await getDocs(collection(getDb(), COLLECTIONS.games));
+  const [snap, version] = await Promise.all([
+    getDocs(collection(getDb(), COLLECTIONS.games)),
+    fetchCatalogVersion(),
+  ]);
   const results: GameDetail[] = [];
   snap.forEach((d) => results.push(d.data() as GameDetail));
-  return results;
+  return { data: results, version };
+}
+
+/**
+ * Stale-while-revalidate: returns immediately (no extra round trip) but if
+ * the server's catalog version drifted from what we cached, busts the local
+ * cache so the *next* `fetchAllFromDb` call re-fetches fresh data. Single
+ * in-flight at a time so concurrent callers share the check.
+ */
+function revalidateInBackground(): void {
+  if (revalidateInflight) return;
+  if (typeof window === "undefined") return;
+  revalidateInflight = (async () => {
+    try {
+      const serverVersion = await fetchCatalogVersion();
+      if (serverVersion !== null && serverVersion !== catalogVersion) {
+        invalidateCatalogCache();
+      }
+    } catch {
+      /* swallow — best-effort */
+    } finally {
+      revalidateInflight = null;
+    }
+  })();
 }
 
 async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
   if (!force) hydrateFromStorage();
   const now = Date.now();
   if (!force && catalogCache && now - catalogCachedAt < CATALOG_TTL_MS) {
+    // Cache hit — fire a non-blocking version check so the next render sees
+    // fresh data if the seed script or a mutation bumped `dw_meta/catalog`.
+    revalidateInBackground();
     return catalogCache;
   }
   if (catalogInflight) return catalogInflight;
   catalogInflight = (async () => {
     try {
-      const data = await loadCatalog();
+      const { data, version } = await loadCatalog();
       const cachedAt = Date.now();
       catalogCache = data;
       catalogCachedAt = cachedAt;
-      persistToStorage(data, cachedAt);
+      catalogVersion = version;
+      persistToStorage(data, cachedAt, version);
       return data;
     } finally {
       catalogInflight = null;
@@ -145,6 +200,8 @@ async function fetchAllFromDb(force = false): Promise<GameDetail[]> {
 export function invalidateCatalogCache(): void {
   catalogCache = null;
   catalogCachedAt = 0;
+  catalogVersion = null;
+  hydrationAttempted = false;
   if (typeof window !== "undefined") {
     try {
       window.sessionStorage.removeItem(CATALOG_STORAGE_KEY);

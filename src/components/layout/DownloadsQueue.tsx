@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { Pause, Play, X } from "lucide-react";
+import { Pause, Play, RotateCcw, X } from "lucide-react";
 import { useDownloadStore } from "@/stores/download-store";
 import { cn, formatBytes } from "@/lib/utils";
 import { WaitingMiniGames } from "@/components/downloads/WaitingMiniGames";
@@ -20,6 +20,7 @@ export function DownloadsQueue() {
   const cancel = useDownloadStore((s) => s.cancel);
   const pause = useDownloadStore((s) => s.pause);
   const resume = useDownloadStore((s) => s.resume);
+  const retry = useDownloadStore((s) => s.retry);
   const clearCompleted = useDownloadStore((s) => s.clearCompleted);
   const hasFinished = tasks.some((t) =>
     ["complete", "cancelled", "error"].includes(t.status),
@@ -96,6 +97,15 @@ export function DownloadsQueue() {
                             title="Cancel download"
                           >
                             <X className="h-3 w-3" />
+                          </button>
+                        )}
+                        {isFailed && (
+                          <button
+                            onClick={() => retry(task.taskId)}
+                            className="text-muted/25 hover:text-foreground/70 transition-colors"
+                            title="Retry download"
+                          >
+                            <RotateCcw className="h-3 w-3" />
                           </button>
                         )}
                       </div>

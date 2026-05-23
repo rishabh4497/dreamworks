@@ -73,6 +73,7 @@ export const COLLECTIONS = {
   aiCache: "dw_ai_cache",
   aiQuotas: "dw_ai_quotas",
   aiUsage: "dw_ai_usage",
+  meta: "dw_meta",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

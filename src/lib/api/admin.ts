@@ -307,6 +307,49 @@ function asCreatorSubmission(
   };
 }
 
+// ── Creator profiles (direct verification by admin) ────────────────────────
+//
+// Reads the actual dw_publishers / dw_developers collections (where profiles
+// live) rather than the explicit-submission queue. Admin Firestore rules
+// allow writing `verificationStatus`, so we update the doc directly.
+
+export async function listAllCreators(
+  type: CreatorSubmissionType,
+  opts: { verification?: CreatorVerificationStatus | "all" } = {},
+): Promise<Creator[]> {
+  const ref = collection(
+    getDb(),
+    type === "publisher" ? COLLECTIONS.publishers : COLLECTIONS.developers,
+  );
+  const snap = await getDocs(query(ref, fbLimit(500)));
+  const list: Creator[] = [];
+  snap.forEach((d) => {
+    const data = d.data() as Publisher | Developer;
+    list.push({ ...data, id: d.id, creatorType: type } as Creator);
+  });
+  list.sort((a, b) => ((a.updatedAt ?? "") < (b.updatedAt ?? "") ? 1 : -1));
+  if (!opts.verification || opts.verification === "all") return list;
+  return list.filter(
+    (c) => (c.verificationStatus ?? "unverified") === opts.verification,
+  );
+}
+
+export async function setCreatorVerification(input: {
+  type: CreatorSubmissionType;
+  id: string;
+  status: CreatorVerificationStatus;
+}): Promise<void> {
+  const ref = doc(
+    getDb(),
+    input.type === "publisher" ? COLLECTIONS.publishers : COLLECTIONS.developers,
+    input.id,
+  );
+  await updateDoc(ref, {
+    verificationStatus: input.status,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
 export async function listCreatorSubmissionQueue(
   type: CreatorSubmissionType,
   status?: SubmissionStatus,
