@@ -40,10 +40,10 @@ export function SyncModal({ open, onClose }: SyncModalProps) {
   };
 
   const colorBySource: Partial<Record<LauncherSource, string>> = {
-    steam: "bg-[#171a21]",
+    steam: "bg-brand-steam",
     epic: "bg-[#2a2a2a]",
     gog: "bg-[#86328a]",
-    "xbox-pc": "bg-[#107c10]",
+    "xbox-pc": "bg-brand-xbox",
     "ea-app": "bg-[#ff4747]",
     ubisoft: "bg-[#0070ff]",
     battlenet: "bg-[#148eff]",

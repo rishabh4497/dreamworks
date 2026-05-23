@@ -1,39 +1,12 @@
 import type { Friend, FriendActivity, FriendStatus, GameId } from "../types";
-import { FRIENDS, FRIEND_ACTIVITY } from "../mock";
-import { FRIEND_OWNED } from "../mock/friends";
 import { getDb } from "../firebase";
-import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 const FRIENDS_COL = "dw_friends";
 const ACTIVITY_COL = "dw_friend_activity";
 const OWNED_COL = "dw_friend_owned";
 
-let seedingPromise: Promise<void> | null = null;
-
-export async function ensureFriendsSeeded(): Promise<void> {
-  if (seedingPromise) return seedingPromise;
-  seedingPromise = (async () => {
-    const snap = await getDocs(collection(getDb(), FRIENDS_COL));
-    if (!snap.empty) return;
-
-    const batch = writeBatch(getDb());
-    for (const f of FRIENDS) {
-      batch.set(doc(getDb(), FRIENDS_COL, f.uid), f);
-    }
-    for (const a of FRIEND_ACTIVITY) {
-      const id = `${a.uid}_${a.at}`;
-      batch.set(doc(getDb(), ACTIVITY_COL, id), a);
-    }
-    for (const [uid, gameIds] of Object.entries(FRIEND_OWNED)) {
-      batch.set(doc(getDb(), OWNED_COL, uid), { uid, gameIds });
-    }
-    await batch.commit();
-  })();
-  return seedingPromise;
-}
-
 export async function listFriends(): Promise<Friend[]> {
-  await ensureFriendsSeeded();
   const snap = await getDocs(collection(getDb(), FRIENDS_COL));
   const out: Friend[] = [];
   snap.forEach((d) => out.push(d.data() as Friend));
@@ -41,7 +14,6 @@ export async function listFriends(): Promise<Friend[]> {
 }
 
 export async function listFriendActivity(): Promise<FriendActivity[]> {
-  await ensureFriendsSeeded();
   const snap = await getDocs(collection(getDb(), ACTIVITY_COL));
   const out: FriendActivity[] = [];
   snap.forEach((d) => out.push(d.data() as FriendActivity));
@@ -62,7 +34,6 @@ const STATUS_RANK: Record<FriendStatus, number> = {
  * to score "your friends play this" suggestions across the catalog.
  */
 export async function listFriendOwnership(): Promise<Record<string, GameId[]>> {
-  await ensureFriendsSeeded();
   const snap = await getDocs(collection(getDb(), OWNED_COL));
   const out: Record<string, GameId[]> = {};
   snap.forEach((d) => {
@@ -73,7 +44,6 @@ export async function listFriendOwnership(): Promise<Record<string, GameId[]>> {
 }
 
 export async function listFriendsWhoOwn(gameId: GameId): Promise<Friend[]> {
-  await ensureFriendsSeeded();
   const [friendsSnap, ownedSnap] = await Promise.all([
     getDocs(collection(getDb(), FRIENDS_COL)),
     getDocs(collection(getDb(), OWNED_COL)),

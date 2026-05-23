@@ -108,7 +108,7 @@ export function GameCard({ game, width = 240, reason }: GameCardProps) {
           <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card to-transparent" />
           <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
             {game.includedInSubscription && (
-              <span className="rounded bg-[#a052ff]/20 border border-[#a052ff]/30 px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-wide text-[#c99eff] shadow-sm backdrop-blur-md">
+              <span className="rounded bg-brand-plus/20 border border-brand-plus/30 px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-wide text-brand-plus-fg shadow-sm backdrop-blur-md">
                 Dreamworks+
               </span>
             )}

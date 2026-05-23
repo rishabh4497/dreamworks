@@ -361,7 +361,7 @@ export function GameDetailPage() {
             )}
             <PriceTag price={detail.price} size="lg" />
             {detail.includedInSubscription && (
-              <div className="rounded-lg border border-[#a052ff]/30 bg-[#a052ff]/10 px-3 py-2 text-center text-[12px] font-semibold text-[#c99eff]">
+              <div className="rounded-lg border border-brand-plus/30 bg-brand-plus/10 px-3 py-2 text-center text-[12px] font-semibold text-brand-plus-fg">
                 <span className="inline-flex items-center gap-1.5">
                   <Crown className="h-3 w-3" /> Included with Dreamworks+
                 </span>

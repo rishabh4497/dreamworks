@@ -1,6 +1,4 @@
 import type { GameId, PostImagePreset, SocialPost, SocialReply } from "../types";
-import { PRESET_POST_IMAGES, SEED_POSTS } from "../mock/feed";
-import { wait } from "./_delay";
 import { getDb } from "../firebase";
 import {
   arrayRemove,
@@ -18,22 +16,7 @@ import {
 } from "firebase/firestore";
 
 const FEED_COL = "dw_feed";
-
-let seedingPromise: Promise<void> | null = null;
-
-async function ensureFeedSeeded(): Promise<void> {
-  if (seedingPromise) return seedingPromise;
-  seedingPromise = (async () => {
-    const snap = await getDocs(collection(getDb(), FEED_COL));
-    if (!snap.empty) return;
-    const batch = writeBatch(getDb());
-    for (const post of SEED_POSTS) {
-      batch.set(doc(getDb(), FEED_COL, post.id), normalizePostForWrite(post));
-    }
-    await batch.commit();
-  })();
-  return seedingPromise;
-}
+const POST_IMAGE_PRESETS_COL = "dw_post_image_presets";
 
 function normalizePostForWrite(post: SocialPost): Record<string, unknown> {
   return {
@@ -64,7 +47,6 @@ export async function listFeedEntries(
   viewerUid: string | null,
   limit = 50,
 ): Promise<SocialPost[]> {
-  await ensureFeedSeeded();
   const q = query(
     collection(getDb(), FEED_COL),
     orderBy("createdAt", "desc"),
@@ -92,7 +74,6 @@ function newId(prefix: string): string {
 }
 
 export async function composePost(input: ComposePostInput): Promise<SocialPost> {
-  await ensureFeedSeeded();
   const post: SocialPost = {
     id: newId("post"),
     authorUid: input.authorUid,
@@ -171,6 +152,8 @@ export async function addReply(input: AddReplyInput): Promise<SocialReply> {
 }
 
 export async function listPostImagePresets(): Promise<PostImagePreset[]> {
-  await wait();
-  return PRESET_POST_IMAGES;
+  const snap = await getDocs(collection(getDb(), POST_IMAGE_PRESETS_COL));
+  const out: PostImagePreset[] = [];
+  snap.forEach((d) => out.push(d.data() as PostImagePreset));
+  return out;
 }

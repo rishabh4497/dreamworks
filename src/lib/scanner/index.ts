@@ -90,7 +90,7 @@ export async function scanAllLaunchers(): Promise<ScanResult> {
     }
   });
 
-  const matched = matchToCatalog(detected);
+  const matched = await matchToCatalog(detected);
   const durationMs = Math.round(performance.now() - started);
 
   return { detected: matched, errors, durationMs, pathsRead };

@@ -97,6 +97,27 @@ export const COLLECTIONS = {
   themes: "dw_themes",
   // Global app config — admin-tunable enums (countries, languages, brands…)
   config: "dw_config",
+  // Static catalog data formerly under src/lib/mock
+  categories: "dw_categories",
+  tags: "dw_tags",
+  news: "dw_news",
+  postImagePresets: "dw_post_image_presets",
+  // Social graph (still seeded — Phase 4 will compute these from real follow data)
+  friends: "dw_friends",
+  friendActivity: "dw_friend_activity",
+  friendOwned: "dw_friend_owned",
+  // Mock-only collections promoted to Firestore (Phase 4)
+  charts: "dw_charts",
+  gameDbMetrics: "dw_game_db_metrics",
+  lfgGroups: "dw_lfg_groups",
+  speedrunRuns: "dw_speedrun_runs",
+} as const;
+
+// Per-user subcollection paths under `dw_users/{uid}/...`.
+export const USER_SUBCOLLECTIONS = {
+  saveHistory: "save_history",
+  preferences: "preferences",
+  recentlyViewed: "recently_viewed",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)

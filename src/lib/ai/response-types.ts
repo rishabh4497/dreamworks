@@ -116,6 +116,60 @@ export interface StudioOverviewResult {
   signatureThemes: string[];
 }
 
+export interface WishlistSniperResult {
+  parsedRule: {
+    thresholdCents?: number;
+    percentOff?: number;
+    atlOnly?: boolean;
+    requireHistoricalLow?: boolean;
+  };
+  verdict: "buy-now" | "wait" | "watch" | "skip";
+  verdictReason: string;
+  predictedSaleWindowDays?: number;
+  confidencePct: number;
+  ruleSummary: string;
+}
+
+export interface OrganizerCollection {
+  name: string;
+  description: string;
+  emoji: string;
+  mood: string;
+  gameIds: string[];
+}
+
+export interface LibraryOrganizerResult {
+  collections: OrganizerCollection[];
+  rationale: string;
+}
+
+export interface PlayNextPick {
+  gameId: string;
+  reason: string;
+  sessionMinutes: number;
+  vibe: string;
+}
+
+export interface PlayNextResult {
+  topPickGameId: string;
+  picks: PlayNextPick[];
+  encouragement: string;
+}
+
+export interface LauncherUnifierResult {
+  intent: "launch" | "search" | "compare-price" | "install" | "unknown";
+  matchedGameId?: string;
+  matchedLauncher?: string;
+  matchedGameName?: string;
+  alternatives: {
+    gameId: string;
+    launcher: string;
+    name: string;
+    note?: string;
+  }[];
+  reply: string;
+}
+
 /** Mapping from feature key → response type. Drives `useAI*` hook typing. */
 export type AIResponseMap = {
   "game-overview": AIOverview;
@@ -133,4 +187,8 @@ export type AIResponseMap = {
   "store-curator": StoreCuratorResult;
   "publisher-overview": StudioOverviewResult;
   "developer-overview": StudioOverviewResult;
+  "wishlist-sniper": WishlistSniperResult;
+  "library-organizer": LibraryOrganizerResult;
+  "play-next": PlayNextResult;
+  "launcher-unifier": LauncherUnifierResult;
 };

@@ -20,6 +20,10 @@ export const AI_FEATURE_KEYS = [
   "store-curator",
   "publisher-overview",
   "developer-overview",
+  "wishlist-sniper",
+  "library-organizer",
+  "play-next",
+  "launcher-unifier",
 ] as const;
 
 export type AIFeatureKey = (typeof AI_FEATURE_KEYS)[number];

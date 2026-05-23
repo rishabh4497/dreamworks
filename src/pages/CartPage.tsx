@@ -87,7 +87,7 @@ export function CartPage() {
                 <img loading="lazy" decoding="async" src={g.capsuleUrl} alt="" referrerPolicy="no-referrer" className="h-16 w-32 rounded-md object-cover" />
                 <div className="flex-1 min-w-0">
                   {g.id === "plus-sub" ? (
-                    <p className="text-[13px] font-semibold text-[#a052ff] truncate">{g.name}</p>
+                    <p className="text-[13px] font-semibold text-brand-plus truncate">{g.name}</p>
                   ) : (
                     <Link to={ROUTES.gameDetail(g.id)} className="hover:underline">
                       <p className="text-[13px] font-semibold text-foreground truncate">{g.name}</p>

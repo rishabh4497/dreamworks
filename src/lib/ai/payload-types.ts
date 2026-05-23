@@ -114,3 +114,51 @@ export interface StudioOverviewPayload {
   }[];
   reviewSamples?: { gameId: string; excerpts: string[] };
 }
+
+export interface WishlistSniperPayload {
+  gameName: string;
+  basePriceCents: number;
+  currentPriceCents: number;
+  historicalLowCents: number;
+  historicalLowAt?: string;
+  userRule: string;
+  recentHistory: { date: string; cents: number }[];
+}
+
+export interface LibraryOrganizerPayload {
+  games: {
+    id: string;
+    name: string;
+    genres: string[];
+    tags: string[];
+    playMinutes: number;
+    completionPct?: number;
+    lastPlayed?: string | null;
+  }[];
+  userPrompt?: string;
+}
+
+export interface PlayNextPayload {
+  ownedGames: {
+    id: string;
+    name: string;
+    genres: string[];
+    tags: string[];
+    playMinutes: number;
+    completionPct?: number;
+    lastPlayed?: string | null;
+    metaScore?: number;
+    mainHours?: number;
+  }[];
+  favoriteGenres?: string[];
+  moodHint?: string;
+  availableMinutes?: number;
+}
+
+export interface LauncherUnifierPayload {
+  query: string;
+  libraryByLauncher: {
+    launcher: string;
+    games: { id: string; name: string; installed: boolean }[];
+  }[];
+}

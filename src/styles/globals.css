@@ -42,6 +42,20 @@
   --positive: #66c0f4;
   --negative: #c0392b;
 
+  /* Platform brand colors — shared light/dark (brand identities don't theme) */
+  --brand-psn: #00439c;
+  --brand-xbox: #107c10;
+  --brand-steam: #171a21;
+  --brand-epic: #313131;
+  --brand-twitch: #9146ff;
+  --brand-twitch-legacy: #6441a5;
+  --brand-discord: #5865f2;
+  --brand-youtube: #ff0033;
+
+  /* Dreamworks+ subscription brand purple */
+  --brand-plus: #a052ff;
+  --brand-plus-fg: #c99eff;
+
   color-scheme: dark;
 }
 
@@ -80,6 +94,18 @@
   --positive: #2a6fa5;
   --negative: #c0392b;
 
+  --brand-psn: #00439c;
+  --brand-xbox: #107c10;
+  --brand-steam: #171a21;
+  --brand-epic: #313131;
+  --brand-twitch: #9146ff;
+  --brand-twitch-legacy: #6441a5;
+  --brand-discord: #5865f2;
+  --brand-youtube: #ff0033;
+
+  --brand-plus: #a052ff;
+  --brand-plus-fg: #c99eff;
+
   color-scheme: light;
 }
 
@@ -113,6 +139,16 @@
   --color-discount-fg: var(--discount-fg);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
+  --color-brand-psn: var(--brand-psn);
+  --color-brand-xbox: var(--brand-xbox);
+  --color-brand-steam: var(--brand-steam);
+  --color-brand-epic: var(--brand-epic);
+  --color-brand-twitch: var(--brand-twitch);
+  --color-brand-twitch-legacy: var(--brand-twitch-legacy);
+  --color-brand-discord: var(--brand-discord);
+  --color-brand-youtube: var(--brand-youtube);
+  --color-brand-plus: var(--brand-plus);
+  --color-brand-plus-fg: var(--brand-plus-fg);
 }
 
 * {

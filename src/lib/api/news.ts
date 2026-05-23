@@ -1,6 +1,6 @@
 import type { NewsArticle } from "../types";
-import { GAMES, NEWS } from "../mock";
 import { getDb } from "../firebase";
+import { listGames } from "./games";
 import {
   collection,
   doc,
@@ -10,29 +10,11 @@ import {
   orderBy,
   query,
   where,
-  writeBatch,
 } from "firebase/firestore";
 
 const NEWS_COL = "dw_news";
 
-let seedingPromise: Promise<void> | null = null;
-
-async function ensureNewsSeeded(): Promise<void> {
-  if (seedingPromise) return seedingPromise;
-  seedingPromise = (async () => {
-    const snap = await getDocs(collection(getDb(), NEWS_COL));
-    if (!snap.empty) return;
-    const batch = writeBatch(getDb());
-    for (const article of NEWS) {
-      batch.set(doc(getDb(), NEWS_COL, article.slug), article);
-    }
-    await batch.commit();
-  })();
-  return seedingPromise;
-}
-
 export async function listNews(limit = 20): Promise<NewsArticle[]> {
-  await ensureNewsSeeded();
   const q = query(
     collection(getDb(), NEWS_COL),
     orderBy("publishedAt", "desc"),
@@ -45,7 +27,6 @@ export async function listNews(limit = 20): Promise<NewsArticle[]> {
 }
 
 export async function getNewsArticle(slug: string): Promise<NewsArticle | undefined> {
-  await ensureNewsSeeded();
   const ref = doc(getDb(), NEWS_COL, slug);
   const snap = await getDoc(ref);
   return snap.exists() ? (snap.data() as NewsArticle) : undefined;
@@ -61,8 +42,8 @@ export async function listNewsByDeveloper(
   limit = 5,
 ): Promise<NewsArticle[]> {
   if (!developer) return [];
-  await ensureNewsSeeded();
-  const ownedGameIds = GAMES.filter((g) => g.developer === developer).map((g) => g.id);
+  const games = await listGames();
+  const ownedGameIds = games.filter((g) => g.developer === developer).map((g) => g.id);
   if (ownedGameIds.length === 0) return [];
   return queryNewsByRelatedGames(ownedGameIds, limit);
 }
@@ -73,8 +54,8 @@ export async function listNewsByPublisher(
   limit = 5,
 ): Promise<NewsArticle[]> {
   if (!publisher) return [];
-  await ensureNewsSeeded();
-  const ownedGameIds = GAMES.filter((g) => g.publisher === publisher).map((g) => g.id);
+  const games = await listGames();
+  const ownedGameIds = games.filter((g) => g.publisher === publisher).map((g) => g.id);
   if (ownedGameIds.length === 0) return [];
   return queryNewsByRelatedGames(ownedGameIds, limit);
 }
