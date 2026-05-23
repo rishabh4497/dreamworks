@@ -1,4 +1,4 @@
-import type { SocialPost } from "../types";
+import type { PostImagePreset, SocialPost } from "../types";
 
 // Seed data for the social feed
 export const MOCK_CREATOR_AVATARS: Record<string, string> = {
@@ -11,7 +11,7 @@ export const MOCK_CREATOR_AVATARS: Record<string, string> = {
   fromsoftware: "https://api.dicebear.com/7.x/identicon/svg?seed=fromsoftware",
 };
 
-export const PRESET_POST_IMAGES = [
+export const PRESET_POST_IMAGES: PostImagePreset[] = [
   { label: "Night City Neon", url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80" },
   { label: "Elden Tree", url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80" },
   { label: "Vice City Beach", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80" },

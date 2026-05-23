@@ -1,19 +1,15 @@
 import { useState } from "react";
 import { Users, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLfgGroups } from "@/hooks/use-lfg-groups";
 import { cn } from "@/lib/utils";
 
 interface LfgMatchmakingProps {
   gameId: string;
 }
 
-const MOCK_GROUPS = [
-  { id: 1, host: "Alex", playstyle: "Casual", needMic: false, spots: 2, max: 4, avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Alex" },
-  { id: 2, host: "Sarah", playstyle: "Tryhard", needMic: true, spots: 1, max: 5, avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Sarah" },
-  { id: 3, host: "Max", playstyle: "Achievement Hunter", needMic: true, spots: 3, max: 4, avatar: "https://api.dicebear.com/9.x/avataaars/svg?seed=Max" },
-];
-
-export function LfgMatchmaking({ gameId: _gameId }: LfgMatchmakingProps) {
+export function LfgMatchmaking({ gameId }: LfgMatchmakingProps) {
+  const { data: groups = [] } = useLfgGroups(gameId);
   const [searching, setSearching] = useState(false);
 
   return (
@@ -27,7 +23,7 @@ export function LfgMatchmaking({ gameId: _gameId }: LfgMatchmakingProps) {
       </div>
 
       <div className="space-y-3">
-        {MOCK_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div key={group.id} className="flex items-center justify-between rounded-xl border border-separator/50 bg-card-active p-3 transition-colors hover:border-acid/30">
             <div className="flex items-center gap-3">
               <img src={group.avatar} alt={group.host} className="h-8 w-8 rounded-full border border-separator bg-black/20" />

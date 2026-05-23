@@ -1,18 +1,14 @@
 import { useState } from "react";
 import { Cloud, History, RotateCcw, CloudOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSaveHistory } from "@/hooks/use-save-history";
 
 interface CloudSavesProps {
   gameId: string;
 }
 
-const MOCK_SAVES = [
-  { id: "s1", date: "Today at 10:42 PM", size: "14.2 MB", desc: "Autosave - The Forgotten Forest" },
-  { id: "s2", date: "Yesterday at 6:15 PM", size: "13.8 MB", desc: "Manual Save - Boss Fight Preparation" },
-  { id: "s3", date: "Oct 12 at 2:00 AM", size: "10.1 MB", desc: "Autosave - Early Game" },
-];
-
-export function CloudSaves({ gameId: _gameId }: CloudSavesProps) {
+export function CloudSaves({ gameId }: CloudSavesProps) {
+  const { data: saves = [] } = useSaveHistory(gameId);
   const [synced, setSynced] = useState(true);
   const [rollingBack, setRollingBack] = useState<string | null>(null);
 
@@ -34,7 +30,7 @@ export function CloudSaves({ gameId: _gameId }: CloudSavesProps) {
       </div>
 
       <div className="space-y-2">
-        {MOCK_SAVES.map((save, i) => (
+        {saves.map((save, i) => (
           <div key={save.id} className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${i === 0 ? "border-blue/30 bg-blue/5" : "border-separator/50 bg-card-active hover:bg-card-hover"}`}>
             <div className="flex items-start gap-3">
               <History className="mt-0.5 h-4 w-4 text-muted/50" />

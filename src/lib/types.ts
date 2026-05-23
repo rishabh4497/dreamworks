@@ -1425,3 +1425,9 @@ export interface FollowSuggestion {
   handle: string;
   avatar: string;
 }
+
+// ── Social: preset images for the feed post composer ──
+export interface PostImagePreset {
+  label: string;
+  url: string;
+}

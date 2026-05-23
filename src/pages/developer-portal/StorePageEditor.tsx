@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageDropzone, ScreenshotsZone } from "@/components/common/ImageDropzone";
+import { VideoDropzone } from "@/components/common/VideoDropzone";
 import { toast } from "@/stores/toast-store";
 import { useApp, useSaveApp } from "@/hooks/use-apps";
 import { joinScreenshots, parseScreenshots } from "@/lib/utils";
@@ -299,6 +300,7 @@ export function StorePageEditor() {
           />
         </div>
         <TrailersEditor
+          appId={appId}
           trailers={draft.trailers ?? []}
           onChange={(next) => set("trailers", next)}
           posterFallback={draft.headerUrl || ""}
@@ -435,35 +437,99 @@ function ChipEditor({
 }
 
 function TrailersEditor({
+  appId,
   trailers,
   onChange,
   posterFallback,
 }: {
+  appId: string;
   trailers: Trailer[];
   onChange: (next: Trailer[]) => void;
   posterFallback: string;
 }) {
   const [url, setUrl] = useState("");
+  const [uploadKey, setUploadKey] = useState(0); // remounts VideoDropzone after each upload
+
+  const addUploadedVideo = (videoUrl: string) => {
+    if (!videoUrl) return;
+    const id = "trailer-" + crypto.randomUUID();
+    const next: Trailer = {
+      url: videoUrl,
+      posterUrl: posterFallback,
+      provider: "self",
+      id,
+    };
+    onChange([...trailers, next]);
+    setUploadKey((k) => k + 1); // reset the dropzone so the user can upload another
+  };
+
   return (
-    <div>
-      <Label>Trailers (YouTube URLs)</Label>
-      <div className="mt-1.5 space-y-2">
-        {trailers.map((t) => (
-          <div
-            key={t.id}
-            className="flex items-center gap-2 rounded-xl border border-separator bg-card-active/40 px-3 py-2 text-[12px]"
-          >
-            <span className="truncate text-foreground/80">{t.url}</span>
-            <button
-              type="button"
-              onClick={() => onChange(trailers.filter((x) => x.id !== t.id))}
-              className="ml-auto text-muted/55 hover:text-red"
-              aria-label="Remove trailer"
+    <div className="space-y-3">
+      <Label>Trailers</Label>
+
+      {/* Existing trailers — show video preview for self-hosted, link for embeds */}
+      {trailers.length > 0 && (
+        <div className="space-y-2">
+          {trailers.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-stretch gap-3 rounded-xl border border-separator bg-card-active/40 p-3 text-[12px]"
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
+              {t.provider === "self" ? (
+                <video
+                  src={t.url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="h-20 w-36 shrink-0 rounded-md bg-black object-cover"
+                />
+              ) : (
+                <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-md bg-black text-[10px] uppercase tracking-widest text-muted/55">
+                  {t.provider}
+                </div>
+              )}
+              <div className="flex min-w-0 flex-1 flex-col justify-center">
+                <p className="truncate text-foreground/80">{t.url}</p>
+                <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted/55">
+                  {t.provider === "self" ? "Self-hosted (Firebase Storage)" : t.provider}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange(trailers.filter((x) => x.id !== t.id))}
+                className="self-start text-muted/55 hover:text-red"
+                aria-label="Remove trailer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload a video file → goes to dw_apps/{appId}/trailers/{uuid} */}
+      <div className="rounded-xl border border-separator bg-card-active/25 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted/55">
+          Upload your own video
+        </p>
+        <VideoDropzone
+          key={uploadKey}
+          label=""
+          value=""
+          onChange={addUploadedVideo}
+          storagePath={
+            appId
+              ? `dw_apps/${appId}/trailers/trailer-${crypto.randomUUID()}.mp4`
+              : undefined
+          }
+        />
+      </div>
+
+      {/* Or paste a YouTube URL */}
+      <div className="rounded-xl border border-separator bg-card-active/25 p-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted/55">
+          …or paste a YouTube URL
+        </p>
         <div className="flex gap-2">
           <Input
             value={url}

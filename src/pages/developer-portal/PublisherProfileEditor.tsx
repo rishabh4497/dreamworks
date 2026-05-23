@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ImageDropzone } from "@/components/common/ImageDropzone";
+import { VideoDropzone } from "@/components/common/VideoDropzone";
 import { toast } from "@/stores/toast-store";
 import { useMyDeveloper } from "@/hooks/use-developer";
 import { useMyPublisher, useSavePublisher } from "@/hooks/use-publisher";
@@ -21,6 +22,7 @@ export function PublisherProfileEditor() {
   const [brandColor, setBrandColor] = useState("#66c0f4");
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [promoVideoUrl, setPromoVideoUrl] = useState("");
   const [tagline, setTagline] = useState("");
   const [about, setAbout] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -32,6 +34,7 @@ export function PublisherProfileEditor() {
     setBrandColor(pub.brandColor ?? "#66c0f4");
     setLogoUrl(pub.logoUrl ?? "");
     setBannerUrl(pub.bannerUrl ?? "");
+    setPromoVideoUrl(pub.promoVideoUrl ?? "");
     setTagline(pub.tagline ?? "");
     setAbout(pub.about ?? "");
     setWebsiteUrl(pub.websiteUrl ?? "");
@@ -51,6 +54,7 @@ export function PublisherProfileEditor() {
     setBrandColor(dev.brandColor);
     setLogoUrl(dev.logoUrl);
     setBannerUrl(dev.bannerUrl ?? "");
+    setPromoVideoUrl(dev.promoVideoUrl ?? "");
     setTagline(dev.tagline);
     setAbout(dev.about ?? "");
     setWebsiteUrl(dev.websiteUrl ?? "");
@@ -70,6 +74,7 @@ export function PublisherProfileEditor() {
         brandColor,
         logoUrl,
         bannerUrl: bannerUrl || undefined,
+        promoVideoUrl: promoVideoUrl || undefined,
         tagline,
         about: about || undefined,
         websiteUrl: websiteUrl || undefined,
@@ -85,6 +90,7 @@ export function PublisherProfileEditor() {
   const publicSlug = pub?.id ?? slugify(name);
   const logoPath = publicSlug ? `dw_publishers/${publicSlug}/logo` : undefined;
   const bannerPath = publicSlug ? `dw_publishers/${publicSlug}/banner` : undefined;
+  const promoVideoPath = publicSlug ? `dw_publishers/${publicSlug}/promo.mp4` : undefined;
 
   return (
     <Card className="mx-auto max-w-3xl space-y-5 p-6">
@@ -154,6 +160,13 @@ export function PublisherProfileEditor() {
           value={bannerUrl}
           onChange={setBannerUrl}
           storagePath={bannerPath}
+        />
+        <VideoDropzone
+          label="Promo video (optional)"
+          value={promoVideoUrl}
+          onChange={setPromoVideoUrl}
+          storagePath={promoVideoPath}
+          className="md:col-span-2"
         />
         <Field label="Website" className="md:col-span-2">
           <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />

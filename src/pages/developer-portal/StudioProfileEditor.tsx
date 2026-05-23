@@ -71,6 +71,7 @@ export function StudioProfileEditor() {
   const publicSlug = dev?.id ?? slugify(name);
   const logoPath = publicSlug ? `dw_developers/${publicSlug}/logo` : undefined;
   const bannerPath = publicSlug ? `dw_developers/${publicSlug}/banner` : undefined;
+  const promoVideoPath = publicSlug ? `dw_developers/${publicSlug}/promo.mp4` : undefined;
 
   return (
     <Card className="mx-auto max-w-3xl space-y-5 p-6">
@@ -138,6 +139,13 @@ export function StudioProfileEditor() {
           value={bannerUrl}
           onChange={setBannerUrl}
           storagePath={bannerPath}
+        />
+        <VideoDropzone
+          label="Promo video (optional)"
+          value={promoVideoUrl}
+          onChange={setPromoVideoUrl}
+          storagePath={promoVideoPath}
+          className="md:col-span-2"
         />
         <Field label="Website" className="md:col-span-2">
           <Input

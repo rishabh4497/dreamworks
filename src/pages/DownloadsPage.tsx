@@ -14,7 +14,6 @@ import {
   Play,
   RefreshCw,
   RotateCcw,
-  Server,
   Settings2,
   Trash2,
   X,
