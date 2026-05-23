@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
 import { PriceTag } from "@/components/ui/price-tag";
 import { ChipInGifting } from "@/components/cart/ChipInGifting";
+import { SavedCarts } from "@/components/cart/SavedCarts";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { formatPrice } from "@/lib/utils";
@@ -270,6 +271,11 @@ export function CartPage() {
             Continue to checkout
           </button>
         </aside>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        <div className="hidden lg:block" />
+        <SavedCarts />
       </div>
     </motion.div>
   );

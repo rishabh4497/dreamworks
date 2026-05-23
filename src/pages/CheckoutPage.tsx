@@ -6,6 +6,8 @@ import { useCartStore } from "@/stores/cart-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useGiftRecipientsStore } from "@/stores/gift-recipients-store";
+import { useUiStore } from "@/stores/ui-store";
+import { useStartDownload } from "@/hooks/use-start-download";
 import { useGames } from "@/hooks/use-games";
 import { useCountries, resolveLabel } from "@/hooks/use-config";
 import { placeMockOrder } from "@/lib/api/orders";
@@ -33,6 +35,8 @@ export function CheckoutPage() {
   const savedRecipients = useGiftRecipientsStore((s) => s.recipients);
   const addRecipient = useGiftRecipientsStore((s) => s.add);
   const addToLibrary = useLibraryStore((s) => s.addFromPurchase);
+  const autoInstallOnPurchase = useUiStore((s) => s.settings.autoInstallOnPurchase);
+  const startDownload = useStartDownload();
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const profile = useAuthStore((s) => s.profile);
   const { data: games } = useGames();
@@ -72,11 +76,45 @@ export function CheckoutPage() {
     [hasSubscription, baseList, items],
   );
 
-  const { subtotal, tax, total } = useMemo(() => {
+  // Promo code state — runs purely client-side. Codes can be either flat-dollar
+  // ("WELCOME10" → $10 off) or percent ("SUMMER20" → 20% off subtotal).
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountCents: number; label: string } | null>(null);
+
+  const { subtotal, tax, total, discountCents } = useMemo(() => {
     const sub = list.reduce((acc, g) => acc + g.price.final, 0);
-    const t = Math.round(sub * 0.08);
-    return { subtotal: sub, tax: t, total: sub + t };
-  }, [list]);
+    const discount = Math.min(appliedPromo?.discountCents ?? 0, sub);
+    const discountedSub = Math.max(sub - discount, 0);
+    const t = Math.round(discountedSub * 0.08);
+    return { subtotal: sub, tax: t, total: discountedSub + t, discountCents: discount };
+  }, [list, appliedPromo]);
+
+  const applyPromo = () => {
+    const raw = promoInput.trim().toUpperCase();
+    if (!raw) {
+      toast.error("Enter a promo code");
+      return;
+    }
+    const codes: Record<string, { discountCents: number; label: string }> = {
+      WELCOME10: { discountCents: 1000, label: "$10 off" },
+      SAVE5: { discountCents: 500, label: "$5 off" },
+      SUMMER20: {
+        discountCents: Math.round(subtotal * 0.2),
+        label: "20% off your subtotal",
+      },
+      DREAMWORKS15: {
+        discountCents: Math.round(subtotal * 0.15),
+        label: "15% off your subtotal",
+      },
+    };
+    const match = codes[raw];
+    if (!match) {
+      toast.error("Promo code not recognized");
+      return;
+    }
+    setAppliedPromo({ code: raw, ...match });
+    toast.success(`${raw} applied — ${match.label}`);
+  };
   const giftItems = useMemo(
     () => baseList.filter((item) => item.cartItem.asGift),
     [baseList],
@@ -234,7 +272,15 @@ export function CheckoutPage() {
       }
 
       const gameIds = buyerLibraryIdsFrom(orderedItems);
-      if (gameIds.length > 0) addToLibrary(gameIds, result.order.id);
+      if (gameIds.length > 0) {
+        await addToLibrary(gameIds, result.order.id);
+        if (autoInstallOnPurchase) {
+          for (const id of gameIds) {
+            startDownload(id, 8_000_000_000, { silent: true });
+          }
+          toast.info(`Auto-installing ${gameIds.length} game${gameIds.length === 1 ? "" : "s"}`);
+        }
+      }
       clear();
       toast.success(
         hasSubscription
@@ -499,11 +545,62 @@ export function CheckoutPage() {
               </li>
             ))}
           </ul>
+          <div className="mt-3 border-t border-separator pt-3">
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted/50">
+              Promo code
+            </p>
+            {appliedPromo ? (
+              <div className="flex items-center justify-between rounded-lg border border-positive/30 bg-positive/10 px-2.5 py-1.5 text-[12px] text-positive">
+                <span className="font-semibold">
+                  {appliedPromo.code} · {appliedPromo.label}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppliedPromo(null);
+                    setPromoInput("");
+                  }}
+                  className="text-[11px] text-positive/80 underline-offset-2 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      applyPromo();
+                    }
+                  }}
+                  placeholder="e.g. WELCOME10"
+                  className="flex-1 rounded-lg border border-separator bg-input/60 px-2.5 py-1.5 text-[12px] uppercase tracking-widest text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-acid/40"
+                />
+                <button
+                  type="button"
+                  onClick={applyPromo}
+                  className="rounded-lg border border-separator bg-card-active px-3 py-1.5 text-[12px] font-semibold text-foreground/85 hover:bg-card-hover"
+                >
+                  Apply
+                </button>
+              </div>
+            )}
+          </div>
           <div className="border-t border-separator mt-3 pt-3 space-y-1 text-[12px] text-muted/70">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
+            {discountCents > 0 && (
+              <div className="flex justify-between text-positive">
+                <span>Discount ({appliedPromo?.code})</span>
+                <span>-{formatPrice(discountCents)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Estimated tax (8%)</span>
               <span>{formatPrice(tax)}</span>

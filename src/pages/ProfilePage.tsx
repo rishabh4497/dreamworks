@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Award,
   Crown,
@@ -31,7 +31,6 @@ import {
 } from "@/lib/utils";
 import { DEFAULT_AVATAR_OPTIONS } from "@/lib/avatar";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
-import { AvatarCustomizer } from "@/components/avatar/AvatarCustomizer";
 import { DreamworksWrapped } from "@/components/profile/DreamworksWrapped";
 import { QuestsPanel } from "@/components/profile/QuestsPanel";
 import { PlaytimeHeatmap } from "@/components/profile/PlaytimeHeatmap";
@@ -40,6 +39,7 @@ import { SpendHoursDashboard } from "@/components/profile/SpendHoursDashboard";
 import { FamilyTimeProfiles } from "@/components/profile/FamilyTimeProfiles";
 import { PostMatchCoach } from "@/components/profile/PostMatchCoach";
 import { RecommendationsSection } from "@/components/profile/RecommendationsSection";
+import { AchievementProgress } from "@/components/profile/AchievementProgress";
 import { toast } from "@/stores/toast-store";
 import type { Friend, Game, LibraryEntry } from "@/lib/types";
 import { InteractiveAchievementRooms } from "@/components/features/UserFeatures";
@@ -48,13 +48,13 @@ import { AiHighlightReel } from "@/components/features/AiFeatures";
 const EASE: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const library = useLibraryStore((s) => s.entries);
   const { data: games } = useGames();
   const { data: value } = useLibraryValue();
   const { data: stats } = useCompletionStats();
   const { data: friends } = useFriends();
-  const [customizerOpen, setCustomizerOpen] = useState(false);
   const [wrappedOpen, setWrappedOpen] = useState(false);
 
   if (!profile) return null;
@@ -69,7 +69,7 @@ export function ProfilePage() {
       <ProfileHero
         profile={profile}
         avatarOptions={avatarOptions}
-        onEditAvatar={() => setCustomizerOpen(true)}
+        onEditAvatar={() => navigate(ROUTES.avatarCustomizer)}
         stats={{
           games: library.length,
           hours: totalMinutes,
@@ -142,15 +142,12 @@ export function ProfilePage() {
 
       <PostMatchCoach />
 
+      <AchievementProgress />
+
       <RecommendationsSection />
 
       <FriendsRail friends={friends ?? []} />
 
-      <AvatarCustomizer
-        open={customizerOpen}
-        onClose={() => setCustomizerOpen(false)}
-        initialOptions={avatarOptions}
-      />
       <DreamworksWrapped open={wrappedOpen} onClose={() => setWrappedOpen(false)} />
     </motion.div>
   );

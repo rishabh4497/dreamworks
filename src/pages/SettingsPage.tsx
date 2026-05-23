@@ -266,6 +266,58 @@ export function SettingsPage() {
               <PaymentMethods t={t} />
             </Section>
 
+            <Section title="Privacy">
+              <Card divide>
+                <ToggleRow
+                  label="Hide my library from friends"
+                  description="Friends won't see what you own when they view your profile."
+                  checked={settings.hideLibraryFromFriends}
+                  onCheckedChange={(next) => updateSettings({ hideLibraryFromFriends: next })}
+                />
+                <ToggleRow
+                  label="Auto-install purchases"
+                  description="Start downloads automatically as soon as checkout completes."
+                  checked={settings.autoInstallOnPurchase}
+                  onCheckedChange={(next) => updateSettings({ autoInstallOnPurchase: next })}
+                />
+                <div className="flex items-center justify-between px-2 py-2">
+                  <div>
+                    <p className="text-[13px] font-medium text-foreground">Display currency</p>
+                    <p className="text-[11.5px] text-muted/65">
+                      Override the displayed currency symbol — amounts are shown without FX conversion.
+                    </p>
+                  </div>
+                  <select
+                    value={settings.currencyOverride ?? ""}
+                    onChange={(e) =>
+                      updateSettings({
+                        currencyOverride: (e.target.value || null) as
+                          | "USD"
+                          | "EUR"
+                          | "GBP"
+                          | "JPY"
+                          | "BRL"
+                          | "INR"
+                          | "CAD"
+                          | "AUD"
+                          | null,
+                      })
+                    }
+                    className="rounded-md border border-separator bg-input px-2 py-1 text-[12px] text-foreground"
+                  >
+                    <option value="">Region default</option>
+                    {(["USD", "EUR", "GBP", "JPY", "BRL", "INR", "CAD", "AUD"] as const).map(
+                      (c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </div>
+              </Card>
+            </Section>
+
             <Section title={t("Family library sharing")}>
               <Card>
                 <ToggleRow
@@ -709,6 +761,66 @@ export function SettingsPage() {
                   checked={settings.emailOnSale}
                   onCheckedChange={(next) => updateSettings({ emailOnSale: next })}
                 />
+                <ToggleRow
+                  label="Quiet hours"
+                  description={
+                    settings.quietHours.enabled
+                      ? `Pop-ups muted from ${settings.quietHours.startHour}:00 to ${settings.quietHours.endHour}:00`
+                      : "Suppress non-critical pop-ups during a nightly window"
+                  }
+                  checked={settings.quietHours.enabled}
+                  onCheckedChange={(next) =>
+                    updateSettings({
+                      quietHours: { ...settings.quietHours, enabled: next },
+                    })
+                  }
+                />
+                {settings.quietHours.enabled && (
+                  <div className="flex items-center gap-3 px-2 pb-2 pt-1 text-[12px] text-muted/80">
+                    <label className="flex items-center gap-1.5">
+                      Start
+                      <select
+                        value={settings.quietHours.startHour}
+                        onChange={(e) =>
+                          updateSettings({
+                            quietHours: {
+                              ...settings.quietHours,
+                              startHour: Number(e.target.value),
+                            },
+                          })
+                        }
+                        className="rounded-md border border-separator bg-input px-2 py-1 text-foreground"
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h}>
+                            {h.toString().padStart(2, "0")}:00
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      End
+                      <select
+                        value={settings.quietHours.endHour}
+                        onChange={(e) =>
+                          updateSettings({
+                            quietHours: {
+                              ...settings.quietHours,
+                              endHour: Number(e.target.value),
+                            },
+                          })
+                        }
+                        className="rounded-md border border-separator bg-input px-2 py-1 text-foreground"
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h}>
+                            {h.toString().padStart(2, "0")}:00
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
               </Card>
             </Section>
 
@@ -815,6 +927,7 @@ export function SettingsPage() {
 
             <Section title="Your data">
               <div className="grid gap-3 sm:grid-cols-2">
+                <LibraryExportCard />
                 <div className="rounded-xl border border-separator bg-card p-4">
                   <div className="flex items-center gap-2 text-foreground">
                     <Download className="h-4 w-4 text-cyan" />
@@ -1430,6 +1543,51 @@ function PaymentMethods({ t }: { t: Translator }) {
           {t("+ Add new payment method")}
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Library export card ─────────────────────────────────────────────────────
+// Pure client-side serialization — no backend round trip, no Firebase reads.
+import { Download as DownloadIcon } from "lucide-react";
+import { useGames } from "@/hooks/use-games";
+import { useLibraryStore } from "@/stores/library-store";
+import { exportLibraryJson, exportLibraryCsv } from "@/lib/library-export";
+
+function LibraryExportCard() {
+  const entries = useLibraryStore((s) => s.entries);
+  const { data: games } = useGames();
+  return (
+    <div className="rounded-xl border border-separator bg-card p-4">
+      <div className="flex items-center gap-2 text-foreground">
+        <DownloadIcon className="h-4 w-4 text-acid" />
+        <p className="text-[13px] font-semibold">Export library</p>
+      </div>
+      <p className="mt-2 text-[12px] leading-relaxed text-muted/65">
+        Download your owned games, playtime, and completion data as JSON or CSV. Runs entirely
+        on this device — no Firebase reads.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => exportLibraryJson(entries, games ?? [])}
+          disabled={entries.length === 0 || !games}
+          className="rounded-lg border border-separator bg-card px-3 py-2 text-[12px] font-medium text-foreground/85 hover:bg-card-active disabled:opacity-50"
+        >
+          JSON
+        </button>
+        <button
+          type="button"
+          onClick={() => exportLibraryCsv(entries, games ?? [])}
+          disabled={entries.length === 0 || !games}
+          className="rounded-lg border border-separator bg-card px-3 py-2 text-[12px] font-medium text-foreground/85 hover:bg-card-active disabled:opacity-50"
+        >
+          CSV
+        </button>
+        <span className="ml-auto self-center text-[11px] text-muted/60">
+          {entries.length} {entries.length === 1 ? "game" : "games"}
+        </span>
+      </div>
     </div>
   );
 }

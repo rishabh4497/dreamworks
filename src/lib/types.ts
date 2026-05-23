@@ -1270,6 +1270,14 @@ export interface ClientSettings {
   textureUpscalerNotifyMe: boolean;
   twoFactorEnabled: boolean;
   lastWishlistSyncAt: ISODate | null;
+  /** Auto-start downloads for purchased games immediately on checkout success. */
+  autoInstallOnPurchase: boolean;
+  /** Override the displayed currency (null = follow profile region). */
+  currencyOverride: Currency | null;
+  /** When true, friends do not see the user's library on their profile. */
+  hideLibraryFromFriends: boolean;
+  /** Local-time window during which non-critical popups are suppressed. */
+  quietHours: { enabled: boolean; startHour: number; endHour: number };
 }
 
 // ── Account-tab persisted entities ─────────────────────────────────────────

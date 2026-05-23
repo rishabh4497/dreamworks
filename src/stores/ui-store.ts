@@ -53,6 +53,25 @@ const DEFAULT_SETTINGS: ClientSettings = {
   textureUpscalerNotifyMe: false,
   twoFactorEnabled: true,
   lastWishlistSyncAt: null,
+  autoInstallOnPurchase: false,
+  currencyOverride: null,
+  hideLibraryFromFriends: false,
+  quietHours: { enabled: false, startHour: 22, endHour: 8 },
+};
+
+export type LibraryView = "grid" | "list";
+export type LibrarySort = "added" | "name" | "last-played" | "play-time" | "size";
+
+export interface LibraryViewPrefs {
+  view: LibraryView;
+  sort: LibrarySort;
+  filters: string[];
+}
+
+const DEFAULT_LIBRARY_VIEW_PREFS: LibraryViewPrefs = {
+  view: "grid",
+  sort: "added",
+  filters: [],
 };
 
 interface UiStore {
@@ -65,6 +84,9 @@ interface UiStore {
   setNotificationPref: (kind: NotificationKind, value: boolean) => void;
   settings: ClientSettings;
   updateSettings: (updates: Partial<ClientSettings>) => void;
+  /** Persisted default view/sort/filters for the library page. */
+  libraryViewPrefs: LibraryViewPrefs;
+  setLibraryViewPrefs: (prefs: Partial<LibraryViewPrefs>) => void;
 }
 
 interface RemoteUi {
@@ -125,6 +147,9 @@ export const useUiStore = create<UiStore>()(
             });
             return { settings };
           }),
+        libraryViewPrefs: { ...DEFAULT_LIBRARY_VIEW_PREFS },
+        setLibraryViewPrefs: (prefs) =>
+          set((s) => ({ libraryViewPrefs: { ...s.libraryViewPrefs, ...prefs } })),
       };
     },
     {
@@ -133,6 +158,7 @@ export const useUiStore = create<UiStore>()(
       partialize: (s) => ({
         notificationPrefs: s.notificationPrefs,
         settings: s.settings,
+        libraryViewPrefs: s.libraryViewPrefs,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
@@ -145,6 +171,10 @@ export const useUiStore = create<UiStore>()(
         state.settings = {
           ...DEFAULT_SETTINGS,
           ...state.settings,
+        };
+        state.libraryViewPrefs = {
+          ...DEFAULT_LIBRARY_VIEW_PREFS,
+          ...state.libraryViewPrefs,
         };
       },
     },

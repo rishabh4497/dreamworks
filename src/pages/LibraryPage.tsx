@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useGames } from "@/hooks/use-games";
 import { useLibraryStore } from "@/stores/library-store";
+import { useUiStore } from "@/stores/ui-store";
 import { useStartDownload } from "@/hooks/use-start-download";
 import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
@@ -78,12 +79,16 @@ export function LibraryPage() {
   const navigate = useNavigate();
   const { isDesktop } = usePlatform();
 
+  const libraryViewPrefs = useUiStore((s) => s.libraryViewPrefs);
+  const setLibraryViewPrefs = useUiStore((s) => s.setLibraryViewPrefs);
   const [addOpen, setAddOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<ViewMode>("grid");
-  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
+  const [view, setView] = useState<ViewMode>(libraryViewPrefs.view);
+  const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(
+    () => new Set(libraryViewPrefs.filters as FilterKey[]),
+  );
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [aiCollectionIds, setAiCollectionIds] = useState<string[] | null>(null);
@@ -164,8 +169,14 @@ export function LibraryPage() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      setLibraryViewPrefs({ filters: [...next] });
       return next;
     });
+  };
+
+  const handleSetView = (v: ViewMode) => {
+    setView(v);
+    setLibraryViewPrefs({ view: v });
   };
 
   const handlePlay = async (e: LibraryEntry, external?: boolean) => {
@@ -477,7 +488,7 @@ export function LibraryPage() {
         <div className="ml-auto inline-flex overflow-hidden rounded-xl border border-separator bg-card">
           <button
             type="button"
-            onClick={() => setView("grid")}
+            onClick={() => handleSetView("grid")}
             className={cn(
               "flex h-8 w-9 items-center justify-center text-muted transition-colors",
               view === "grid"
@@ -490,7 +501,7 @@ export function LibraryPage() {
           </button>
           <button
             type="button"
-            onClick={() => setView("list")}
+            onClick={() => handleSetView("list")}
             className={cn(
               "flex h-8 w-9 items-center justify-center text-muted transition-colors",
               view === "list"
