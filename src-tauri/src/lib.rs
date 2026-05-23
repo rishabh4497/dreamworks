@@ -902,13 +902,13 @@ async fn start_resource_monitor(
 
     let mut guard = state.handle.lock().expect("monitor handle poisoned");
     *guard = Some(handle);
-    ok(())
+    Ok(ok(()))
 }
 
 #[tauri::command]
 async fn stop_resource_monitor(
     state: tauri::State<'_, MonitorState>,
-) -> CommandResult<()> {
+) -> Result<CommandResult<()>, ()> {
     let handle = {
         let mut guard = state.handle.lock().expect("monitor handle poisoned");
         guard.take()
@@ -916,7 +916,7 @@ async fn stop_resource_monitor(
     if let Some(h) = handle {
         h.abort();
     }
-    ok(())
+    Ok(ok(()))
 }
 
 // ── Diagnostics: launcher scan report ──────────────────────────────────────

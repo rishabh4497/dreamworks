@@ -83,6 +83,8 @@ export function PublisherProfileEditor() {
   };
 
   const publicSlug = pub?.id ?? slugify(name);
+  const logoPath = publicSlug ? `dw_publishers/${publicSlug}/logo` : undefined;
+  const bannerPath = publicSlug ? `dw_publishers/${publicSlug}/banner` : undefined;
 
   return (
     <Card className="mx-auto max-w-3xl space-y-5 p-6">
@@ -141,8 +143,18 @@ export function PublisherProfileEditor() {
             className="min-h-24 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
           />
         </Field>
-        <ImageDropzone label="Publisher logo" value={logoUrl} onChange={setLogoUrl} />
-        <ImageDropzone label="Banner" value={bannerUrl} onChange={setBannerUrl} />
+        <ImageDropzone
+          label="Publisher logo"
+          value={logoUrl}
+          onChange={setLogoUrl}
+          storagePath={logoPath}
+        />
+        <ImageDropzone
+          label="Banner"
+          value={bannerUrl}
+          onChange={setBannerUrl}
+          storagePath={bannerPath}
+        />
         <Field label="Website" className="md:col-span-2">
           <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} />
         </Field>

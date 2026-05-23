@@ -2,6 +2,8 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   BarChart3,
+  Briefcase,
+  Building,
   Calendar,
   Globe,
   Heart,
@@ -9,7 +11,10 @@ import {
   Library,
   LogOut,
   Search,
+  ScrollText,
   Settings,
+  ShieldAlert,
+  ShieldCheck,
   ShoppingCart,
   Tag,
   TrendingUp,
@@ -66,6 +71,17 @@ export function Sidebar() {
     { to: ROUTES.developerPortal, label: "Developer Portal", icon: Package },
   ];
 
+  const isAdmin = profile?.role === "admin";
+  const adminNav: NavItem[] = [
+    { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck },
+    { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package },
+    { to: ROUTES.adminUsers, label: "Users", icon: User },
+    { to: ROUTES.adminContentModeration, label: "Content", icon: ShieldAlert },
+    { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase },
+    { to: ROUTES.adminStudios, label: "Studios", icon: Building },
+    { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText },
+  ];
+
   // Steam parity: the full Library experience and download queue are
   // desktop-only. Web users still have wishlist, cart, and profile.
   const youNav: NavItem[] = filterByPlatform(
@@ -105,6 +121,13 @@ export function Sidebar() {
 
         <p className={GROUP_LABEL}>Analytics</p>
         <NavGroup items={dbNav} currentPath={location.pathname} matchPrefix="/db" />
+
+        {isAdmin && (
+          <>
+            <p className={GROUP_LABEL}>Admin</p>
+            <NavGroup items={adminNav} currentPath={location.pathname} matchPrefix="/admin" />
+          </>
+        )}
 
         <p className={GROUP_LABEL}>Developer</p>
         <NavGroup items={devNav} currentPath={location.pathname} />
@@ -183,15 +206,19 @@ function NavGroup({
   return (
     <div className="flex flex-col gap-0.5">
       {items.map((item) => {
-        const isActive =
-          matchPrefix && item.label === "Top Charts"
-            ? currentPath.startsWith("/db/charts")
-            : currentPath === item.to;
+        let isActive: boolean;
+        if (matchPrefix === "/db" && item.label === "Top Charts") {
+          isActive = currentPath.startsWith("/db/charts");
+        } else if (matchPrefix && item.to !== matchPrefix && item.to.startsWith(matchPrefix)) {
+          isActive = currentPath === item.to || currentPath.startsWith(`${item.to}/`);
+        } else {
+          isActive = currentPath === item.to;
+        }
         return (
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === "/store" || item.to === "/db" || item.to === "/profile"}
+            end={item.to === "/store" || item.to === "/db" || item.to === "/profile" || item.to === "/admin"}
             className={({ isActive: rrIsActive }) =>
               cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium transition-all duration-150",

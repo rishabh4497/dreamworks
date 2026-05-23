@@ -272,21 +272,29 @@ export function StorePageEditor() {
       <Card className="space-y-4 p-4">
         <SectionTitle icon={ImageIcon} title="Media" />
         <div className="grid gap-3 md:grid-cols-2">
-          <ImageDropzone label="Cover" value={draft.coverUrl || ""} onChange={(v) => set("coverUrl", v)} />
+          <ImageDropzone
+            label="Cover"
+            value={draft.coverUrl || ""}
+            onChange={(v) => set("coverUrl", v)}
+            storagePath={`dw_apps/${appId}/cover`}
+          />
           <ImageDropzone
             label="Capsule"
             value={draft.capsuleUrl || ""}
             onChange={(v) => set("capsuleUrl", v)}
+            storagePath={`dw_apps/${appId}/capsule`}
           />
           <ImageDropzone
             label="Header"
             value={draft.headerUrl || ""}
             onChange={(v) => set("headerUrl", v)}
+            storagePath={`dw_apps/${appId}/header`}
             className="md:col-span-2"
           />
           <ScreenshotsZone
             value={screenshotsRaw}
             onChange={(value) => set("screenshots", parseScreenshots(value))}
+            storagePath={`dw_apps/${appId}/screenshots`}
             className="md:col-span-2"
           />
         </div>

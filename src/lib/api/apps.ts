@@ -170,7 +170,13 @@ export async function deleteApp(id: string): Promise<void> {
 }
 
 export async function submitAppForReview(id: string): Promise<App> {
-  return saveApp(id, { stage: "in-review", submittedAt: now() });
+  // Server-authoritative: validates checklist, creates an immutable submission
+  // record in dw_app_submissions, and transitions the app stage atomically.
+  const { submitAppForReviewCallable } = await import("./submissions");
+  await submitAppForReviewCallable(id);
+  const refreshed = await getApp(id);
+  if (!refreshed) throw new Error(`App "${id}" not found after submission.`);
+  return refreshed;
 }
 
 function youtubeIdFromUrl(url: string): string {
@@ -301,12 +307,14 @@ function ageRatingFor(label: string): GameDetail["ageRating"] {
 }
 
 export async function publishApp(id: string): Promise<App> {
-  const app = await getApp(id);
-  if (!app) throw new Error(`App "${id}" not found.`);
-  const detail = await appToGameDetail(app);
-  const gameRef = doc(getDb(), COLLECTIONS.games, detail.id);
-  await setDoc(gameRef, stripUndefined(detail), { merge: true });
-  return saveApp(id, { stage: "released" });
+  // Admin-only: copies the app into dw_games and sets stage="released" in a
+  // transaction. The callable validates the latest submission is "approved"
+  // before publishing. Developers can no longer self-publish.
+  const { publishApprovedAppCallable } = await import("./submissions");
+  await publishApprovedAppCallable(id);
+  const refreshed = await getApp(id);
+  if (!refreshed) throw new Error(`App "${id}" not found after publish.`);
+  return refreshed;
 }
 
 // Build/branch convenience reads (write paths live in app-builds.ts to keep

@@ -123,8 +123,18 @@ export function StudioProfileEditor() {
             className="min-h-24 w-full rounded-xl border border-separator bg-input px-3.5 py-2 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/30 focus:outline-none focus:ring-1 focus:ring-acid/15"
           />
         </Field>
-        <ImageDropzone label="Studio logo" value={logoUrl} onChange={setLogoUrl} />
-        <ImageDropzone label="Banner" value={bannerUrl} onChange={setBannerUrl} />
+        <ImageDropzone
+          label="Studio logo"
+          value={logoUrl}
+          onChange={setLogoUrl}
+          storagePath={logoPath}
+        />
+        <ImageDropzone
+          label="Banner"
+          value={bannerUrl}
+          onChange={setBannerUrl}
+          storagePath={bannerPath}
+        />
         <Field label="Website" className="md:col-span-2">
           <Input
             value={websiteUrl}

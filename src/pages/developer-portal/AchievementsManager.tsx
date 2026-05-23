@@ -59,7 +59,7 @@ export function AchievementsManager() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-[16px] font-semibold text-foreground">Achievements</h3>
-        <Button onClick={() => setEditing({ ...EMPTY })}>
+        <Button onClick={() => setEditing({ ...EMPTY, id: "ach-" + crypto.randomUUID() })}>
           <Plus className="h-4 w-4" />
           Add achievement
         </Button>
@@ -167,6 +167,10 @@ export function AchievementsManager() {
               label="Icon"
               value={editing.iconUrl}
               onChange={(value) => setEditing({ ...editing, iconUrl: value })}
+              storagePath={
+                editing.id ? `dw_apps/${appId}/achievements/${editing.id}/icon` : undefined
+              }
+              maxDim={256}
             />
             <Field label="Estimated global unlock %">
               <Input
