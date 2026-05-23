@@ -56,11 +56,7 @@ export function ThemeCustomizer() {
                 type="button"
                 key={theme.id}
                 onClick={() => {
-                  if (active && theme.id !== defaultThemeId) {
-                    setActiveThemeId(defaultThemeId);
-                  } else if (!active) {
-                    setActiveThemeId(theme.id);
-                  }
+                  setActiveThemeId(active ? "" : theme.id);
                 }}
                 aria-pressed={active}
                 className={cn(

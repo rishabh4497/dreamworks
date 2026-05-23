@@ -67,7 +67,11 @@ export function AppLayout() {
 
   useEffect(() => {
     if (typeof document === "undefined") return;
-    document.documentElement.setAttribute("data-app-theme", activeThemeId);
+    if (activeThemeId) {
+      document.documentElement.setAttribute("data-app-theme", activeThemeId);
+    } else {
+      document.documentElement.removeAttribute("data-app-theme");
+    }
   }, [activeThemeId]);
 
   useLayoutEffect(() => {
