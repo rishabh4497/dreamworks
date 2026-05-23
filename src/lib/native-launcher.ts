@@ -96,6 +96,37 @@ export interface SystemCapabilities {
   canScanLaunchers: boolean;
 }
 
+export interface StorageDriveNative {
+  id: string;
+  name: string;
+  mountPoint: string;
+  totalBytes: number;
+  availableBytes: number;
+  usedBytes: number;
+  fileSystem: string;
+  isRemovable: boolean;
+}
+
+export interface CleanupScanEntry {
+  gameId: GameId;
+  installPath: string;
+}
+
+export interface CleanupCandidateNative {
+  id: string;
+  label: string;
+  source: string;
+  path: string;
+  sizeBytes: number;
+  kind: string;
+}
+
+export interface DeleteCachePathResult {
+  path: string;
+  deletedBytes: number;
+  deletedAt: string;
+}
+
 async function invokeCommand<T>(
   command: string,
   args?: Record<string, unknown>,
@@ -154,6 +185,22 @@ export function openInstallFolderNative(request: OpenInstallFolderRequest) {
 
 export function readSystemCapabilitiesNative() {
   return invokeCommand<SystemCapabilities>("read_system_capabilities");
+}
+
+export function listStorageDrivesNative() {
+  return invokeCommand<StorageDriveNative[]>("list_storage_drives");
+}
+
+export function scanCleanupCandidatesNative(installPaths: CleanupScanEntry[]) {
+  return invokeCommand<CleanupCandidateNative[]>("scan_cleanup_candidates", {
+    request: { installPaths },
+  });
+}
+
+export function deleteCachePathNative(path: string) {
+  return invokeCommand<DeleteCachePathResult>("delete_cache_path", {
+    request: { path },
+  });
 }
 
 export function manifestFromNativeDetection(

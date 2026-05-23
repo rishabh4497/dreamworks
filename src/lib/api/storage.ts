@@ -1,11 +1,22 @@
-import type { GameId, LibraryEntry } from "@/lib/types";
+import type { CommandResult, GameId } from "@/lib/types";
+import {
+  deleteCachePathNative,
+  listStorageDrivesNative,
+  scanCleanupCandidatesNative,
+  type CleanupCandidateNative,
+  type CleanupScanEntry,
+  type DeleteCachePathResult,
+} from "@/lib/native-launcher";
 
 export interface StorageDrive {
   id: string;
   name: string;
   rootPath: string;
   totalBytes: number;
-  reservedBytes: number;
+  availableBytes: number;
+  usedBytes: number;
+  fileSystem?: string;
+  isRemovable?: boolean;
 }
 
 export interface CleanupCandidate {
@@ -13,33 +24,53 @@ export interface CleanupCandidate {
   driveId: string;
   label: string;
   source: string;
+  path: string;
   sizeBytes: number;
-  selected: boolean;
+  kind: string;
 }
 
-export const STORAGE_DRIVES: StorageDrive[] = [
-  {
-    id: "main",
-    name: "Main SSD",
-    rootPath: "/Games/Dreamworks",
-    totalBytes: 1_000_000_000_000,
-    reservedBytes: 420_000_000_000,
-  },
-  {
-    id: "vault",
-    name: "Vault SSD",
-    rootPath: "/Volumes/Vault/Dreamworks",
-    totalBytes: 2_000_000_000_000,
-    reservedBytes: 850_000_000_000,
-  },
-  {
-    id: "archive",
-    name: "Archive HDD",
-    rootPath: "/Volumes/Archive/Dreamworks",
-    totalBytes: 4_000_000_000_000,
-    reservedBytes: 2_150_000_000_000,
-  },
-];
+export async function fetchStorageDrives(): Promise<CommandResult<StorageDrive[]>> {
+  const native = await listStorageDrivesNative();
+  if (!native.ok) return { ok: false, error: native.error };
+  const drives: StorageDrive[] = native.data.map((d) => ({
+    id: d.id,
+    name: d.name,
+    rootPath: d.mountPoint,
+    totalBytes: d.totalBytes,
+    availableBytes: d.availableBytes,
+    usedBytes: d.usedBytes,
+    fileSystem: d.fileSystem,
+    isRemovable: d.isRemovable,
+  }));
+  return { ok: true, data: drives };
+}
+
+export async function fetchCleanupCandidates(
+  installPaths: CleanupScanEntry[],
+  drives: StorageDrive[],
+): Promise<CommandResult<CleanupCandidate[]>> {
+  if (installPaths.length === 0) {
+    return { ok: true, data: [] };
+  }
+  const native = await scanCleanupCandidatesNative(installPaths);
+  if (!native.ok) return { ok: false, error: native.error };
+  const candidates = native.data.map((c: CleanupCandidateNative) => ({
+    id: c.id,
+    driveId: resolveDriveForPath(c.path, drives).id,
+    label: c.label,
+    source: c.source,
+    path: c.path,
+    sizeBytes: c.sizeBytes,
+    kind: c.kind,
+  }));
+  return { ok: true, data: candidates };
+}
+
+export async function deleteCacheCandidate(
+  path: string,
+): Promise<CommandResult<DeleteCachePathResult>> {
+  return deleteCachePathNative(path);
+}
 
 export function installPathForGame(
   gameId: GameId,
@@ -49,60 +80,34 @@ export function installPathForGame(
   return installPath ?? `${fallbackRoot}/${gameId}`;
 }
 
-export function resolveDriveForPath(path: string) {
-  return (
-    STORAGE_DRIVES.find((drive) => path.startsWith(drive.rootPath)) ??
-    STORAGE_DRIVES[0]
-  );
+export function resolveDriveForPath(
+  path: string,
+  drives: StorageDrive[],
+): StorageDrive {
+  const fallback: StorageDrive = {
+    id: "unknown",
+    name: "Unknown drive",
+    rootPath: "",
+    totalBytes: 0,
+    availableBytes: 0,
+    usedBytes: 0,
+  };
+  if (drives.length === 0) return fallback;
+  // Pick the drive whose mount point is the longest prefix of the path.
+  const match = drives
+    .filter((drive) => drive.rootPath && path.startsWith(drive.rootPath))
+    .sort((a, b) => b.rootPath.length - a.rootPath.length)[0];
+  return match ?? drives[0];
 }
 
-export function buildMovedInstallPath(gameId: GameId, driveId: string) {
-  const drive = STORAGE_DRIVES.find((candidate) => candidate.id === driveId) ?? STORAGE_DRIVES[0];
-  return `${drive.rootPath}/${gameId}`;
-}
-
-export function buildCleanupCandidates(
-  installedEntries: LibraryEntry[],
-  getInstallPath: (entry: LibraryEntry) => string,
-): CleanupCandidate[] {
-  const candidates: CleanupCandidate[] = [];
-
-  installedEntries.forEach((entry, index) => {
-    const drive = resolveDriveForPath(getInstallPath(entry));
-    const patchBytes = Math.min(2_800_000_000, Math.round(entry.sizeBytes * 0.08));
-    const shaderBytes = Math.min(1_400_000_000, Math.round(entry.sizeBytes * 0.035));
-
-    if (patchBytes > 0) {
-      candidates.push({
-        id: `${entry.gameId}-patches`,
-        driveId: drive.id,
-        label: "Old patch chunks",
-        source: entry.gameId,
-        sizeBytes: patchBytes,
-        selected: index % 2 === 0,
-      });
-    }
-
-    if (shaderBytes > 0) {
-      candidates.push({
-        id: `${entry.gameId}-shader-cache`,
-        driveId: drive.id,
-        label: "Shader cache",
-        source: entry.gameId,
-        sizeBytes: shaderBytes,
-        selected: index % 3 !== 0,
-      });
-    }
-  });
-
-  candidates.push({
-    id: "launcher-crash-dumps",
-    driveId: "main",
-    label: "Crash dumps",
-    source: "Launcher diagnostics",
-    sizeBytes: 640_000_000,
-    selected: true,
-  });
-
-  return candidates.sort((a, b) => b.sizeBytes - a.sizeBytes);
+export function buildMovedInstallPath(
+  gameId: GameId,
+  driveId: string,
+  drives: StorageDrive[],
+  installSubdir = "Dreamworks",
+) {
+  const drive = drives.find((d) => d.id === driveId) ?? drives[0];
+  if (!drive) return `/${installSubdir}/${gameId}`;
+  const base = drive.rootPath.replace(/\/+$/, "");
+  return `${base}/${installSubdir}/${gameId}`;
 }
