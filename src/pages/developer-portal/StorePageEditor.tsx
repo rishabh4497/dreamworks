@@ -448,19 +448,21 @@ function TrailersEditor({
   posterFallback: string;
 }) {
   const [url, setUrl] = useState("");
-  const [uploadKey, setUploadKey] = useState(0); // remounts VideoDropzone after each upload
+  const [pendingTrailerId, setPendingTrailerId] = useState(() => crypto.randomUUID());
+  const pendingPath = appId ? `dw_apps/${appId}/trailers/${pendingTrailerId}.mp4` : undefined;
 
   const addUploadedVideo = (videoUrl: string) => {
     if (!videoUrl) return;
-    const id = "trailer-" + crypto.randomUUID();
     const next: Trailer = {
       url: videoUrl,
       posterUrl: posterFallback,
       provider: "self",
-      id,
+      id: pendingTrailerId,
     };
     onChange([...trailers, next]);
-    setUploadKey((k) => k + 1); // reset the dropzone so the user can upload another
+    // Rotate the id so the next upload lands at a fresh storage path; also
+    // resets the VideoDropzone's preview because it's keyed by the id.
+    setPendingTrailerId(crypto.randomUUID());
   };
 
   return (
@@ -513,15 +515,11 @@ function TrailersEditor({
           Upload your own video
         </p>
         <VideoDropzone
-          key={uploadKey}
+          key={pendingTrailerId}
           label=""
           value=""
           onChange={addUploadedVideo}
-          storagePath={
-            appId
-              ? `dw_apps/${appId}/trailers/trailer-${crypto.randomUUID()}.mp4`
-              : undefined
-          }
+          storagePath={pendingPath}
         />
       </div>
 

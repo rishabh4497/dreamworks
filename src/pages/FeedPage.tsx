@@ -25,6 +25,8 @@ import { useFeedStore } from "@/stores/feed-store";
 import { useGames } from "@/hooks/use-games";
 import { useNews } from "@/hooks/use-news";
 import { useRecentThreads } from "@/hooks/use-forums";
+import { useFollowSuggestions } from "@/hooks/use-follow-suggestions";
+import { usePostImagePresets } from "@/hooks/use-post-image-presets";
 import { UserAvatar } from "@/components/avatar/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,7 +34,6 @@ import { ThreadRow } from "@/components/forums/ThreadRow";
 import { LfgBoard } from "@/components/social/LfgBoard";
 import { ROUTES } from "@/lib/routes";
 import { cn, relativeDate, formatDate } from "@/lib/utils";
-import { PRESET_POST_IMAGES } from "@/lib/mock/feed";
 
 // Simple custom component to render user avatars easily
 function ProfileAvatar({
@@ -111,6 +112,8 @@ export function FeedPage() {
   const { data: games = [] } = useGames();
   const { data: news = [], isLoading: newsLoading } = useNews();
   const { data: threads = [], isLoading: threadsLoading } = useRecentThreads();
+  const { data: followSuggestions = [] } = useFollowSuggestions();
+  const { data: postImagePresets = [] } = usePostImagePresets();
 
   // Component UI States
   const [composerText, setComposerText] = useState("");
@@ -381,7 +384,7 @@ export function FeedPage() {
                             Select Gaming Screenshot to Share
                           </p>
                           <div className="grid grid-cols-5 gap-2">
-                            {PRESET_POST_IMAGES.map((img) => (
+                            {postImagePresets.map((img) => (
                               <button
                                 key={img.label}
                                 type="button"
@@ -834,12 +837,7 @@ export function FeedPage() {
               </h3>
             </div>
             <div className="space-y-3">
-              {[
-                { name: "Rockstar Games", handle: "@rockstargames", avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=rockstar" },
-                { name: "FromSoftware", handle: "@fromsoftware", avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=fromsoftware" },
-                { name: "Hades II Game", handle: "@hadesgame", avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=hades" },
-                { name: "Sarah (Sister)", handle: "@sarah", avatar: "https://picsum.photos/seed/sarah/96/96" }
-              ].map((gamer) => {
+              {followSuggestions.map((gamer) => {
                 const isFollowing = following[gamer.handle];
                 return (
                   <div key={gamer.handle} className="flex items-center justify-between gap-2">

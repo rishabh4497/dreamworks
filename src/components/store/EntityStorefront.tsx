@@ -124,7 +124,25 @@ export function EntityStorefront({ kind, name, games, isLoading }: EntityStorefr
       {/* ── Cinematic hero ───────────────────────────────────────────────── */}
       <section className="relative mb-8 overflow-hidden rounded-2xl border border-separator">
         <div className="relative h-56 sm:h-72">
-          {dbProfile?.bannerUrl ? (
+          {dbProfile?.promoVideoUrl ? (
+            <>
+              <video
+                src={dbProfile.promoVideoUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                poster={dbProfile.bannerUrl}
+                className="absolute inset-0 h-full w-full object-cover opacity-90"
+              />
+              <div
+                className="absolute inset-0"
+                style={{ background: brandWashBackground(wash) }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-background/70 via-transparent to-background/20" />
+            </>
+          ) : dbProfile?.bannerUrl ? (
             <>
               <img
                 src={dbProfile.bannerUrl}

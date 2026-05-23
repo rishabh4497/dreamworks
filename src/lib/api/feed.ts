@@ -1,5 +1,6 @@
-import type { GameId, SocialPost, SocialReply } from "../types";
-import { SEED_POSTS } from "../mock/feed";
+import type { GameId, PostImagePreset, SocialPost, SocialReply } from "../types";
+import { PRESET_POST_IMAGES, SEED_POSTS } from "../mock/feed";
+import { wait } from "./_delay";
 import { getDb } from "../firebase";
 import {
   arrayRemove,
@@ -167,4 +168,9 @@ export async function addReply(input: AddReplyInput): Promise<SocialReply> {
   const ref = doc(getDb(), FEED_COL, input.postId);
   await updateDoc(ref, { replies: arrayUnion(reply) });
   return reply;
+}
+
+export async function listPostImagePresets(): Promise<PostImagePreset[]> {
+  await wait();
+  return PRESET_POST_IMAGES;
 }

@@ -27,6 +27,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePlatform } from "@/hooks/use-platform";
 import { useUiStore } from "@/stores/ui-store";
 import { toast } from "@/stores/toast-store";
+import { pickFolder } from "@/lib/platform";
 import type {
   NotificationKind,
   StartupLocation,
@@ -150,8 +151,9 @@ export function SettingsPage() {
     }, 1200);
   };
 
-  const handleBrowseFolder = () => {
-    toast.info("Folder picker opened (mock)");
+  const handleBrowseFolder = async () => {
+    const picked = await pickFolder("Choose install folder");
+    if (picked) updateSettings({ installPath: picked });
   };
 
   const handleExportData = () => {
@@ -641,24 +643,6 @@ export function SettingsPage() {
               />
             </Section>
 
-            <Section title="Download region">
-              <FieldLabel>Choose nearest server</FieldLabel>
-              <div className="flex items-center gap-2 rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground">
-                <Globe className="h-4 w-4 shrink-0 text-muted/60" />
-                <select
-                  value={settings.downloadRegion}
-                  onChange={(e) => updateSettings({ downloadRegion: e.target.value })}
-                  className="w-full bg-transparent focus:outline-none"
-                >
-                  <option value="US East (New York)">US East (New York)</option>
-                  <option value="US West (San Jose)">US West (San Jose)</option>
-                  <option value="Europe West (Frankfurt)">Europe West (Frankfurt)</option>
-                  <option value="Asia East (Tokyo)">Asia East (Tokyo)</option>
-                  <option value="South America (São Paulo)">South America (São Paulo)</option>
-                </select>
-              </div>
-            </Section>
-
             <Section title="Default installation path">
               <div className="flex gap-2">
                 <div className="flex flex-1 items-center gap-2 rounded-xl border border-separator bg-input px-3 py-2 text-[13px] text-foreground">
@@ -678,19 +662,6 @@ export function SettingsPage() {
                   Browse
                 </button>
               </div>
-            </Section>
-
-            <Section title="Background activities">
-              <Card>
-                <ToggleRow
-                  label="Allow downloads during gameplay"
-                  description="Downloading games in background can degrade game ping/performance"
-                  checked={settings.allowDownloadsDuringGameplay}
-                  onCheckedChange={(next) =>
-                    updateSettings({ allowDownloadsDuringGameplay: next })
-                  }
-                />
-              </Card>
             </Section>
 
             <Section title="Dreamworks cloud saves">

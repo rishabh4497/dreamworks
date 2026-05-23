@@ -22,7 +22,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ToggleRow } from "@/components/ui/toggle-row";
 import { useDownloadStore } from "@/stores/download-store";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -46,9 +45,9 @@ import {
   writeBackupManifest,
 } from "@/lib/api/downloads";
 import { isDesktop, pathExistsSafe } from "@/lib/platform";
-import { getGameById } from "@/lib/mock";
+import { useGames } from "@/hooks/use-games";
 import { cn, formatBytes, relativeDate } from "@/lib/utils";
-import type { DownloadLimitOption, DownloadStatus, DownloadTask, GameId, LibraryEntry } from "@/lib/types";
+import type { DownloadLimitOption, DownloadStatus, DownloadTask, Game, GameId, LibraryEntry } from "@/lib/types";
 
 const ENGINE_SIZE_BYTES = 4_500_000_000;
 
@@ -58,14 +57,6 @@ const LIMIT_OPTIONS: Array<{ value: DownloadLimitOption; label: string }> = [
   { value: "25", label: "25 MB/s" },
   { value: "50", label: "50 MB/s" },
   { value: "100", label: "100 MB/s" },
-];
-
-const REGION_OPTIONS = [
-  "US East (New York)",
-  "US West (San Jose)",
-  "Europe West (Frankfurt)",
-  "Asia East (Tokyo)",
-  "South America (São Paulo)",
 ];
 
 interface BackupManifest {
@@ -681,45 +672,29 @@ export function DownloadsPage() {
 
               <label className="block">
                 <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-muted/45">
-                  Region
-                </span>
-                <div className="flex h-9 items-center gap-2 rounded-lg border border-separator bg-input px-3">
-                  <Server className="h-3.5 w-3.5 shrink-0 text-muted/45" />
-                  <select
-                    value={settings.downloadRegion}
-                    onChange={(e) => updateSettings({ downloadRegion: e.target.value })}
-                    className="w-full bg-transparent text-[12px] text-foreground focus:outline-none"
-                  >
-                    {REGION_OPTIONS.map((region) => (
-                      <option key={region} value={region}>
-                        {region}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </label>
-
-              <label className="block">
-                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-widest text-muted/45">
                   Install folder
                 </span>
-                <Input
-                  value={settings.installPath}
-                  onChange={(e) => updateSettings({ installPath: e.target.value })}
-                  className="h-9 rounded-lg text-[12px]"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={settings.installPath}
+                    onChange={(e) => updateSettings({ installPath: e.target.value })}
+                    className="h-9 flex-1 rounded-lg text-[12px]"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={async () => {
+                      const picked = await pickFolder("Choose install folder");
+                      if (picked) updateSettings({ installPath: picked });
+                    }}
+                    disabled={!desktop}
+                    title={desktop ? "Browse folder" : "Desktop only"}
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Browse
+                  </Button>
+                </div>
               </label>
-
-              <div className="rounded-lg bg-card-active/35 px-3 py-1">
-                <ToggleRow
-                  label="Downloads during gameplay"
-                  description="Throttle-safe background transfers"
-                  checked={settings.allowDownloadsDuringGameplay}
-                  onCheckedChange={(next) =>
-                    updateSettings({ allowDownloadsDuringGameplay: next })
-                  }
-                />
-              </div>
             </div>
           </section>
 
