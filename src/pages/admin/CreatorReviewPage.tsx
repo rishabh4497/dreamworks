@@ -281,83 +281,129 @@ export function CreatorReviewPage({ type }: CreatorReviewPageProps) {
                     </span>
                   </p>
                 </div>
-                <Link
-                  to={
-                    type === "publisher"
-                      ? ROUTES.publisher(selected.id)
-                      : ROUTES.developer(selected.id)
-                  }
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-separator bg-card px-2.5 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
-                  title="Open public profile"
-                >
-                  Public
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {!editing && (
+                    <button
+                      type="button"
+                      onClick={startEdit}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-separator bg-card px-2.5 text-[12px] font-medium text-foreground/85 hover:bg-card-active"
+                      title="Edit profile fields"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </button>
+                  )}
+                  <Link
+                    to={
+                      type === "publisher"
+                        ? ROUTES.publisher(selected.id)
+                        : ROUTES.developer(selected.id)
+                    }
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-separator bg-card px-2.5 text-[12px] font-medium text-muted hover:bg-card-active hover:text-foreground"
+                    title="Open public profile"
+                  >
+                    Public
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
 
-              {selected.about && (
-                <section className="mb-4">
-                  <h4 className="mb-1 text-[12px] font-semibold uppercase tracking-widest text-muted/55">
-                    About
-                  </h4>
-                  <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground/85">
-                    {selected.about}
-                  </p>
-                </section>
+              {editing ? (
+                <EditForm
+                  draft={draft}
+                  onChange={setDraft}
+                  onChangeSocial={patchSocial}
+                />
+              ) : (
+                <>
+                  {selected.about && (
+                    <section className="mb-4">
+                      <h4 className="mb-1 text-[12px] font-semibold uppercase tracking-widest text-muted/55">
+                        About
+                      </h4>
+                      <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-foreground/85">
+                        {selected.about}
+                      </p>
+                    </section>
+                  )}
+
+                  <section className="mb-4 grid gap-2 sm:grid-cols-2">
+                    {selected.websiteUrl && (
+                      <button
+                        type="button"
+                        onClick={() => openExternal(selected.websiteUrl!)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-separator bg-card px-3 py-2 text-[12px] text-foreground/85 hover:bg-card-active"
+                      >
+                        <Globe className="h-3.5 w-3.5 text-muted/65" />
+                        <span className="truncate">{selected.websiteUrl}</span>
+                        <ExternalLink className="ml-auto h-3 w-3 opacity-60" />
+                      </button>
+                    )}
+                    {selected.brandColor && (
+                      <div className="inline-flex items-center gap-2 rounded-lg border border-separator bg-card px-3 py-2 text-[12px] text-muted/85">
+                        <span
+                          className="h-3.5 w-3.5 rounded border border-separator"
+                          style={{ background: selected.brandColor }}
+                        />
+                        <span className="font-mono">{selected.brandColor}</span>
+                      </div>
+                    )}
+                  </section>
+                </>
               )}
 
-              <section className="mb-4 grid gap-2 sm:grid-cols-2">
-                {selected.websiteUrl && (
-                  <button
-                    type="button"
-                    onClick={() => openExternal(selected.websiteUrl!)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-separator bg-card px-3 py-2 text-[12px] text-foreground/85 hover:bg-card-active"
+              {editing ? (
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-separator/50 pt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={cancelEdit}
+                    disabled={updateMutation.isPending}
                   >
-                    <Globe className="h-3.5 w-3.5 text-muted/65" />
-                    <span className="truncate">{selected.websiteUrl}</span>
-                    <ExternalLink className="ml-auto h-3 w-3 opacity-60" />
-                  </button>
-                )}
-                {selected.brandColor && (
-                  <div className="inline-flex items-center gap-2 rounded-lg border border-separator bg-card px-3 py-2 text-[12px] text-muted/85">
-                    <span
-                      className="h-3.5 w-3.5 rounded border border-separator"
-                      style={{ background: selected.brandColor }}
-                    />
-                    <span className="font-mono">{selected.brandColor}</span>
-                  </div>
-                )}
-              </section>
-
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-separator/50 pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStatus("unverified")}
-                  disabled={setVerification.isPending || statusOf(selected) === "unverified"}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Reset
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setStatus("rejected")}
-                  disabled={setVerification.isPending || statusOf(selected) === "rejected"}
-                >
-                  <XCircle className="h-3.5 w-3.5" />
-                  Reject
-                </Button>
-                <Button
-                  variant="success"
-                  size="sm"
-                  onClick={() => setStatus("approved")}
-                  disabled={setVerification.isPending || statusOf(selected) === "approved"}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Approve
-                </Button>
-              </div>
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={saveEdit}
+                    disabled={updateMutation.isPending}
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    {updateMutation.isPending ? "Saving…" : "Save changes"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-separator/50 pt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setStatus("unverified")}
+                    disabled={setVerification.isPending || statusOf(selected) === "unverified"}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setStatus("rejected")}
+                    disabled={setVerification.isPending || statusOf(selected) === "rejected"}
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                    Reject
+                  </Button>
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => setStatus("approved")}
+                    disabled={setVerification.isPending || statusOf(selected) === "approved"}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Approve
+                  </Button>
+                </div>
+              )}
             </Card>
           ) : (
             <Card className="p-6 text-center text-[13px] text-muted/65">
@@ -408,6 +454,134 @@ function CreatorRow({
         <p className="truncate font-mono text-[11px] text-muted/55">{creator.id}</p>
       </div>
     </button>
+  );
+}
+
+function EditForm({
+  draft,
+  onChange,
+  onChangeSocial,
+}: {
+  draft: CreatorPatch;
+  onChange: (next: CreatorPatch) => void;
+  onChangeSocial: (key: keyof CreatorSocialLinks, value: string) => void;
+}) {
+  const set = <K extends keyof CreatorPatch>(key: K, value: CreatorPatch[K]) => {
+    onChange({ ...draft, [key]: value });
+  };
+
+  return (
+    <div className="mb-4 space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Display name">
+          <input
+            type="text"
+            value={draft.name ?? ""}
+            onChange={(e) => set("name", e.target.value)}
+            className={INPUT_CLASS}
+          />
+        </Field>
+        <Field label="Brand color">
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              value={draft.brandColor || "#000000"}
+              onChange={(e) => set("brandColor", e.target.value)}
+              className="h-9 w-12 shrink-0 cursor-pointer rounded-lg border border-separator bg-input"
+            />
+            <input
+              type="text"
+              value={draft.brandColor ?? ""}
+              onChange={(e) => set("brandColor", e.target.value)}
+              placeholder="#000000"
+              className={cn(INPUT_CLASS, "font-mono")}
+            />
+          </div>
+        </Field>
+      </div>
+
+      <Field label="Tagline">
+        <input
+          type="text"
+          value={draft.tagline ?? ""}
+          onChange={(e) => set("tagline", e.target.value)}
+          className={INPUT_CLASS}
+        />
+      </Field>
+
+      <Field label="About">
+        <textarea
+          value={draft.about ?? ""}
+          onChange={(e) => set("about", e.target.value)}
+          rows={4}
+          className={cn(INPUT_CLASS, "min-h-24 resize-y leading-relaxed")}
+        />
+      </Field>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Logo URL">
+          <input
+            type="url"
+            value={draft.logoUrl ?? ""}
+            onChange={(e) => set("logoUrl", e.target.value)}
+            placeholder="https://…"
+            className={INPUT_CLASS}
+          />
+        </Field>
+        <Field label="Banner URL">
+          <input
+            type="url"
+            value={draft.bannerUrl ?? ""}
+            onChange={(e) => set("bannerUrl", e.target.value)}
+            placeholder="https://…"
+            className={INPUT_CLASS}
+          />
+        </Field>
+      </div>
+
+      <Field label="Website URL">
+        <input
+          type="url"
+          value={draft.websiteUrl ?? ""}
+          onChange={(e) => set("websiteUrl", e.target.value)}
+          placeholder="https://…"
+          className={INPUT_CLASS}
+        />
+      </Field>
+
+      <fieldset className="space-y-2 rounded-xl border border-separator bg-card-active/30 p-3">
+        <legend className="px-1 text-[11px] font-semibold uppercase tracking-widest text-muted/55">
+          Social links
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(["twitter", "discord", "youtube", "twitch"] as const).map((key) => (
+            <Field key={key} label={key}>
+              <input
+                type="url"
+                value={draft.socialLinks?.[key] ?? ""}
+                onChange={(e) => onChangeSocial(key, e.target.value)}
+                placeholder={`https://${key}.com/…`}
+                className={INPUT_CLASS}
+              />
+            </Field>
+          ))}
+        </div>
+      </fieldset>
+    </div>
+  );
+}
+
+const INPUT_CLASS =
+  "h-9 w-full rounded-lg border border-separator bg-input px-3 text-[13px] text-foreground placeholder:text-muted/40 focus:border-acid/40 focus:outline-none focus:ring-1 focus:ring-acid/15";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1">
+      <span className="block text-[11px] font-medium uppercase tracking-widest text-muted/55">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
 
