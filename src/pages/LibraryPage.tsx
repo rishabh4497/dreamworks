@@ -36,6 +36,8 @@ import { usePlatform } from "@/hooks/use-platform";
 import { launchGameNative } from "@/lib/native-launcher";
 import { UniversalPhotoGallery, LocalCoopMatchmaker, InteractiveDigitalManuals, AutomatedModProfiles } from "@/components/features/UserFeatures";
 import { AiDynamicPatchNotes } from "@/components/features/AiFeatures";
+import { LibraryAutoOrganizer } from "@/components/library/LibraryAutoOrganizer";
+import { CrossLauncherSearch } from "@/components/library/CrossLauncherSearch";
 
 const LAUNCHER_LABEL: Record<LauncherSource, string> = {
   dreamworks: "Dreamworks",
@@ -83,6 +85,8 @@ export function LibraryPage() {
   const [activeFilters, setActiveFilters] = useState<Set<FilterKey>>(new Set());
   const [activeCollection, setActiveCollection] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [aiCollectionIds, setAiCollectionIds] = useState<string[] | null>(null);
+  const [aiCollectionName, setAiCollectionName] = useState<string | null>(null);
 
   // ─── Derived data ──────────────────────────────────────────────────────
   const gameById = useMemo(() => {
@@ -135,6 +139,7 @@ export function LibraryPage() {
       ) {
         return false;
       }
+      if (aiCollectionIds && !aiCollectionIds.includes(e.gameId)) return false;
       if (activeCollection) {
         const col = collections?.find((c) => c.id === activeCollection);
         if (!col || !col.gameIds.includes(e.gameId)) return false;
@@ -150,7 +155,7 @@ export function LibraryPage() {
       }
       return true;
     });
-  }, [entries, gameById, search, activeFilters, activeCollection, collections]);
+  }, [entries, gameById, search, activeFilters, activeCollection, collections, aiCollectionIds]);
 
   // ─── Handlers ──────────────────────────────────────────────────────────
   const toggleFilter = (key: FilterKey) => {
@@ -262,6 +267,32 @@ export function LibraryPage() {
         <ModManager />
       </section>
       <WishlistSync />
+      <CrossLauncherSearch />
+      <LibraryAutoOrganizer
+        onPickCollection={(ids, name) => {
+          setAiCollectionIds(ids);
+          setAiCollectionName(name);
+          setActiveCollection(null);
+        }}
+      />
+      {aiCollectionIds && aiCollectionName && (
+        <section className="flex items-center justify-between rounded-xl border border-acid/30 bg-acid/5 px-3 py-2">
+          <p className="text-[12px] text-foreground/85">
+            Filtering by AI collection ·{" "}
+            <span className="font-semibold text-acid">{aiCollectionName}</span> · {aiCollectionIds.length} games
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setAiCollectionIds(null);
+              setAiCollectionName(null);
+            }}
+            className="text-[11px] text-muted/80 underline-offset-2 hover:text-foreground/80 hover:underline"
+          >
+            Clear
+          </button>
+        </section>
+      )}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <UniversalPhotoGallery />
         <LocalCoopMatchmaker />

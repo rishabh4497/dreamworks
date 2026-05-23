@@ -163,7 +163,7 @@ export function AlertSettings({ gameId, gameName, open, onClose }: AlertSettings
                 rows={2}
                 value={smartRuleInput}
                 onChange={(e) => setSmartRuleInput(e.target.value)}
-                placeholder='e.g. "below $30 OR 60% off, but only if it hasn\'t been on sale in 90 days"'
+                placeholder={`e.g. "below $30 OR 60% off, but only if it hasn't been on sale in 90 days"`}
                 className="w-full rounded-lg border border-separator bg-input px-2.5 py-1.5 text-[12px] text-foreground placeholder:text-muted/50 focus:outline-none focus:ring-1 focus:ring-acid/40"
               />
               <p className="mt-1 text-[10px] text-muted/60">

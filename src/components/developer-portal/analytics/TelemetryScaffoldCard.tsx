@@ -1,30 +1,27 @@
-import { Activity, AlertOctagon, Bug, Cpu } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Bug,
+  Clock,
+  Cpu,
+  type LucideIcon,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useTelemetryScaffold, resolveLabel } from "@/hooks/use-config";
 
-const ITEMS = [
-  {
-    icon: Activity,
-    label: "Session length distribution",
-    description: "p50 / p95 / p99 session length, segmented by platform and region.",
-  },
-  {
-    icon: Cpu,
-    label: "Hardware mix",
-    description: "GPU, CPU, RAM, and OS breakdown of your active player base.",
-  },
-  {
-    icon: Bug,
-    label: "Crash dumps",
-    description: "Grouped by stack signature, with first/last seen and build version.",
-  },
-  {
-    icon: AlertOctagon,
-    label: "ANR / freeze rate",
-    description: "Frames-dropped and main-thread stall events per session.",
-  },
-] as const;
+// Lucide icon registry. The config doc carries `meta.icon` as a kebab-case
+// name; we map it to the actual component here so the bundle ships only the
+// icons we reference.
+const ICONS: Record<string, LucideIcon> = {
+  clock: Clock,
+  cpu: Cpu,
+  "alert-triangle": AlertTriangle,
+  activity: Activity,
+  bug: Bug,
+};
 
 export function TelemetryScaffoldCard() {
+  const { data: items = [] } = useTelemetryScaffold();
   return (
     <Card className="p-5">
       <header className="mb-4">
@@ -35,18 +32,30 @@ export function TelemetryScaffoldCard() {
         </p>
       </header>
       <div className="grid gap-3 sm:grid-cols-2">
-        {ITEMS.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-xl border border-dashed border-separator p-4"
-          >
-            <div className="flex items-center gap-2">
-              <item.icon className="h-4 w-4 text-muted/60" />
-              <span className="text-[12px] font-semibold text-foreground/85">{item.label}</span>
+        {items.map((item) => {
+          const meta = item.meta as
+            | { icon?: string; description?: { en: string } & Record<string, string> }
+            | undefined;
+          const Icon = (meta?.icon && ICONS[meta.icon]) || Activity;
+          return (
+            <div
+              key={item.id}
+              className="rounded-xl border border-dashed border-separator p-4"
+            >
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-muted/60" />
+                <span className="text-[12px] font-semibold text-foreground/85">
+                  {resolveLabel(item.labels)}
+                </span>
+              </div>
+              {meta?.description && (
+                <p className="mt-1.5 text-[11px] text-muted/55">
+                  {resolveLabel(meta.description)}
+                </p>
+              )}
             </div>
-            <p className="mt-1.5 text-[11px] text-muted/55">{item.description}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );

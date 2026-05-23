@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "check:mock-imports": "scripts/check-no-mock-imports.sh",
     "seed:firebase": "tsx scripts/seed-firebase.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

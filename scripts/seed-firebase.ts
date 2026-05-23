@@ -29,11 +29,33 @@ import { getStorage } from "firebase-admin/storage";
 
 import { GAME_SEEDS } from "../src/lib/mock/games.js";
 import { buildGameDetail } from "../src/lib/mock/game-detail.js";
+import { CATEGORIES, TAGS } from "../src/lib/mock/index.js";
+import { NEWS } from "../src/lib/mock/news.js";
+import { SEED_THREADS, SEED_REPLIES } from "../src/lib/mock/forums.js";
+import { SEED_POSTS, PRESET_POST_IMAGES } from "../src/lib/mock/feed.js";
+import { SEED_NOTIFICATIONS } from "../src/lib/mock/notifications.js";
+import { THEME_SEEDS } from "../src/lib/mock/themes.js";
+import { CONTROLLER_LAYOUT_SEEDS } from "../src/lib/mock/controller-layouts.js";
+import { WORKSHOP_MODS } from "../src/lib/mock/workshop-mods.js";
+import {
+  LFG_BOARD_SEED_POSTS,
+  LFG_BOARD_SEED_GUIDES,
+} from "../src/lib/mock/lfg-board.js";
+import { LFG_GROUPS } from "../src/lib/mock/lfg-groups.js";
+import { FOLLOW_SUGGESTIONS } from "../src/lib/mock/follow-suggestions.js";
+import {
+  FRIENDS,
+  FRIEND_ACTIVITY,
+  FRIEND_OWNED,
+} from "../src/lib/mock/friends.js";
+import { SPEEDRUN_RUNS } from "../src/lib/mock/speedrun-runs.js";
+import { buildReviewsForGame } from "../src/lib/mock/reviews.js";
 import { slugify } from "../src/lib/utils.js";
 import { studioBrand } from "../src/lib/studio-logos.js";
 import type {
   App,
   AppBranch,
+  Cosmetic,
   Developer,
   GameDetail,
   Publisher,
@@ -653,6 +675,12 @@ async function main() {
   // new market or supported language without a code release.
   await seedConfig();
 
+  // ── Phase 6e: Catalog/community data (categories, tags, news, etc.) ──────
+  // Static or slow-moving content that the storefront pulls without auth.
+  // Previously auto-seeded by `ensureXSeeded()` helpers — now pre-populated
+  // here so the app reads pure Firestore at runtime.
+  await seedCatalogAndCommunity(studios);
+
   // ── Phase 7: MOCK_USERS.md ──────────────────────────────────────────────
   const ownedStudios = [...studios.values()].filter((s) => s.uid);
   writeFileSync(MOCK_USERS_MD_PATH, renderMockUsersMarkdown(ownedStudios), "utf-8");
@@ -1249,6 +1277,201 @@ async function seedConfig(): Promise<void> {
   });
 
   logTally("dw_config", tally, 11);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 6e: catalog + community seed data
+// ────────────────────────────────────────────────────────────────────────────
+//
+// One function per former `ensureXSeeded()` so each collection has a clear
+// home and a separate tally line in the seed output. All writes are
+// fill-missing-doc so manual edits in the console are preserved on re-run.
+
+async function seedCatalogAndCommunity(
+  studios: Map<string, StudioIdentity>,
+): Promise<void> {
+  const db = getFirestore();
+
+  // dw_categories — keyed by slug.
+  await seedById(db, "dw_categories", CATEGORIES, (c) => c.slug);
+
+  // dw_tags — keyed by slug.
+  await seedById(db, "dw_tags", TAGS, (t) => t.slug);
+
+  // dw_themes — keyed by id.
+  await seedById(db, "dw_themes", THEME_SEEDS, (t) => t.id);
+
+  // dw_controller_layouts — keyed by id.
+  await seedById(db, "dw_controller_layouts", CONTROLLER_LAYOUT_SEEDS, (l) => l.id);
+
+  // dw_workshop_mods — keyed by id.
+  await seedById(db, "dw_workshop_mods", WORKSHOP_MODS, (m) => m.id);
+
+  // dw_lfg_posts — keyed by id.
+  await seedById(db, "dw_lfg_posts", LFG_BOARD_SEED_POSTS, (p) => p.id);
+
+  // dw_lfg_guides — keyed by id.
+  await seedById(db, "dw_lfg_guides", LFG_BOARD_SEED_GUIDES, (g) => g.id);
+
+  // dw_lfg_groups — Phase 4 collection; keyed by id (synthetic from index).
+  await seedById(db, "dw_lfg_groups", LFG_GROUPS, (g, i) => `lfg-group-${i + 1}`);
+
+  // dw_follow_suggestions — keyed by handle (sans the leading `@`).
+  await seedById(db, "dw_follow_suggestions", FOLLOW_SUGGESTIONS, (s) =>
+    s.handle.replace(/^@/, ""),
+  );
+
+  // dw_news — keyed by slug.
+  await seedById(db, "dw_news", NEWS, (a) => a.slug);
+
+  // dw_feed — social posts keyed by id, with empty interaction arrays.
+  await seedById(
+    db,
+    "dw_feed",
+    SEED_POSTS,
+    (p) => p.id,
+    (p) => ({
+      ...p,
+      likedBy: [] as string[],
+      repostedBy: [] as string[],
+      replies: p.replies ?? [],
+    }),
+  );
+
+  // dw_post_image_presets — used by the post composer for one-tap art.
+  // Synthesize stable IDs from the label (presets have no native id).
+  await seedById(db, "dw_post_image_presets", PRESET_POST_IMAGES, (p) =>
+    slugify(p.label),
+  );
+
+  // dw_forum_threads — keyed by id.
+  await seedById(db, "dw_forum_threads", SEED_THREADS, (t) => t.id);
+
+  // dw_forum_replies — keyed by id, batched 300 at a time (Firestore caps
+  // batches at 500 writes; doc reads inside `fillMissingDoc` consume slots).
+  await seedById(db, "dw_forum_replies", SEED_REPLIES, (r) => r.id);
+
+  // dw_reviews — derived per-game by the mock review builder. Each review
+  // already carries its own id from the builder.
+  const allReviews = GAME_SEEDS.flatMap((seed) => buildReviewsForGame(seed.id));
+  await seedById(db, "dw_reviews", allReviews, (r) => r.id);
+
+  // dw_friends — social graph (per-user keyed by uid).
+  await seedById(db, "dw_friends", FRIENDS, (f) => f.uid);
+
+  // dw_friend_activity — keyed by `${uid}_${timestamp}` so the same friend
+  // can have multiple activity entries without doc collisions.
+  await seedById(
+    db,
+    "dw_friend_activity",
+    FRIEND_ACTIVITY,
+    (a) => `${a.uid}_${a.at}`,
+  );
+
+  // dw_friend_owned — one doc per friend listing the games they own.
+  const friendOwnedEntries = Object.entries(FRIEND_OWNED).map(
+    ([uid, gameIds]) => ({ uid, gameIds }),
+  );
+  await seedById(db, "dw_friend_owned", friendOwnedEntries, (e) => e.uid);
+
+  // dw_speedrun_runs — leaderboard entries. Synthetic id from rank+player.
+  await seedById(
+    db,
+    "dw_speedrun_runs",
+    SPEEDRUN_RUNS,
+    (r) => `${slugify(r.player)}-${r.rank}`,
+  );
+
+  // dw_cosmetics — Phase 6 wardrobe catalog. Inline seed since the data is
+  // small and previously lived in the component.
+  const cosmetics: Cosmetic[] = [
+    {
+      id: "neon-visor",
+      name: "Neon Visor",
+      game: "Cyber Strike",
+      rarity: "legendary",
+      slot: "head",
+    },
+    {
+      id: "n7-hoodie",
+      name: "N7 Hoodie",
+      game: "Space Explorer",
+      rarity: "epic",
+      slot: "body",
+    },
+    {
+      id: "dragon-wings",
+      name: "Dragon Wings",
+      game: "Fantasy Quest",
+      rarity: "mythic",
+      slot: "back",
+    },
+    {
+      id: "pixel-glasses",
+      name: "Pixel Glasses",
+      game: "Retro Dash",
+      rarity: "rare",
+      slot: "head",
+    },
+    {
+      id: "speedrun-medallion",
+      name: "Speedrun Medallion",
+      game: "Velocity",
+      rarity: "epic",
+      slot: "trinket",
+    },
+    {
+      id: "obsidian-boots",
+      name: "Obsidian Boots",
+      game: "Volcano Trail",
+      rarity: "rare",
+      slot: "feet",
+    },
+  ];
+  await seedById(db, "dw_cosmetics", cosmetics, (c) => c.id);
+
+  // dw_notifications — seed one entry per studio owner so signed-in users on
+  // a fresh project see something in the bell. Keyed by ${uid}__${seedId} so
+  // the same template can apply to multiple users without collision.
+  const notifEntries = [...studios.values()]
+    .filter((s): s is StudioIdentity & { uid: string } => Boolean(s.uid))
+    .flatMap((studio) =>
+      SEED_NOTIFICATIONS.map((seed) => ({
+        ...seed,
+        id: `${studio.uid}__${seed.id}`,
+        userId: studio.uid,
+      })),
+    );
+  await seedById(db, "dw_notifications", notifEntries, (n) => n.id);
+}
+
+/**
+ * Generic fill-missing seeder. Accepts an array of source items, a key
+ * extractor, and an optional doc-shape transform. Emits one tally line.
+ */
+async function seedById<T>(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+  items: readonly T[],
+  keyOf: (item: T, index: number) => string,
+  shape: (item: T) => Record<string, unknown> = (item) =>
+    item as unknown as Record<string, unknown>,
+): Promise<void> {
+  const tally: Tally = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const id = keyOf(item, i);
+    if (!id) continue;
+    const ref = db.collection(collectionName).doc(id);
+    try {
+      const r = await fillMissingDoc(ref, shape(item));
+      tally[r.status] += 1;
+    } catch (err) {
+      tally.failed += 1;
+      console.error(`  ✗ ${collectionName}/${id}: ${(err as Error).message}`);
+    }
+  }
+  logTally(collectionName, tally, items.length);
 }
 
 main().catch((err) => {
