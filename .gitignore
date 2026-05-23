@@ -36,3 +36,8 @@ src-tauri/Cargo.lock
 public/gta6/
 CLAUDE.md
 docs/
+
+# Firebase seed-script artefacts (contain real Firebase service-account secrets
+# and mock-user credentials respectively — never commit).
+serviceAccountKey.json
+MOCK_USERS.md
