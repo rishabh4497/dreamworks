@@ -6,6 +6,7 @@ import { defaultCloudSaveStatus } from "@/lib/native-launcher";
 import { useAuthStore } from "@/stores/auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
 import { doc, setDoc, updateDoc, deleteDoc, writeBatch } from "firebase/firestore";
+import { cleanForFirestore } from "@/lib/firestore-clean";
 import { attachUserQuerySync } from "@/lib/store-factory";
 
 interface AddExternalOptions {
@@ -67,24 +68,27 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
       const detail = await getGameDetail(id);
       const mainHours = detail?.playtime.mainHours ?? 0;
       const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
-      batch.set(docRef, {
-        userId: profile.uid,
-        gameId: id,
-        ownedSince: now,
-        installed: false,
-        sizeBytes: 0,
-        playMinutes: 0,
-        lastPlayed: null,
-        collectionIds: [],
-        achievementsUnlocked: 0,
-        completionPct: 0,
-        refundWindow: computeRefundWindow(now, mainHours, 0),
-        orderId,
-        sourceLauncher: "dreamworks",
-        cloudSaveStatus: "synced",
-        drmType: "dreamworks",
-        canLaunchOffline: true,
-      });
+      batch.set(
+        docRef,
+        cleanForFirestore({
+          userId: profile.uid,
+          gameId: id,
+          ownedSince: now,
+          installed: false,
+          sizeBytes: 0,
+          playMinutes: 0,
+          lastPlayed: null,
+          collectionIds: [],
+          achievementsUnlocked: 0,
+          completionPct: 0,
+          refundWindow: computeRefundWindow(now, mainHours, 0),
+          orderId,
+          sourceLauncher: "dreamworks",
+          cloudSaveStatus: "synced",
+          drmType: "dreamworks",
+          canLaunchOffline: true,
+        }),
+      );
     }
     await batch.commit();
   },
@@ -110,29 +114,32 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     } else {
       const now = new Date().toISOString();
       const drmType = drmForSource(sourceLauncher);
-      await setDoc(docRef, {
-        userId: profile.uid,
-        gameId: id,
-        ownedSince: now,
-        installed: opts?.installed ?? true,
-        sizeBytes: opts?.sizeBytes ?? 0,
-        playMinutes: 0,
-        lastPlayed: null,
-        collectionIds: [],
-        achievementsUnlocked: 0,
-        completionPct: 0,
-        refundWindow: null,
-        sourceLauncher,
-        externalId: opts?.externalId,
-        installPath: opts?.installPath,
-        launchCommand: opts?.launchCommand,
-        installedVersion: opts?.installedVersion,
-        lastVerifiedAt: null,
-        cloudSaveStatus: defaultCloudSaveStatus(sourceLauncher),
-        drmType,
-        canLaunchOffline: opts?.canLaunchOffline ?? drmType === "dreamworks",
-        sources: [copy],
-      });
+      await setDoc(
+        docRef,
+        cleanForFirestore({
+          userId: profile.uid,
+          gameId: id,
+          ownedSince: now,
+          installed: opts?.installed ?? true,
+          sizeBytes: opts?.sizeBytes ?? 0,
+          playMinutes: 0,
+          lastPlayed: null,
+          collectionIds: [],
+          achievementsUnlocked: 0,
+          completionPct: 0,
+          refundWindow: null,
+          sourceLauncher,
+          externalId: opts?.externalId,
+          installPath: opts?.installPath,
+          launchCommand: opts?.launchCommand,
+          installedVersion: opts?.installedVersion,
+          lastVerifiedAt: null,
+          cloudSaveStatus: defaultCloudSaveStatus(sourceLauncher),
+          drmType,
+          canLaunchOffline: opts?.canLaunchOffline ?? drmType === "dreamworks",
+          sources: [copy],
+        }),
+      );
     }
   },
   toggleInstalled: async (id) => {

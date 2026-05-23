@@ -43,12 +43,40 @@ export function useConfigDoc<E extends ConfigEntry = ConfigEntry>(key: ConfigKey
 // rows. Pages can call e.g. `useCountries().data?.entries` and treat the
 // result as a ready-to-render list.
 
+// Fallback country list so checkout still works when the Firestore config
+// document is empty or unreachable. Codes are ISO-3166 alpha-2.
+const FALLBACK_COUNTRIES: ConfigEntry[] = [
+  { id: "US", labels: { en: "United States" }, sortOrder: 0, enabled: true },
+  { id: "CA", labels: { en: "Canada" }, sortOrder: 1, enabled: true },
+  { id: "GB", labels: { en: "United Kingdom" }, sortOrder: 2, enabled: true },
+  { id: "DE", labels: { en: "Germany" }, sortOrder: 3, enabled: true },
+  { id: "FR", labels: { en: "France" }, sortOrder: 4, enabled: true },
+  { id: "ES", labels: { en: "Spain" }, sortOrder: 5, enabled: true },
+  { id: "IT", labels: { en: "Italy" }, sortOrder: 6, enabled: true },
+  { id: "NL", labels: { en: "Netherlands" }, sortOrder: 7, enabled: true },
+  { id: "SE", labels: { en: "Sweden" }, sortOrder: 8, enabled: true },
+  { id: "PL", labels: { en: "Poland" }, sortOrder: 9, enabled: true },
+  { id: "AU", labels: { en: "Australia" }, sortOrder: 10, enabled: true },
+  { id: "NZ", labels: { en: "New Zealand" }, sortOrder: 11, enabled: true },
+  { id: "JP", labels: { en: "Japan" }, sortOrder: 12, enabled: true },
+  { id: "KR", labels: { en: "South Korea" }, sortOrder: 13, enabled: true },
+  { id: "IN", labels: { en: "India" }, sortOrder: 14, enabled: true },
+  { id: "BR", labels: { en: "Brazil" }, sortOrder: 15, enabled: true },
+  { id: "MX", labels: { en: "Mexico" }, sortOrder: 16, enabled: true },
+  { id: "AR", labels: { en: "Argentina" }, sortOrder: 17, enabled: true },
+  { id: "ZA", labels: { en: "South Africa" }, sortOrder: 18, enabled: true },
+  { id: "AE", labels: { en: "United Arab Emirates" }, sortOrder: 19, enabled: true },
+];
+
 export function useCountries() {
   return useQuery({
     queryKey: ["config", "countries"],
     queryFn: getCountries,
     staleTime: CONFIG_STALE_MS,
-    select: selectActive,
+    select: (doc: ConfigDocument | null) => {
+      const entries = selectActive(doc);
+      return entries.length > 0 ? entries : FALLBACK_COUNTRIES;
+    },
   });
 }
 

@@ -18,6 +18,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { createEntitlementsForOrder, upsertEntitlements } from "./entitlements";
+import { cleanForFirestore } from "../firestore-clean";
 
 const TAX_RATE = 0.08;
 
@@ -170,7 +171,7 @@ export async function placeMockOrder(input: PlaceMockOrderInput): Promise<PlaceM
   };
 
   const docRef = doc(getDb(), COLLECTIONS.orders, orderId);
-  await setDoc(docRef, order);
+  await setDoc(docRef, cleanForFirestore(order));
 
   const purchasedGames = input.games.filter((game) =>
     lineItems.some((line) => line.gameId === game.id && grantsBuyerAccess(line)),

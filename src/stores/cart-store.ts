@@ -4,6 +4,7 @@ import type { CartItem, FamilyApprovalMetadata, GameId, GiftRecipient, ISODate }
 import { getDb } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthStore } from "./auth-store";
+import { cleanForFirestore } from "@/lib/firestore-clean";
 
 interface CartStore {
   items: CartItem[];
@@ -30,11 +31,15 @@ function syncToFirestore(items: CartItem[]): void {
   if (!uid) return;
   // Fire-and-forget; localStorage stays the source of truth for instant render
   // and the Firestore write only matters for cross-device roaming.
-  void setDoc(doc(getDb(), CART_COL, uid), {
-    userId: uid,
-    items,
-    updatedAt: new Date().toISOString(),
-  }).catch(() => {});
+  // cleanForFirestore strips any `undefined` fields (Firestore rejects them).
+  void setDoc(
+    doc(getDb(), CART_COL, uid),
+    cleanForFirestore({
+      userId: uid,
+      items,
+      updatedAt: new Date().toISOString(),
+    }),
+  ).catch(() => {});
 }
 
 export const useCartStore = create<CartStore>()(
