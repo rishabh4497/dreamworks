@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { Toaster } from "@/components/common/Toaster";
 import { CommandPalette } from "@/components/common/CommandPalette";
+import { ConsentBanner } from "@/components/common/ConsentBanner";
 import { FpsOverlay } from "@/components/common/FpsOverlay";
 import { VoiceWidget } from "@/components/voice/VoiceWidget";
 import { useWishlistAlerts } from "@/hooks/use-wishlist-alerts";
@@ -129,6 +130,7 @@ export function AppLayout() {
       <VoiceWidget />
       <FpsOverlay />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <ConsentBanner />
     </div>
   );
 }

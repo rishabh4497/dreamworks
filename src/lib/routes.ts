@@ -40,19 +40,22 @@ export const ROUTES = {
   adminAuditLog: "/admin/audit-log",
 
   // Admin Console (observability / god-view). Top-level route, role-gated to
-  // admins. Tabs are URL-param driven (mirrors DbHomePage).
+  // admins. Six top-level tabs; deeper sections live under ?sub=… on People,
+  // Creators, and Health.
   console: "/console",
   consoleOverview: "/console?tab=overview",
-  consoleUsers: "/console?tab=users",
-  consoleStudios: "/console?tab=studios",
-  consolePublishers: "/console?tab=publishers",
-  consoleDevices: "/console?tab=devices",
-  consolePerformance: "/console?tab=performance",
-  consoleFeatures: "/console?tab=features",
-  consoleErrors: "/console?tab=errors",
+  consolePeople: "/console?tab=people",
+  consoleUsers: "/console?tab=people&sub=users",
+  consoleDevices: "/console?tab=people&sub=rigs",
+  consoleCreators: "/console?tab=creators",
+  consoleStudios: "/console?tab=creators&sub=studios",
+  consolePublishers: "/console?tab=creators&sub=publishers",
   consoleMoney: "/console?tab=money",
-  consoleQuality: "/console?tab=quality",
-  consoleLiveOps: "/console?tab=liveops",
+  consoleHealth: "/console?tab=health",
+  consolePerformance: "/console?tab=health&sub=performance",
+  consoleErrors: "/console?tab=health&sub=errors",
+  consoleQuality: "/console?tab=health&sub=friction",
+  consoleFeatures: "/console?tab=health&sub=usage",
   consoleReports: "/console?tab=reports",
   // Per-actor deep-dive reports.
   consoleUserReport: (uid: string) => `/console/report/user/${uid}`,

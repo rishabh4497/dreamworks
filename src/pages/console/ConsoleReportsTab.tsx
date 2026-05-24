@@ -26,31 +26,31 @@ const TEMPLATES: ReportTemplate[] = [
     id: "growth-ops",
     title: "Top growth opportunities",
     description: "Apps with high wishlist counts but low purchase conversion.",
-    href: "/console?tab=studios",
+    href: "/console?tab=creators&sub=studios",
   },
   {
     id: "at-risk-users",
     title: "At-risk users",
     description: "Power users last seen 14+ days ago. Worth a re-engagement push.",
-    href: "/console?tab=users",
+    href: "/console?tab=people&sub=users",
   },
   {
     id: "stuck-review",
     title: "Studios stuck in review",
     description: "Submissions pending for 14+ days; admin moderation backlog.",
-    href: "/console?tab=studios",
+    href: "/console?tab=creators&sub=studios",
   },
   {
     id: "high-refund",
     title: "Publishers above refund threshold",
     description: "Anyone over 5% refund rate gets a yellow flag.",
-    href: "/console?tab=publishers",
+    href: "/console?tab=creators&sub=publishers",
   },
   {
     id: "low-conversion",
     title: "Wishlist conversion < industry benchmark",
     description: "Apps converting below the 5–10% Steam benchmark.",
-    href: "/console?tab=studios",
+    href: "/console?tab=creators&sub=studios",
   },
 ];
 
@@ -108,17 +108,17 @@ export function ConsoleReportsTab() {
         <ConsoleSection title="Per-actor deep-dive reports">
           <div className="grid gap-3 md:grid-cols-3">
             <Link
-              to="/console?tab=users"
+              to="/console?tab=people&sub=users"
               className="rounded-lg border border-separator bg-card p-4 transition-colors hover:bg-card-hover"
             >
               <FileText className="h-4 w-4 text-acid" />
               <p className="mt-2 text-[13px] font-semibold text-foreground/90">User report</p>
               <p className="mt-1 text-[11.5px] text-muted/60">
-                Pick a user from the Users tab to open a 360° report.
+                Pick a user from the People tab to open a 360° report.
               </p>
             </Link>
             <Link
-              to="/console?tab=studios"
+              to="/console?tab=creators&sub=studios"
               className="rounded-lg border border-separator bg-card p-4 transition-colors hover:bg-card-hover"
             >
               <FileText className="h-4 w-4 text-acid" />
@@ -128,7 +128,7 @@ export function ConsoleReportsTab() {
               </p>
             </Link>
             <Link
-              to="/console?tab=publishers"
+              to="/console?tab=creators&sub=publishers"
               className="rounded-lg border border-separator bg-card p-4 transition-colors hover:bg-card-hover"
             >
               <FileText className="h-4 w-4 text-acid" />

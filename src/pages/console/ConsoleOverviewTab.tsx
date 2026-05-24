@@ -1,4 +1,4 @@
-import { Activity, AlertOctagon, Gauge, LineChart, UserCheck, Users } from "lucide-react";
+import { Activity, AlertOctagon, Download, Gauge, LineChart, Mic, Radio, UserCheck, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
@@ -8,12 +8,14 @@ import { ConsoleLiveSessions } from "@/components/console/ConsoleLiveSessions";
 import { ConsoleSection } from "@/components/console/ConsoleSection";
 import { ConsoleAnomalyBadge } from "@/components/console/ConsoleAnomalyBadge";
 import { ConsoleInsightsFeed } from "@/components/console/ConsoleInsightsFeed";
-import { useConsoleCompare, useConsoleOverview, useConsoleRange } from "@/hooks/use-console";
+import { ConsoleErrorRow } from "@/components/console/ConsoleErrorRow";
+import { useConsoleCompare, useConsoleLive, useConsoleOverview, useConsoleRange } from "@/hooks/use-console";
 
 export function ConsoleOverviewTab() {
   const [range] = useConsoleRange();
   const { data, isLoading, error } = useConsoleOverview(range);
   const { data: compare } = useConsoleCompare(range);
+  const { data: live } = useConsoleLive();
 
   if (isLoading) return <LoadingSpinner label="Crunching overview…" />;
   if (error) return <ErrorCard error={error as Error} />;
@@ -114,6 +116,42 @@ export function ConsoleOverviewTab() {
       <ConsoleSection title="Insights" description="Auto-flagged anomalies and opportunities">
         <ConsoleInsightsFeed />
       </ConsoleSection>
+
+      {live && (
+        <ConsoleSection title="Live ops" description="Refreshes every 5 s">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <ConsoleKpiTile
+              icon={Activity}
+              label="Sessions (5m)"
+              value={live.liveSessions.length.toLocaleString()}
+              tone="positive"
+            />
+            <ConsoleKpiTile
+              icon={Download}
+              label="Active downloads"
+              value={live.activeDownloads.toLocaleString()}
+            />
+            <ConsoleKpiTile
+              icon={Mic}
+              label="Voice channels"
+              value={live.activeVoiceChannels.toLocaleString()}
+            />
+            <ConsoleKpiTile
+              icon={Radio}
+              label="Recent errors"
+              value={live.recentErrors.length.toLocaleString()}
+              tone={live.recentErrors.length > 0 ? "negative" : "default"}
+            />
+          </div>
+          {live.recentErrors.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {live.recentErrors.slice(0, 5).map((e) => (
+                <ConsoleErrorRow key={e.id} error={e} />
+              ))}
+            </div>
+          )}
+        </ConsoleSection>
+      )}
 
       <Card className="flex items-center gap-3 border-acid/20 bg-acid/5 p-3 text-[12px] text-muted/70">
         <Activity className="h-4 w-4 text-acid" />

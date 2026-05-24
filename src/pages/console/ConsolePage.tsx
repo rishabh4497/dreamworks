@@ -1,16 +1,10 @@
 import { motion } from "motion/react";
 import {
   Activity,
-  AlertOctagon,
-  Briefcase,
   Building,
   DollarSign,
   FileBarChart2,
-  Gauge,
   LayoutDashboard,
-  Monitor,
-  MousePointerClick,
-  Radio,
   ShieldAlert,
   Users,
 } from "lucide-react";
@@ -20,16 +14,10 @@ import { useConsoleTab } from "@/hooks/use-console";
 import { ConsoleRangeSelector } from "@/components/console/ConsoleRangeSelector";
 import { ConsoleCompareToggle } from "@/components/console/ConsoleCompareToggle";
 import { ConsoleOverviewTab } from "./ConsoleOverviewTab";
-import { ConsoleUsersTab } from "./ConsoleUsersTab";
-import { ConsoleStudiosTab } from "./ConsoleStudiosTab";
-import { ConsolePublishersTab } from "./ConsolePublishersTab";
-import { ConsoleDevicesTab } from "./ConsoleDevicesTab";
-import { ConsolePerformanceTab } from "./ConsolePerformanceTab";
-import { ConsoleFeaturesTab } from "./ConsoleFeaturesTab";
-import { ConsoleErrorsTab } from "./ConsoleErrorsTab";
+import { ConsolePeopleTab } from "./ConsolePeopleTab";
+import { ConsoleCreatorsTab } from "./ConsoleCreatorsTab";
 import { ConsoleMoneyTab } from "./ConsoleMoneyTab";
-import { ConsoleQualityTab } from "./ConsoleQualityTab";
-import { ConsoleLiveOpsTab } from "./ConsoleLiveOpsTab";
+import { ConsoleHealthTab } from "./ConsoleHealthTab";
 import { ConsoleReportsTab } from "./ConsoleReportsTab";
 
 interface TabDef {
@@ -40,16 +28,10 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "users", label: "Users", icon: Users },
-  { id: "studios", label: "Studios", icon: Building },
-  { id: "publishers", label: "Publishers", icon: Briefcase },
+  { id: "people", label: "People", icon: Users },
+  { id: "creators", label: "Creators", icon: Building },
   { id: "money", label: "Money", icon: DollarSign },
-  { id: "devices", label: "Devices & rigs", icon: Monitor },
-  { id: "performance", label: "Performance", icon: Gauge },
-  { id: "features", label: "Features", icon: MousePointerClick },
-  { id: "quality", label: "Quality", icon: ShieldAlert },
-  { id: "errors", label: "Errors", icon: AlertOctagon },
-  { id: "liveops", label: "Live ops", icon: Radio },
+  { id: "health", label: "Health", icon: ShieldAlert },
   { id: "reports", label: "Reports", icon: FileBarChart2 },
 ];
 
@@ -111,17 +93,17 @@ export function ConsolePage() {
         transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
         {tab === "overview" && <ConsoleOverviewTab />}
-        {tab === "users" && <ConsoleUsersTab />}
-        {tab === "studios" && <ConsoleStudiosTab />}
-        {tab === "publishers" && <ConsolePublishersTab />}
+        {tab === "people" && <ConsolePeopleTab />}
+        {tab === "creators" && <ConsoleCreatorsTab />}
         {tab === "money" && <ConsoleMoneyTab />}
-        {tab === "devices" && <ConsoleDevicesTab />}
-        {tab === "performance" && <ConsolePerformanceTab />}
-        {tab === "features" && <ConsoleFeaturesTab />}
-        {tab === "quality" && <ConsoleQualityTab />}
-        {tab === "errors" && <ConsoleErrorsTab />}
-        {tab === "liveops" && <ConsoleLiveOpsTab />}
+        {tab === "health" && <ConsoleHealthTab />}
         {tab === "reports" && <ConsoleReportsTab />}
+        {/* Legacy tab IDs from earlier URLs still routable */}
+        {(tab === "users" || tab === "devices") && <ConsolePeopleTab />}
+        {(tab === "studios" || tab === "publishers") && <ConsoleCreatorsTab />}
+        {(tab === "performance" || tab === "errors" || tab === "quality" || tab === "features" || tab === "liveops") && (
+          <ConsoleHealthTab />
+        )}
       </motion.div>
     </motion.div>
   );
