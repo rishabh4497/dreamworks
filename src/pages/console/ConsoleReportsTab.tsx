@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, FileBarChart2, FileText, Search } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { ConsoleSection } from "@/components/console/ConsoleSection";
 import { ConsoleAnnotationsManager } from "@/components/console/ConsoleAnnotationsManager";
 import { ConsoleSavedViews } from "@/components/console/ConsoleSavedViews";

@@ -8,6 +8,7 @@ import {
   Megaphone,
   Globe2,
   Briefcase,
+  Sparkles,
 } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { migrateLegacyDeveloperData } from "@/lib/api/developer-portal-migrate";
@@ -20,6 +21,8 @@ const NAV_ITEMS = [
   { to: ROUTES.devAnalytics, label: "Analytics", icon: BarChart3, matchPrefix: ROUTES.devAnalytics },
   { to: ROUTES.devMarketing, label: "Marketing", icon: Megaphone, matchPrefix: ROUTES.devMarketing },
   { to: ROUTES.devOps, label: "Live Ops", icon: Globe2, matchPrefix: ROUTES.devOps },
+  { to: ROUTES.devStudioInsights, label: "Studio insights", icon: Sparkles, matchPrefix: ROUTES.devStudioInsights },
+  { to: ROUTES.devPublisherInsights, label: "Publisher insights", icon: Sparkles, matchPrefix: ROUTES.devPublisherInsights },
 ] as const;
 
 export function DeveloperPortalPage() {

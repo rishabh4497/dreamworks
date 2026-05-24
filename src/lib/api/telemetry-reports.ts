@@ -438,7 +438,9 @@ export async function getStudioReport(studioId: string): Promise<ConsoleStudioRe
       ).catch(() => ({ docs: [] as { data: () => Record<string, unknown> }[] })),
     ]);
 
-  const apps = appsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+  const apps = appsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
+    Record<string, unknown> & { id: string }
+  >;
   const submissions = submissionsSnap.docs.map((d) => d.data() as Record<string, unknown>);
   const orders = ordersSnap.docs.map((d) => d.data() as Record<string, unknown>);
   const errors = errorsSnap.docs.map((d) => d.data() as Record<string, unknown>);
@@ -659,7 +661,7 @@ export async function getPublisherReport(
   if (!pubSnap.exists()) return null;
   const pub = pubSnap.data() as Record<string, unknown>;
 
-  const [appsSnap, ordersSnap, reviewsSnap, refundsSnap] = await Promise.all([
+  const [appsSnap, ordersSnap, reviewsSnap] = await Promise.all([
     getDocs(
       query(
         collection(db, COLLECTIONS.apps),
@@ -677,10 +679,11 @@ export async function getPublisherReport(
     getDocs(query(collection(db, COLLECTIONS.reviews), fbLimit(READ_CAP))).catch(
       () => ({ docs: [] as { data: () => Record<string, unknown> }[] }),
     ),
-    Promise.resolve({ docs: [] as { data: () => Record<string, unknown> }[] }),
   ]);
 
-  const apps = appsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+  const apps = appsSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
+    Record<string, unknown> & { id: string }
+  >;
   const orders = ordersSnap.docs.map((d) => d.data() as Record<string, unknown>);
   const reviewsAll = reviewsSnap.docs.map((d) => d.data() as Record<string, unknown>);
 

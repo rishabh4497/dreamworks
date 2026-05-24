@@ -70,7 +70,10 @@ export function ConsoleMoneyTab() {
           <Card className="p-4">
             <ConsoleGeoBar data={data.revenueByRegion} />
             <div className="mt-3 flex justify-end">
-              <ConsoleExportCsv rows={data.revenueByRegion} filename="dw-revenue-region" />
+              <ConsoleExportCsv
+                rows={data.revenueByRegion.map((r) => ({ name: r.name, count: r.count }))}
+                filename="dw-revenue-region"
+              />
             </div>
           </Card>
         </ConsoleSection>
