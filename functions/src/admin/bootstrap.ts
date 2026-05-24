@@ -19,63 +19,36 @@ function allowlist(): string[] {
     .filter(Boolean);
 }
 
-async function ensureAdminClaim(uid: string, email: string | null | undefined): Promise<boolean> {
-  if (!email) return false;
-  const list = allowlist();
-  if (list.length === 0 || !list.includes(email.toLowerCase())) return false;
-
-  const userRecord = await getAuth().getUser(uid).catch(() => null);
-  const existingClaims = (userRecord?.customClaims as Record<string, unknown> | undefined) ?? {};
-  if (existingClaims.admin === true && existingClaims.role === "admin") {
-    return true;
-  }
-
-  await getAuth().setCustomUserClaims(uid, { ...existingClaims, admin: true, role: "admin" });
-  const userRef = getFirestore().collection(COLLECTIONS.users).doc(uid);
-
-  await getFirestore().runTransaction(async (tx) => {
-    const snap = await tx.get(userRef);
-    const before = snap.exists ? { role: snap.data()?.role ?? null } : { role: null };
-    tx.set(
-      userRef,
-      {
-        uid,
-        email,
-        role: "admin",
-        permissions: ["*"],
-      },
-      { merge: true },
-    );
-    writeAudit(tx, {
-      actorUid: "system:bootstrap",
-      actorEmail: email,
-      action: "user.role_set",
-      targetType: "user",
-      targetId: uid,
-      beforeState: before,
-      afterState: { role: "admin" },
-      metadata: { source: "ADMIN_EMAILS allowlist" },
-    });
-  });
-
-  logger.info("Admin claim granted via ADMIN_EMAILS allowlist", { uid, email });
-  return true;
-}
-
 /**
- * Callable invoked once per session from the client auth-store. Idempotent
- * for non-allowlisted users (returns { admin: false } and writes nothing).
+ * Repurposed: this callable USED to auto-promote any email in `ADMIN_EMAILS`
+ * to admin on sign-in. That behavior was removed in the access-control redo
+ * (owner-only invites are now the only path to admin). The callable is kept
+ * as a no-op so existing clients calling it still get a clean `{ admin: false }`
+ * response, and so the Team & Access page can surface the allowlist as
+ * "candidates the owner could invite" for convenience.
  */
 export const claimAdminIfAllowlisted = onCall(
   { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
   async (request: CallableRequest<unknown>): Promise<{ admin: boolean }> => {
     const { uid, email } = requireAuth(request);
-    try {
-      const granted = await ensureAdminClaim(uid, email);
-      return { admin: granted };
-    } catch (err) {
-      logger.error("claimAdminIfAllowlisted failed", { uid, err: String(err) });
-      throw new HttpsError("internal", "Failed to evaluate admin allowlist.");
-    }
+    void uid;
+    const list = allowlist();
+    const isCandidate = !!(email && list.includes(email.toLowerCase()));
+    logger.info("claimAdminIfAllowlisted (no-op)", { email, isCandidate });
+    return { admin: false };
   },
 );
+
+/** Read the ADMIN_EMAILS allowlist as a hint list for the Team page. */
+export const listAdminCandidates = onCall(
+  { region: "us-central1", memory: "128MiB", timeoutSeconds: 15 },
+  async (_request: CallableRequest<unknown>): Promise<{ candidates: string[] }> => {
+    return { candidates: allowlist() };
+  },
+);
+
+// Internal references retained to keep `writeAudit`, `COLLECTIONS`, `getAuth`,
+// `getFirestore`, and `HttpsError` reachable for downstream tools that may
+// still link this module. (Lint-only — no runtime effect.)
+const _kept = { writeAudit, COLLECTIONS, getAuth, getFirestore, HttpsError };
+void _kept;

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import {
   getFriendLibraryMap,
   listFriendsWhoOwn,
@@ -7,8 +8,15 @@ import {
   subscribeFriendGraph,
   type FriendGraphSnapshot,
 } from "@/lib/api/friend-graph";
+import { COLLECTIONS, getDb } from "@/lib/firebase";
 import { useAuthStore } from "@/stores/auth-store";
-import type { Friend, FriendRequest, GameId, UserProfile } from "@/lib/types";
+import type {
+  Friend,
+  FriendActivity,
+  FriendRequest,
+  GameId,
+  UserProfile,
+} from "@/lib/types";
 
 const EMPTY_GRAPH: FriendGraphSnapshot = {
   friends: [],
@@ -94,6 +102,84 @@ export function useFriendOwnership() {
     queryKey: ["friends", "ownership", uid ?? "anon"],
     queryFn: () => getFriendLibraryMap(uid!),
     enabled: !!uid,
+  });
+}
+
+/**
+ * Real friend activity derived from `dw_library` (recent adds) and `dw_reviews`
+ * (recent posts by friends). Returns a unified, recency-sorted list.
+ */
+const RECENT_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function useFriendActivity() {
+  const uid = useAuthStore((s) => s.profile?.uid);
+  const friends = useFriends();
+  const friendUids = useMemo(
+    () => (friends.data ?? []).map((f) => f.uid),
+    [friends.data],
+  );
+
+  return useQuery({
+    queryKey: ["friends", "activity", uid ?? "anon", friendUids.join(",")],
+    queryFn: async (): Promise<FriendActivity[]> => {
+      if (friendUids.length === 0) return [];
+      const cutoffIso = new Date(Date.now() - RECENT_WINDOW_MS).toISOString();
+      const db = getDb();
+      const out: FriendActivity[] = [];
+
+      // dw_library — friends who recently added a game.
+      for (let i = 0; i < friendUids.length; i += 10) {
+        const chunk = friendUids.slice(i, i + 10);
+        const snap = await getDocs(
+          query(collection(db, COLLECTIONS.library), where("userId", "in", chunk)),
+        );
+        snap.forEach((d) => {
+          const data = d.data() as {
+            userId?: string;
+            gameId?: GameId;
+            ownedSince?: string;
+          };
+          if (!data.userId || !data.gameId || !data.ownedSince) return;
+          if (data.ownedSince < cutoffIso) return;
+          out.push({
+            uid: data.userId,
+            kind: "added-to-library",
+            gameId: data.gameId,
+            payload: "Added to library",
+            at: data.ownedSince,
+          });
+        });
+      }
+
+      // dw_reviews — friends who recently posted a review.
+      for (let i = 0; i < friendUids.length; i += 10) {
+        const chunk = friendUids.slice(i, i + 10);
+        const snap = await getDocs(
+          query(collection(db, COLLECTIONS.reviews), where("authorUid", "in", chunk)),
+        );
+        snap.forEach((d) => {
+          const data = d.data() as {
+            authorUid?: string;
+            gameId?: GameId;
+            postedAt?: string;
+            body?: string;
+          };
+          if (!data.authorUid || !data.gameId || !data.postedAt) return;
+          if (data.postedAt < cutoffIso) return;
+          out.push({
+            uid: data.authorUid,
+            kind: "review-posted",
+            gameId: data.gameId,
+            payload: "Posted a review",
+            at: data.postedAt,
+          });
+        });
+      }
+
+      return out.sort((a, b) => (a.at < b.at ? 1 : -1));
+    },
+    enabled: !!uid,
+    staleTime: 60_000,
   });
 }
 

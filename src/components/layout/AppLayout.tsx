@@ -13,6 +13,7 @@ import { useFriendPresenceNotifier } from "@/hooks/use-friend-presence-notifier"
 import { usePageViewTelemetry } from "@/hooks/use-page-view-telemetry";
 import { useScanHistoryPruner } from "@/hooks/use-scan-history-pruner";
 import { useAlertsEvaluator } from "@/hooks/use-alerts-evaluator";
+import { usePresenceHeartbeat } from "@/hooks/use-presence-heartbeat";
 import { useAccentStore } from "@/stores/accent-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useProfileStore } from "@/stores/profile-store";
@@ -32,6 +33,7 @@ export function AppLayout() {
   useScanHistoryPruner();
   usePageViewTelemetry();
   useAlertsEvaluator();
+  usePresenceHeartbeat();
   const accent = useAccentStore((s) => s.accent);
   const dynamicBackgrounds = useUiStore((s) => s.settings.dynamicStoreBackgroundsEnabled);
   const screenshotKey = useUiStore((s) => s.settings.screenshotKey);

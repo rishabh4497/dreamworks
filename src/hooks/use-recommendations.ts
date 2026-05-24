@@ -86,7 +86,7 @@ export function useFriendRecs(limit = 6): RecRow[] {
     // gameId → set of friend uids who own it.
     const ownersByGame = new Map<string, Set<string>>();
     for (const friend of friends) {
-      const ownedList = ownership[friend.uid] ?? [];
+      const ownedList = ownership.get(friend.uid) ?? [];
       for (const gameId of ownedList) {
         if (ownedIds.has(gameId)) continue;
         if (!ownersByGame.has(gameId)) ownersByGame.set(gameId, new Set());

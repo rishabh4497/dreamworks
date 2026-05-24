@@ -2,7 +2,8 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
-import { COLLECTIONS, assertAdmin, writeAudit } from "./shared.js";
+import { COLLECTIONS, writeAudit } from "./shared.js";
+import { assertPermission } from "../lib/assert-permission.js";
 
 interface DeleteRequest {
   appId: string;
@@ -56,7 +57,7 @@ async function deleteSubmissionsForApp(appId: string): Promise<number> {
 export const deleteAppAdmin = onCall(
   { region: "us-central1", memory: "512MiB", timeoutSeconds: 120 },
   async (request: CallableRequest<DeleteRequest>): Promise<DeleteResponse> => {
-    const { uid, email } = await assertAdmin(request);
+    const { uid, email } = await assertPermission(request, "admin.apps.write");
     const { appId, alsoDeleteGame = true } = request.data ?? ({} as DeleteRequest);
     if (!appId) throw new HttpsError("invalid-argument", "appId required.");
 

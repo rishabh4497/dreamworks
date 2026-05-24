@@ -2,7 +2,8 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore, type Transaction } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
-import { COLLECTIONS, assertAdmin, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { COLLECTIONS, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { assertPermission } from "../lib/assert-permission.js";
 
 interface PublishRequest {
   appId: string;
@@ -140,7 +141,7 @@ async function appToGameDetail(tx: Transaction, app: any, achievements: any[]) {
 export const publishApprovedApp = onCall(
   { region: "us-central1", memory: "512MiB", timeoutSeconds: 60 },
   async (request: CallableRequest<PublishRequest>): Promise<PublishResponse> => {
-    const { uid, email } = await assertAdmin(request);
+    const { uid, email } = await assertPermission(request, "admin.apps.write");
     const { appId } = request.data ?? ({} as PublishRequest);
     if (!appId) throw new HttpsError("invalid-argument", "appId required.");
 

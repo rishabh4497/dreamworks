@@ -2,7 +2,8 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
-import { COLLECTIONS, assertAdmin, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { COLLECTIONS, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { assertPermission } from "../lib/assert-permission.js";
 
 type Outcome = "approve" | "request_changes" | "reject";
 
@@ -31,7 +32,7 @@ const ALLOWED_OUTCOMES: ReadonlySet<Outcome> = new Set(["approve", "request_chan
 export const reviewAppSubmission = onCall(
   { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
   async (request: CallableRequest<ReviewRequest>): Promise<ReviewResponse> => {
-    const { uid, email } = await assertAdmin(request);
+    const { uid, email } = await assertPermission(request, "admin.submissions.review");
     const { submissionId, outcome, summaryNote, reasons, assetComments } =
       request.data ?? ({} as ReviewRequest);
 
