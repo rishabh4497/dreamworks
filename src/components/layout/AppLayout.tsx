@@ -12,6 +12,7 @@ import { useLibraryImportNotifier } from "@/hooks/use-library-import-notifier";
 import { useFriendPresenceNotifier } from "@/hooks/use-friend-presence-notifier";
 import { usePageViewTelemetry } from "@/hooks/use-page-view-telemetry";
 import { useScanHistoryPruner } from "@/hooks/use-scan-history-pruner";
+import { useAlertsEvaluator } from "@/hooks/use-alerts-evaluator";
 import { useAccentStore } from "@/stores/accent-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useProfileStore } from "@/stores/profile-store";
@@ -30,6 +31,7 @@ export function AppLayout() {
   useFriendPresenceNotifier();
   useScanHistoryPruner();
   usePageViewTelemetry();
+  useAlertsEvaluator();
   const accent = useAccentStore((s) => s.accent);
   const dynamicBackgrounds = useUiStore((s) => s.settings.dynamicStoreBackgroundsEnabled);
   const screenshotKey = useUiStore((s) => s.settings.screenshotKey);

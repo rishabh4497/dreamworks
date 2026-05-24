@@ -10,7 +10,7 @@ import {
   useExperiments,
   useUpdateExperiment,
 } from "@/hooks/use-console-advanced";
-import type { ConsoleRange, Experiment } from "@/lib/types";
+import type { ConsoleRange } from "@/lib/types";
 
 interface Props {
   range: ConsoleRange;

@@ -1,4 +1,5 @@
-import { Activity, AlertOctagon, Download, Gauge, LineChart, Mic, Radio, UserCheck, Users } from "lucide-react";
+import { Activity, AlertOctagon, Bell, Download, Gauge, LineChart, Mic, Radio, ShieldCheck, UserCheck, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
@@ -10,12 +11,15 @@ import { ConsoleAnomalyBadge } from "@/components/console/ConsoleAnomalyBadge";
 import { ConsoleInsightsFeed } from "@/components/console/ConsoleInsightsFeed";
 import { ConsoleErrorRow } from "@/components/console/ConsoleErrorRow";
 import { useConsoleCompare, useConsoleLive, useConsoleOverview, useConsoleRange } from "@/hooks/use-console";
+import { useCrashFree, useLiveAlertEvents } from "@/hooks/use-console-advanced";
 
 export function ConsoleOverviewTab() {
   const [range] = useConsoleRange();
   const { data, isLoading, error } = useConsoleOverview(range);
   const { data: compare } = useConsoleCompare(range);
   const { data: live } = useConsoleLive();
+  const { data: crashFree } = useCrashFree(range);
+  const firingAlerts = useLiveAlertEvents("firing");
 
   if (isLoading) return <LoadingSpinner label="Crunching overview…" />;
   if (error) return <ErrorCard error={error as Error} />;
@@ -23,6 +27,26 @@ export function ConsoleOverviewTab() {
 
   return (
     <div className="space-y-8">
+      {firingAlerts.length > 0 && (
+        <Link
+          to="/console?tab=reports&sub=alerts"
+          className="flex items-center gap-3 rounded-xl border border-red/30 bg-red/5 p-3 transition-colors hover:bg-red/10"
+        >
+          <Bell className="h-4 w-4 text-red" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-semibold text-red">
+              {firingAlerts.length} alert{firingAlerts.length === 1 ? "" : "s"} firing
+            </p>
+            <p className="mt-0.5 truncate text-[11.5px] text-red/80">
+              {firingAlerts[0]?.ruleName} · {firingAlerts[0]?.metric} = {firingAlerts[0]?.observedValue}
+            </p>
+          </div>
+          <span className="rounded-md bg-red/15 px-2 py-0.5 text-[10.5px] font-semibold text-red">
+            review →
+          </span>
+        </Link>
+      )}
+
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <ConsoleKpiTile icon={Users} label="DAU" value={data.dau.toLocaleString()} />
         <ConsoleKpiTile icon={Users} label="WAU" value={data.wau.toLocaleString()} />
@@ -46,6 +70,18 @@ export function ConsoleOverviewTab() {
           tone={data.p95LcpMs > 2500 ? "warn" : "positive"}
         />
       </div>
+
+      {crashFree && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <ConsoleKpiTile
+            icon={ShieldCheck}
+            label="Crash-free sessions"
+            value={`${crashFree.crashFreePct.toFixed(2)}%`}
+            tone={crashFree.crashFreePct >= 99 ? "positive" : crashFree.crashFreePct >= 95 ? "default" : "negative"}
+            hint={`${crashFree.sessionsWithError}/${crashFree.totalSessions} errored`}
+          />
+        </div>
+      )}
 
       {compare && (
         <Card className="flex flex-wrap items-center gap-3 p-3 text-[11.5px]">

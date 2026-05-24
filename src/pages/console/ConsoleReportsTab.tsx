@@ -1,10 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, FileBarChart2, FileText, Search } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { ConsoleSection } from "@/components/console/ConsoleSection";
 import { ConsoleAnnotationsManager } from "@/components/console/ConsoleAnnotationsManager";
 import { ConsoleSavedViews } from "@/components/console/ConsoleSavedViews";
 import { ConsoleInsightsFeed } from "@/components/console/ConsoleInsightsFeed";
+import { ConsoleAlertManager } from "@/components/console/ConsoleAlertManager";
+import { ConsoleExperimentList } from "@/components/console/ConsoleExperimentList";
+import { ConsoleFunnelBuilder } from "@/components/console/ConsoleFunnelBuilder";
+import { ConsoleSankey } from "@/components/console/ConsoleSankey";
+import { ConsoleQueryBuilder } from "@/components/console/ConsoleQueryBuilder";
+import { ConsoleDashboardList } from "@/components/console/ConsoleDashboardList";
+import { ConsoleChurnTable } from "@/components/console/ConsoleChurnTable";
+import { ConsoleLtvTable } from "@/components/console/ConsoleLtvTable";
+import { ConsoleSearchAnalyticsCard } from "@/components/console/ConsoleSearchAnalyticsCard";
+import { ConsoleRecCtrTable } from "@/components/console/ConsoleRecCtrTable";
+import { ConsoleSubTabs, useSubTab } from "@/components/console/ConsoleSubTabs";
+import { useConsoleRange } from "@/hooks/use-console";
+import {
+  useChurnPredictions,
+  useLtvForecast,
+  useRecCtr,
+  useSankey,
+  useSearchAnalytics,
+} from "@/hooks/use-console-advanced";
 import { cn } from "@/lib/utils";
 
 interface ReportTemplate {
@@ -53,7 +73,44 @@ const TEMPLATES: ReportTemplate[] = [
   },
 ];
 
+const SUBS = [
+  { id: "templates", label: "Templates" },
+  { id: "insights", label: "Insights" },
+  { id: "alerts", label: "Alerts" },
+  { id: "experiments", label: "Experiments" },
+  { id: "funnels", label: "Funnels" },
+  { id: "sankey", label: "Path / Sankey" },
+  { id: "search", label: "Search" },
+  { id: "recs", label: "Recs" },
+  { id: "churn", label: "Churn" },
+  { id: "ltv", label: "LTV" },
+  { id: "queries", label: "Ad-hoc query" },
+  { id: "dashboards", label: "Dashboards" },
+];
+
 export function ConsoleReportsTab() {
+  const [sub] = useSubTab("sub", "templates");
+  const [range] = useConsoleRange();
+  return (
+    <div className="space-y-6">
+      <ConsoleSubTabs tabs={SUBS} />
+      {sub === "templates" && <TemplatesPanel />}
+      {sub === "insights" && <InsightsPanel />}
+      {sub === "alerts" && <ConsoleAlertManager />}
+      {sub === "experiments" && <ConsoleExperimentList range={range} />}
+      {sub === "funnels" && <ConsoleFunnelBuilder range={range} />}
+      {sub === "sankey" && <SankeyPanel range={range} />}
+      {sub === "search" && <SearchPanel range={range} />}
+      {sub === "recs" && <RecsPanel range={range} />}
+      {sub === "churn" && <ChurnPanel />}
+      {sub === "ltv" && <LtvPanel />}
+      {sub === "queries" && <ConsoleQueryBuilder />}
+      {sub === "dashboards" && <ConsoleDashboardList />}
+    </div>
+  );
+}
+
+function TemplatesPanel() {
   const [search, setSearch] = useState("");
   const filtered = TEMPLATES.filter(
     (t) =>
@@ -61,7 +118,6 @@ export function ConsoleReportsTab() {
       t.title.toLowerCase().includes(search.toLowerCase()) ||
       t.description.toLowerCase().includes(search.toLowerCase()),
   );
-
   return (
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="space-y-8 lg:col-span-2">
@@ -138,10 +194,6 @@ export function ConsoleReportsTab() {
             </Link>
           </div>
         </ConsoleSection>
-
-        <ConsoleSection title="Insights feed" description="Auto-generated anomalies, opportunities, and regressions">
-          <ConsoleInsightsFeed />
-        </ConsoleSection>
       </div>
 
       <div className="space-y-6">
@@ -149,5 +201,72 @@ export function ConsoleReportsTab() {
         <ConsoleSavedViews />
       </div>
     </div>
+  );
+}
+
+function InsightsPanel() {
+  return (
+    <ConsoleSection
+      title="Insights feed"
+      description="Auto-generated anomalies, opportunities, and regressions"
+    >
+      <ConsoleInsightsFeed />
+    </ConsoleSection>
+  );
+}
+
+function SankeyPanel({ range }: { range: import("@/lib/types").ConsoleRange }) {
+  const [start, setStart] = useState("/store");
+  const { data } = useSankey(start, range);
+  return (
+    <div className="space-y-3">
+      <Card className="p-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[11.5px] text-muted/55">Start path</span>
+          <input
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="w-64 rounded-md bg-input px-2 py-1.5 text-[12px] text-foreground outline-none focus:ring-1 focus:ring-acid/40"
+          />
+        </div>
+      </Card>
+      <Card className="p-4">
+        {data ? <ConsoleSankey data={data} /> : <p className="py-6 text-center text-[12px] text-muted/45">Loading…</p>}
+      </Card>
+    </div>
+  );
+}
+
+function SearchPanel({ range }: { range: import("@/lib/types").ConsoleRange }) {
+  const { data } = useSearchAnalytics(range);
+  if (!data) return null;
+  return <ConsoleSearchAnalyticsCard report={data} />;
+}
+
+function RecsPanel({ range }: { range: import("@/lib/types").ConsoleRange }) {
+  const { data } = useRecCtr(range);
+  if (!data) return null;
+  return <ConsoleRecCtrTable report={data} />;
+}
+
+function ChurnPanel() {
+  const { data = [] } = useChurnPredictions();
+  return (
+    <ConsoleSection title="Churn predictions" description="Users likely to churn in the next 30 days">
+      <Card className="p-4">
+        <ConsoleChurnTable rows={data} />
+      </Card>
+    </ConsoleSection>
+  );
+}
+
+function LtvPanel() {
+  const { data = [] } = useLtvForecast();
+  return (
+    <ConsoleSection title="LTV forecast" description="Predicted 90d spend based on first-week behavior">
+      <Card className="p-4">
+        <ConsoleLtvTable rows={data} />
+      </Card>
+    </ConsoleSection>
   );
 }
