@@ -132,22 +132,22 @@ async function handleUserAuth(user: User | null) {
           await user.getIdToken(true);
         }
       }
-      // Owner bootstrap: mint the owner claim if the caller is the OWNER_UID
-      // and has completed MFA. The Cloud Function silently refuses otherwise.
-      if (!tokenResult.claims.owner) {
+      // Bootstrap admin: mint the admin claim if the caller's uid matches
+      // the OWNER_UID secret. The Cloud Function silently refuses otherwise.
+      if (!tokenResult.claims.admin) {
         try {
           const { httpsCallable } = await import("firebase/functions");
           const { getFirebaseFunctions } = await import("@/lib/firebase");
-          const claimOwner = httpsCallable<unknown, { owner: boolean; reason?: string }>(
+          const bootstrap = httpsCallable<unknown, { admin: boolean; reason?: string }>(
             getFirebaseFunctions(),
             "claimOwnerIfEligible",
           );
-          const ownerRes = await claimOwner({});
-          if (ownerRes.data?.owner) {
+          const bootstrapRes = await bootstrap({});
+          if (bootstrapRes.data?.admin) {
             await user.getIdToken(true);
           }
-        } catch (ownerErr) {
-          console.debug("owner claim attempt skipped", ownerErr);
+        } catch (bootstrapErr) {
+          console.debug("bootstrap admin attempt skipped", bootstrapErr);
         }
       }
     } catch (claimErr) {

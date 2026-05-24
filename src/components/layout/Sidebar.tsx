@@ -63,7 +63,12 @@ export function Sidebar() {
   ];
 
   const role = profile?.role;
-  const isCreator = role === "developer" || role === "publisher" || role === "admin" || role === "owner";
+  // Creators (external studios + publishers) and admins see the developer portal.
+  // Internal `developer` (employees) do NOT — that role is for app maintainers.
+  const isCreator =
+    role === "creator-developer" ||
+    role === "creator-publisher" ||
+    role === "admin";
   const isUserOnly = role === "user";
   const devNav: NavItem[] = isCreator
     ? [{ to: ROUTES.developerPortal, label: t("Developer Portal"), icon: Package }]

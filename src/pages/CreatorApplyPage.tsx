@@ -9,12 +9,12 @@ import { toast } from "@/stores/toast-store";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 
-type Kind = "developer" | "publisher";
+type Kind = "creator-developer" | "creator-publisher";
 
 export function CreatorApplyPage() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
-  const [kind, setKind] = useState<Kind>("developer");
+  const [kind, setKind] = useState<Kind>("creator-developer");
   const [brand, setBrand] = useState({
     name: "",
     brandColor: "#66c0f4",
@@ -29,10 +29,9 @@ export function CreatorApplyPage() {
   const [submitted, setSubmitted] = useState(false);
 
   const alreadyCreator =
-    profile?.role === "developer" ||
-    profile?.role === "publisher" ||
-    profile?.role === "admin" ||
-    profile?.role === "owner";
+    profile?.role === "creator-developer" ||
+    profile?.role === "creator-publisher" ||
+    profile?.role === "admin";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,10 +140,10 @@ export function CreatorApplyPage() {
             <div className="inline-flex rounded-lg bg-input p-1">
               <button
                 type="button"
-                onClick={() => setKind("developer")}
+                onClick={() => setKind("creator-developer")}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium",
-                  kind === "developer" ? "bg-card-active text-foreground" : "text-muted/65",
+                  kind === "creator-developer" ? "bg-card-active text-foreground" : "text-muted/65",
                 )}
               >
                 <Building className="h-3.5 w-3.5" />
@@ -152,10 +151,10 @@ export function CreatorApplyPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setKind("publisher")}
+                onClick={() => setKind("creator-publisher")}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium",
-                  kind === "publisher" ? "bg-card-active text-foreground" : "text-muted/65",
+                  kind === "creator-publisher" ? "bg-card-active text-foreground" : "text-muted/65",
                 )}
               >
                 <Briefcase className="h-3.5 w-3.5" />
@@ -163,7 +162,7 @@ export function CreatorApplyPage() {
               </button>
             </div>
           </div>
-          <Field label={kind === "developer" ? "Studio name" : "Publisher name"} required>
+          <Field label={kind === "creator-developer" ? "Studio name" : "Publisher name"} required>
             <input
               value={brand.name}
               onChange={(e) => setBrand({ ...brand, name: e.target.value })}

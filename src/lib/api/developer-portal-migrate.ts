@@ -179,7 +179,7 @@ export async function migrateLegacyDeveloperData(): Promise<void> {
   try {
     const tokenResult = await user.getIdTokenResult();
     const role = tokenResult.claims.role as string | undefined;
-    if (!role || !["developer", "publisher", "admin", "owner"].includes(role)) {
+    if (!role || !["creator-developer", "creator-publisher", "admin"].includes(role)) {
       window.localStorage.setItem(FLAG_KEY, FLAG_VAL);
       return;
     }

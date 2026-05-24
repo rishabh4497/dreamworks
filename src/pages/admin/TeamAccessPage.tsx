@@ -36,7 +36,12 @@ export function TeamAccessPage() {
   const profile = useAuthStore((s) => s.profile);
   const queryClient = useQueryClient();
   const reauth = useReauthRunner();
-  const isOwner = profile?.role === "owner";
+  // "Top admin" = role=admin AND holds the wildcard. Only they can grant
+  // admin-only-default keys and manage other admins' permissions.
+  const isTopAdmin =
+    profile?.role === "admin" &&
+    Array.isArray(profile?.permissions) &&
+    profile.permissions.includes("*");
 
   const { data: admins = [], isLoading } = useQuery({
     queryKey: ["admin", "team", "list"],
@@ -96,7 +101,7 @@ export function TeamAccessPage() {
         <button
           type="button"
           onClick={() => setInviteOpen((v) => !v)}
-          disabled={!isOwner}
+          disabled={!isTopAdmin}
           className="rounded-md bg-acid px-3 py-1.5 text-[12.5px] font-semibold text-background hover:bg-acid/80 disabled:opacity-40"
         >
           <Plus className="-mt-0.5 mr-1 inline h-3.5 w-3.5" />
@@ -107,9 +112,9 @@ export function TeamAccessPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <Card className="p-4">
           <p className="mb-3 text-[11px] uppercase tracking-widest text-muted/55">
-            Owner & admins
+            Admins
           </p>
-          <OwnerRow />
+          <TopAdminRow />
           <ul className="mt-2 space-y-1.5">
             {admins.map((a) => (
               <li key={a.uid}>
@@ -160,7 +165,7 @@ export function TeamAccessPage() {
               admin={selected}
               draft={draftPerms}
               onChange={setDraftPerms}
-              isOwner={isOwner}
+              isTopAdmin={isTopAdmin}
               onSave={() =>
                 saveMutation.mutate({
                   targetUid: selected.uid,
@@ -186,20 +191,24 @@ export function TeamAccessPage() {
   );
 }
 
-function OwnerRow() {
+function TopAdminRow() {
   const profile = useAuthStore((s) => s.profile);
-  if (profile?.role !== "owner") return null;
+  const isTopAdmin =
+    profile?.role === "admin" &&
+    Array.isArray(profile?.permissions) &&
+    profile.permissions.includes("*");
+  if (!isTopAdmin) return null;
   return (
     <div className="mb-1.5 flex items-center justify-between gap-3 rounded-lg border border-orange/30 bg-orange/5 p-2.5">
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium text-foreground/85">
-          {profile.displayName || profile.email}
+          {profile?.displayName || profile?.email}
           <span className="ml-2 text-[10.5px] text-orange">(you)</span>
         </p>
-        <p className="mt-0.5 truncate text-[11px] text-muted/55">{profile.email}</p>
+        <p className="mt-0.5 truncate text-[11px] text-muted/55">{profile?.email}</p>
       </div>
       <Badge variant="warn" className="gap-1">
-        <Crown className="h-3 w-3" /> Owner
+        <Crown className="h-3 w-3" /> Top admin
       </Badge>
     </div>
   );
@@ -209,13 +218,13 @@ interface EditorProps {
   admin: AdminUserSummary;
   draft: Set<string>;
   onChange: (next: Set<string>) => void;
-  isOwner: boolean;
+  isTopAdmin: boolean;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
 }
 
-function PermissionEditor({ admin, draft, onChange, isOwner, onSave, onCancel, saving }: EditorProps) {
+function PermissionEditor({ admin, draft, onChange, isTopAdmin, onSave, onCancel, saving }: EditorProps) {
   function toggle(key: PermissionKey) {
     const next = new Set(draft);
     if (next.has(key)) next.delete(key);
@@ -260,7 +269,7 @@ function PermissionEditor({ admin, draft, onChange, isOwner, onSave, onCancel, s
             <ul className="space-y-1">
               {g.keys.map((k) => {
                 const ownerOnly = OWNER_ONLY_DEFAULTS.has(k);
-                const disabled = ownerOnly && !isOwner;
+                const disabled = ownerOnly && !isTopAdmin;
                 const checked = draft.has(k);
                 return (
                   <li key={k}>

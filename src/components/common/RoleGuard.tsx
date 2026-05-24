@@ -6,7 +6,7 @@ import type { UserRole } from "@/lib/types";
 import { hasPermission, type PermissionKey } from "@/lib/permissions";
 
 interface RoleGuardProps {
-  /** Allowed roles. "owner" is always allowed implicitly. */
+  /** Allowed roles. `admin` (top role) is always allowed implicitly. */
   roles?: UserRole[];
   /** Optional permission key — must ALSO pass when supplied. */
   permission?: PermissionKey | PermissionKey[];
@@ -17,7 +17,7 @@ interface RoleGuardProps {
 
 /**
  * Route-level gate. Supports both role-based and permission-key-based
- * checks. Owner is implicitly accepted for any role check.
+ * checks. `admin` (the top role) is implicitly accepted for any role check.
  */
 export function RoleGuard({ roles, permission, fallbackPath, children }: RoleGuardProps) {
   const authState = useAuthStore((s) => s.authState);
@@ -30,14 +30,14 @@ export function RoleGuard({ roles, permission, fallbackPath, children }: RoleGua
     return <Navigate to={fallbackPath ?? ROUTES.store} replace />;
   }
 
-  // Role check — owner is superset of any role.
-  if (roles && roles.length > 0 && profile.role !== "owner") {
+  // Role check — admin is the top role and is implicitly allowed everywhere.
+  if (roles && roles.length > 0 && profile.role !== "admin") {
     if (!roles.includes(profile.role)) {
       return <Navigate to={fallbackPath ?? ROUTES.store} replace />;
     }
   }
 
-  // Permission check (when supplied — owner always passes).
+  // Permission check (when supplied — admins with "*" always pass via hasPermission).
   if (permission) {
     const keys = Array.isArray(permission) ? permission : [permission];
     const ok = keys.some((k) => hasPermission(profile, k));

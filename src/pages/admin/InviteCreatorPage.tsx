@@ -5,7 +5,7 @@ import { inviteCreator, lookupUserByEmail } from "@/lib/api/admin";
 import { toast } from "@/stores/toast-store";
 import { cn } from "@/lib/utils";
 
-type Kind = "developer" | "publisher";
+type Kind = "creator-developer" | "creator-publisher";
 
 interface LookupResult {
   uid: string | null;
@@ -18,7 +18,7 @@ interface LookupResult {
 export function InviteCreatorPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
-  const [kind, setKind] = useState<Kind>("developer");
+  const [kind, setKind] = useState<Kind>("creator-developer");
   const [lookup, setLookup] = useState<LookupResult | null>(null);
   const [lookupBusy, setLookupBusy] = useState(false);
   const [brand, setBrand] = useState({
@@ -243,10 +243,10 @@ function KindToggle({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => voi
     <div className="inline-flex rounded-lg bg-input p-1">
       <button
         type="button"
-        onClick={() => onChange("developer")}
+        onClick={() => onChange("creator-developer")}
         className={cn(
           "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium",
-          kind === "developer" ? "bg-card-active text-foreground" : "text-muted/65",
+          kind === "creator-developer" ? "bg-card-active text-foreground" : "text-muted/65",
         )}
       >
         <Building className="h-3.5 w-3.5" />
@@ -254,10 +254,10 @@ function KindToggle({ kind, onChange }: { kind: Kind; onChange: (k: Kind) => voi
       </button>
       <button
         type="button"
-        onClick={() => onChange("publisher")}
+        onClick={() => onChange("creator-publisher")}
         className={cn(
           "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium",
-          kind === "publisher" ? "bg-card-active text-foreground" : "text-muted/65",
+          kind === "creator-publisher" ? "bg-card-active text-foreground" : "text-muted/65",
         )}
       >
         <Briefcase className="h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ function BrandForm({ brand, onChange, kind }: BrandFormProps) {
     <div className="grid gap-3 md:grid-cols-2">
       <div className="md:col-span-2">
         <span className="mb-1 block text-[10.5px] uppercase tracking-widest text-muted/55">
-          {kind === "developer" ? "Studio name" : "Publisher name"}
+          {kind === "creator-developer" ? "Studio name" : "Publisher name"}
         </span>
         <input
           value={brand.name}

@@ -3,9 +3,10 @@ import type { UserRole } from "@/lib/types";
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: "user", label: "User" },
-  { value: "developer", label: "Developer" },
-  { value: "publisher", label: "Publisher" },
-  { value: "admin", label: "Admin" },
+  { value: "developer", label: "Developer (employee)" },
+  { value: "creator-developer", label: "Creator — Developer (studio)" },
+  { value: "creator-publisher", label: "Creator — Publisher" },
+  { value: "admin", label: "Admin (top)" },
 ];
 
 interface RoleSelectProps {

@@ -16,8 +16,9 @@ import type { AdminUserSummary, UserRole } from "@/lib/types";
 const ROLE_FILTER_OPTIONS: { value: UserRole | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
   { value: "user", label: "Users" },
-  { value: "developer", label: "Developers" },
-  { value: "publisher", label: "Publishers" },
+  { value: "developer", label: "Developers (employees)" },
+  { value: "creator-developer", label: "Creator developers" },
+  { value: "creator-publisher", label: "Creator publishers" },
   { value: "admin", label: "Admins" },
 ];
 

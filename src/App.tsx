@@ -158,7 +158,7 @@ export default function App() {
               path="developer-portal"
               element={
                 <RoleGuard
-                  roles={["developer", "publisher", "admin", "owner"]}
+                  roles={["creator-developer", "creator-publisher"]}
                   fallbackPath="/become-a-creator"
                 >
                   <DeveloperPortalPage />

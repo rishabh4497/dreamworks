@@ -81,8 +81,8 @@ export function ApplicationsQueuePage() {
                       {a.submitterEmail}
                     </p>
                   </div>
-                  <Badge variant={a.kind === "developer" ? "default" : "new"}>
-                    {a.kind === "developer" ? (
+                  <Badge variant={a.kind === "creator-developer" ? "default" : "new"}>
+                    {a.kind === "creator-developer" ? (
                       <Building className="-mt-0.5 mr-0.5 inline h-2.5 w-2.5" />
                     ) : (
                       <Briefcase className="-mt-0.5 mr-0.5 inline h-2.5 w-2.5" />
@@ -131,7 +131,7 @@ function ApplicationDetail({ app, onApprove, onReject, busy }: DetailProps) {
     <div className="space-y-4">
       <header>
         <div className="flex items-center gap-2">
-          <Badge variant={app.kind === "developer" ? "default" : "new"}>{app.kind}</Badge>
+          <Badge variant={app.kind === "creator-developer" ? "default" : "new"}>{app.kind}</Badge>
           <Badge>{app.status}</Badge>
         </div>
         <h3 className="mt-2 text-[16px] font-semibold text-foreground">
