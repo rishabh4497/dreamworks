@@ -51,21 +51,38 @@ export type PublisherInput = Omit<Publisher, "id" | "updatedAt" | "ownerUserId" 
   appIds?: string[];
 };
 
+/**
+ * Update an EXISTING publisher entity. Creation is admin-onboarded only.
+ * See `saveDeveloper` for the matching pattern.
+ */
 export async function savePublisher(input: PublisherInput): Promise<Publisher> {
   const userId = requireUserId();
   const id = input.id ?? slugify(input.name);
   if (!id) throw new Error("Publisher name is required.");
   const ref = doc(getDb(), COLLECTIONS.publishers, id);
   const existing = await getDoc(ref);
+  if (!existing.exists()) {
+    throw new Error(
+      "You don't own a publisher profile yet. Apply at /become-a-creator or wait for an admin invite.",
+    );
+  }
+  const current = existing.data() as Publisher;
+  if (current.ownerUserId !== userId) {
+    throw new Error("You don't have permission to edit this publisher.");
+  }
   const next: Publisher = stripUndefined({
-    ...(existing.exists() ? (existing.data() as Publisher) : {}),
+    ...current,
     ...input,
     id,
-    ownerUserId: existing.exists() ? (existing.data() as Publisher).ownerUserId ?? userId : userId,
-    appIds: input.appIds ?? (existing.exists() ? (existing.data() as Publisher).appIds ?? [] : []),
+    ownerUserId: current.ownerUserId,
+    appIds: input.appIds ?? current.appIds ?? [],
     updatedAt: now(),
   }) as Publisher;
-  await setDoc(ref, next, { merge: true });
+  const { verificationStatus: _vs, ...safeNext } = next as Publisher & {
+    verificationStatus?: string;
+  };
+  void _vs;
+  await setDoc(ref, safeNext as Publisher, { merge: true });
   return next;
 }
 

@@ -121,9 +121,9 @@ async function handleUserAuth(user: User | null) {
       });
     });
 
-    // Bootstrap: if the user is on the ADMIN_EMAILS allowlist (server-side)
-    // grant the admin custom claim once per session. Idempotent and silent
-    // for non-allowlisted users.
+    // Bootstrap: legacy callable is now a no-op (ADMIN_EMAILS allowlist no
+    // longer auto-promotes after the access-control redo). Keep the call for
+    // back-compat but expect { admin: false }.
     try {
       const tokenResult = await user.getIdTokenResult();
       if (!tokenResult.claims.admin) {
@@ -132,8 +132,25 @@ async function handleUserAuth(user: User | null) {
           await user.getIdToken(true);
         }
       }
+      // Owner bootstrap: mint the owner claim if the caller is the OWNER_UID
+      // and has completed MFA. The Cloud Function silently refuses otherwise.
+      if (!tokenResult.claims.owner) {
+        try {
+          const { httpsCallable } = await import("firebase/functions");
+          const { getFirebaseFunctions } = await import("@/lib/firebase");
+          const claimOwner = httpsCallable<unknown, { owner: boolean; reason?: string }>(
+            getFirebaseFunctions(),
+            "claimOwnerIfEligible",
+          );
+          const ownerRes = await claimOwner({});
+          if (ownerRes.data?.owner) {
+            await user.getIdToken(true);
+          }
+        } catch (ownerErr) {
+          console.debug("owner claim attempt skipped", ownerErr);
+        }
+      }
     } catch (claimErr) {
-      // Non-fatal: the callable may be unavailable in local-only environments.
       console.debug("admin claim bootstrap skipped", claimErr);
     }
   } catch (error: any) {

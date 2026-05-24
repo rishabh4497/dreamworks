@@ -38,6 +38,13 @@ export const ROUTES = {
   adminStudios: "/admin/studios",
   adminStudioDetail: (id: string) => `/admin/studios/${id}`,
   adminAuditLog: "/admin/audit-log",
+  adminTeam: "/admin/team",
+  adminInviteCreator: "/admin/invite-creator",
+  adminApplications: "/admin/applications",
+
+  // Public access-control surfaces (apply + claim).
+  applyCreator: "/become-a-creator",
+  claimInvite: "/claim-invite",
 
   // Admin Console (observability / god-view). Top-level route, role-gated to
   // admins. Six top-level tabs; deeper sections live under ?sub=… on People,

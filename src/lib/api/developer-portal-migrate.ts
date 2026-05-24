@@ -171,6 +171,24 @@ export async function migrateLegacyDeveloperData(): Promise<void> {
   const user = getFirebaseAuth().currentUser;
   if (!user) return;
 
+  // Access-control redo guard: only run for users who are already verified
+  // creators (developer/publisher/admin/owner). Plain users no longer get
+  // entities auto-minted on portal entry — that path is now admin-onboarded.
+  // We check the token's `role` custom claim (set by the role/permission
+  // Cloud Functions) before doing any writes.
+  try {
+    const tokenResult = await user.getIdTokenResult();
+    const role = tokenResult.claims.role as string | undefined;
+    if (!role || !["developer", "publisher", "admin", "owner"].includes(role)) {
+      window.localStorage.setItem(FLAG_KEY, FLAG_VAL);
+      return;
+    }
+  } catch {
+    // If we can't read the token, fail safe by skipping the migration.
+    window.localStorage.setItem(FLAG_KEY, FLAG_VAL);
+    return;
+  }
+
   try {
     const drafts = await fetchLegacyDraftsForUser(user.uid);
     if (drafts.length === 0) {

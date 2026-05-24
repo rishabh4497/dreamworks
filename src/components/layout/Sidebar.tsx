@@ -10,6 +10,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Store,
   Tag,
   TrendingUp,
   Puzzle,
@@ -22,6 +23,7 @@ const logoSrc = "/internal-logo.png";
 import { cn } from "@/lib/utils";
 import { ROUTES, DESKTOP_ONLY_ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/stores/auth-store";
+import { hasPermission } from "@/lib/permissions";
 import { useLibraryStore } from "@/stores/library-store";
 import { useUiStore } from "@/stores/ui-store";
 import { usePlatform } from "@/hooks/use-platform";
@@ -60,15 +62,18 @@ export function Sidebar() {
     { to: ROUTES.feed, label: t("Feed"), icon: Globe },
   ];
 
-  const devNav: NavItem[] = [
-    { to: ROUTES.developerPortal, label: t("Developer Portal"), icon: Package },
-  ];
+  const role = profile?.role;
+  const isCreator = role === "developer" || role === "publisher" || role === "admin" || role === "owner";
+  const isUserOnly = role === "user";
+  const devNav: NavItem[] = isCreator
+    ? [{ to: ROUTES.developerPortal, label: t("Developer Portal"), icon: Package }]
+    : [];
 
-  const isAdmin = profile?.role === "admin";
-  const adminNav: NavItem[] = [
-    { to: ROUTES.admin, label: t("Admin Panel"), icon: ShieldCheck },
-    { to: ROUTES.console, label: t("Console"), icon: LineChart },
-  ];
+  const canSeeAdmin = hasPermission(profile, "admin.access");
+  const canSeeConsole = hasPermission(profile, "console.access");
+  const adminNav: NavItem[] = [];
+  if (canSeeAdmin) adminNav.push({ to: ROUTES.admin, label: t("Admin Panel"), icon: ShieldCheck });
+  if (canSeeConsole) adminNav.push({ to: ROUTES.console, label: t("Console"), icon: LineChart });
 
   // Library lives in the sidebar (desktop-only); downloads/wishlist/cart/profile
   // are reached from the top header.
@@ -126,7 +131,7 @@ export function Sidebar() {
           compactMode={compactMode}
         />
 
-        {isAdmin && (
+        {adminNav.length > 0 && (
           <>
             {!compactMode && <p className={GROUP_LABEL}>{t("Admin")}</p>}
             {compactMode && <div className="mt-4 mb-1.5" />}
@@ -139,9 +144,27 @@ export function Sidebar() {
           </>
         )}
 
-        {!compactMode && <p className={GROUP_LABEL}>{t("Developer")}</p>}
-        {compactMode && <div className="mt-4 mb-1.5" />}
-        <NavGroup items={devNav} currentPath={location.pathname} compactMode={compactMode} />
+        {devNav.length > 0 && (
+          <>
+            {!compactMode && <p className={GROUP_LABEL}>{t("Developer")}</p>}
+            {compactMode && <div className="mt-4 mb-1.5" />}
+            <NavGroup items={devNav} currentPath={location.pathname} compactMode={compactMode} />
+          </>
+        )}
+
+        {isUserOnly && (
+          <>
+            {!compactMode && <p className={GROUP_LABEL}>{t("More")}</p>}
+            {compactMode && <div className="mt-4 mb-1.5" />}
+            <NavGroup
+              items={[
+                { to: ROUTES.applyCreator, label: t("Sell on Dreamworks"), icon: Store },
+              ]}
+              currentPath={location.pathname}
+              compactMode={compactMode}
+            />
+          </>
+        )}
 
         {isDesktop && (
           <div className="mt-4 pt-3">
