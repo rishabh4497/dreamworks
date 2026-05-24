@@ -86,10 +86,50 @@ service cloud.firestore {
                     && resource.data.authorUid == request.auth.uid;
     }
 
-    // ── Friends graph (shared demo data for v1) ─────────────────────────
-    match /dw_friends/{friendId}          { allow read: if true; allow write: if isSignedIn(); }
-    match /dw_friend_activity/{eventId}   { allow read: if true; allow write: if isSignedIn(); }
-    match /dw_friend_owned/{friendId}     { allow read: if true; allow write: if isSignedIn(); }
+    // ── Legacy fake-friend collections (read-only; purged by seed --clean-friends) ──
+    // Kept around so the cleanup task can delete leftover docs. The runtime
+    // friend graph lives at users/{uid}/friends/{friendUid} (see below).
+    match /dw_friends/{friendId}          { allow read: if true; allow write: if isAdmin(); }
+    match /dw_friend_activity/{eventId}   { allow read: if true; allow write: if isAdmin(); }
+    match /dw_friend_owned/{friendId}     { allow read: if true; allow write: if isAdmin(); }
+
+    // ── Real friend graph: per-user mirrored edges ──────────────────────
+    // Each friendship is stored as two docs, one per side:
+    //   users/{A}/friends/{B}  and  users/{B}/friends/{A}
+    // Either side can read or write either doc — that lets request/accept/
+    // decline/remove all flow client-side without a fan-out Cloud Function.
+    match /users/{uid}/friends/{friendUid} {
+      allow read: if isSignedIn()
+                  && (request.auth.uid == uid || request.auth.uid == friendUid);
+      allow write: if isSignedIn()
+                   && (request.auth.uid == uid || request.auth.uid == friendUid);
+    }
+
+    // ── 1:1 chats ───────────────────────────────────────────────────────
+    // The chat doc lists exactly two participants; reads/updates require
+    // membership. Messages inherit via a lookup back to the parent chat so
+    // we don't have to duplicate participants on every message.
+    match /dw_chats/{chatId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn()
+                    && request.resource.data.participants.size() == 2
+                    && request.auth.uid in request.resource.data.participants;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if false;
+    }
+    match /dw_chats/{chatId}/messages/{msgId} {
+      allow read: if isSignedIn()
+                  && request.auth.uid in get(/databases/$(database)/documents/dw_chats/$(chatId)).data.participants;
+      allow create: if isSignedIn()
+                    && request.resource.data.senderUid == request.auth.uid
+                    && request.auth.uid in get(/databases/$(database)/documents/dw_chats/$(chatId)).data.participants;
+      // Updates are limited to read-receipt bumps (the `readBy` array). Any
+      // other field touched server-side only.
+      allow update: if isSignedIn()
+                    && request.auth.uid in get(/databases/$(database)/documents/dw_chats/$(chatId)).data.participants
+                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(["readBy"]);
+      allow delete: if false;
+    }
 
     // ── Per-user owned data ─────────────────────────────────────────────
     match /dw_library/{docId} {

@@ -2,7 +2,8 @@ import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
-import { COLLECTIONS, assertAdmin, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { COLLECTIONS, nowIso, stripUndefined, writeAudit } from "./shared.js";
+import { assertPermission } from "../lib/assert-permission.js";
 
 type Outcome = "approve" | "request_changes" | "reject";
 
@@ -24,7 +25,7 @@ function makeHandler(
   return onCall(
     { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
     async (request: CallableRequest<ReviewProfileRequest>) => {
-      const { uid, email } = await assertAdmin(request);
+      const { uid, email } = await assertPermission(request, "admin.creators.review");
       const { submissionId, outcome, summaryNote, reasons } = request.data ?? ({} as ReviewProfileRequest);
       if (!submissionId) throw new HttpsError("invalid-argument", "submissionId required.");
       if (!ALLOWED.has(outcome)) throw new HttpsError("invalid-argument", `Invalid outcome: ${outcome}`);

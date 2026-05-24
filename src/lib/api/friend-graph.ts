@@ -201,9 +201,7 @@ export async function searchUsersByHandle(needle: string): Promise<UserProfile[]
 
   // Email exact match first (cheap & decisive).
   if (trimmed.includes("@")) {
-    const snap = await getDocs(
-      query(usersCol, where("email", "==", trimmed.toLowerCase())),
-    );
+    const snap = await getDocs(query(usersCol, where("email", "==", trimmed)));
     const out: UserProfile[] = [];
     snap.forEach((d) => out.push(profileFromDoc(d.id, d.data())));
     return out;
@@ -273,7 +271,6 @@ export async function sendFriendRequest(
       { merge: true },
     );
     await batch.commit();
-    void acceptedAt; // (silence unused if downstream stops needing it)
     return;
   }
 
@@ -446,7 +443,3 @@ export async function listFriendsWhoOwn(
   });
 }
 
-// `collectionGroup` import kept around for future expansion (e.g. counting how
-// many users have me as a friend without iterating my own subcollection).
-void collectionGroup;
-void deleteDoc;

@@ -3,9 +3,11 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
-import { COLLECTIONS, assertAdmin, writeAudit } from "./shared.js";
+import { COLLECTIONS, writeAudit } from "./shared.js";
+import { assertPermission } from "../lib/assert-permission.js";
+import { assertFreshAuth } from "../lib/recent-auth.js";
 
-type Role = "user" | "developer" | "publisher" | "admin";
+type Role = "user" | "developer" | "publisher" | "admin" | "owner";
 
 interface SetRoleRequest {
   targetUid: string;
@@ -13,12 +15,17 @@ interface SetRoleRequest {
   permissions?: string[];
 }
 
+// "owner" cannot be granted via this function — only mintable via
+// claimOwnerIfEligible with the OWNER_UID secret check + MFA gate.
 const ALLOWED_ROLES: ReadonlySet<Role> = new Set(["user", "developer", "publisher", "admin"]);
 
 export const setUserRole = onCall(
   { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
   async (request: CallableRequest<SetRoleRequest>): Promise<{ ok: true }> => {
-    const { uid: actorUid, email } = await assertAdmin(request);
+    // Sensitive: requires fresh reauth + explicit permission.
+    assertFreshAuth(request, 300);
+    const actor = await assertPermission(request, "admin.users.role_change");
+    const { uid: actorUid, email } = actor;
     const { targetUid, role, permissions } = request.data ?? ({} as SetRoleRequest);
 
     if (!targetUid) throw new HttpsError("invalid-argument", "targetUid required.");
@@ -30,8 +37,12 @@ export const setUserRole = onCall(
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(userRef);
       if (!snap.exists) throw new HttpsError("not-found", "User not found.");
+      const currentRole = snap.data()?.role ?? null;
+      if (currentRole === "owner") {
+        throw new HttpsError("permission-denied", "Cannot demote the owner.");
+      }
       const before = {
-        role: snap.data()?.role ?? null,
+        role: currentRole,
         permissions: snap.data()?.permissions ?? [],
       };
       tx.update(userRef, {
