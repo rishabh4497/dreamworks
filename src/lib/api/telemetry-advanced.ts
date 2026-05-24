@@ -822,7 +822,14 @@ export async function getApdexByRoute(range: ConsoleRange): Promise<ApdexByRoute
   return Array.from(byRoute.entries())
     .map(([route, s]) => {
       const apdex = s.samples > 0 ? (s.satisfied + s.tolerating / 2) / s.samples : 0;
-      return { route, samples: s.samples, apdex, ...s };
+      return {
+        route,
+        samples: s.samples,
+        apdex,
+        satisfied: s.satisfied,
+        tolerating: s.tolerating,
+        frustrating: s.frustrating,
+      } satisfies ApdexByRoute;
     })
     .sort((a, b) => b.samples - a.samples)
     .slice(0, 50);
@@ -1724,18 +1731,23 @@ export async function runAdHocQuery(spec: AdHocQuerySpec): Promise<AdHocQueryRes
   }
   constraints.push(fbLimit(Math.min(spec.limit ?? 500, READ_CAP)));
   const snap = await getDocs(query(collection(db, collectionForQuery(spec.collection)), ...constraints));
-  const raw = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+  const raw: Array<Record<string, unknown>> = snap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Record<string, unknown>),
+  }));
   if (!spec.groupBy) {
     return { rows: raw, ms: Math.round(performance.now() - t0) };
   }
   const groups = new Map<string, number[]>();
+  const groupBy = spec.groupBy;
+  const aggField = spec.aggregateField;
   for (const r of raw) {
-    const key = String(r[spec.groupBy] ?? "");
+    const key = String(r[groupBy] ?? "");
     if (!groups.has(key)) groups.set(key, []);
-    const v = spec.aggregateField ? Number(r[spec.aggregateField] ?? 0) : 1;
+    const v = aggField ? Number(r[aggField] ?? 0) : 1;
     groups.get(key)!.push(v);
   }
-  const rows = Array.from(groups.entries()).map(([k, arr]) => {
+  const rows: Array<Record<string, unknown>> = Array.from(groups.entries()).map(([k, arr]) => {
     let value = 0;
     switch (spec.aggregate) {
       case "count":
@@ -1754,9 +1766,12 @@ export async function runAdHocQuery(spec: AdHocQuerySpec): Promise<AdHocQueryRes
         value = Math.max(...arr);
         break;
     }
-    return { [spec.groupBy!]: k, value };
+    return { [groupBy]: k, value };
   });
-  return { rows: rows.sort((a, b) => Number(b.value) - Number(a.value)), ms: Math.round(performance.now() - t0) };
+  return {
+    rows: rows.sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0)),
+    ms: Math.round(performance.now() - t0),
+  };
 }
 
 export async function listDashboards(): Promise<ConsoleDashboard[]> {

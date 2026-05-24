@@ -85,6 +85,8 @@ export interface ReviewFacets {
 export interface Review {
   id: string;
   gameId: GameId;
+  /** Author's uid. Optional only for legacy seeded reviews; new writes must set it. */
+  authorUid?: string;
   authorName: string;
   authorAvatarUrl: string;
   authorHoursOnRecord: number;
@@ -678,7 +680,24 @@ export type AuditAction =
   | "user.permissions_set"
   | "publisher.review"
   | "studio.review"
-  | "moderation.decide";
+  | "moderation.decide"
+  // Owner / access control
+  | "owner.granted_admin"
+  | "owner.revoked_admin"
+  | "owner.permissions_changed"
+  | "owner.invited_admin"
+  | "owner.bootstrap"
+  // Creator onboarding (apply + invite)
+  | "creator.application_submitted"
+  | "creator.application_approved"
+  | "creator.application_rejected"
+  | "creator.invited_direct"
+  | "creator.invite_sent"
+  | "creator.invite_claimed"
+  | "creator.invite_expired"
+  // Auth hardening
+  | "auth.reauth_required"
+  | "auth.mfa_enrolled";
 
 export type AuditTargetType =
   | "app"
@@ -686,7 +705,10 @@ export type AuditTargetType =
   | "user"
   | "publisher"
   | "developer"
-  | "moderationRecord";
+  | "moderationRecord"
+  | "creatorApplication"
+  | "creatorInvite"
+  | "adminInvite";
 
 export interface AuditEntry {
   id: string;
@@ -704,7 +726,7 @@ export interface AuditEntry {
 // ── User & ownership ───────────────────────────────────────────────────────
 import type { AvatarOptions } from "./avatar";
 
-export type UserRole = "user" | "developer" | "publisher" | "admin";
+export type UserRole = "user" | "developer" | "publisher" | "admin" | "owner";
 
 export interface UserProfile {
   uid: string;
@@ -727,6 +749,8 @@ export interface UserProfile {
   role: UserRole;
   permissions: string[];
   suspended?: boolean;
+  /** Heartbeat timestamp written every ~30s while the tab is visible. */
+  lastActiveAt?: ISODate;
 }
 
 export interface AdminUserSummary {
@@ -1094,6 +1118,8 @@ export interface NewsArticle {
 }
 
 // ── Friends ─────────────────────────────────────────────────────────────────
+// Only "online" / "offline" are emitted by the live presence layer today.
+// "in-game" / "away" remain in the union for type-stability of older readers.
 export type FriendStatus = "online" | "offline" | "in-game" | "away";
 
 export interface Friend {
@@ -1105,6 +1131,32 @@ export interface Friend {
   lastSeen: ISODate;
 }
 
+/**
+ * Real friend-graph edge stored at `users/{uid}/friends/{friendUid}`.
+ * Each friendship is mirrored on both sides so both users can list it.
+ */
+export type FriendEdgeStatus = "pending-out" | "pending-in" | "accepted";
+
+export interface FriendEdge {
+  uid: string;
+  status: FriendEdgeStatus;
+  initiator: string;
+  createdAt: ISODate;
+  acceptedAt: ISODate | null;
+}
+
+/** View-model for an incoming/outgoing friend request joined with the other user's profile. */
+export interface FriendRequest {
+  uid: string;
+  displayName: string;
+  avatarUrl: string;
+  createdAt: ISODate;
+  direction: "in" | "out";
+}
+
+// Activity surfaces on the home rail are now computed from real `dw_library`
+// adds and `dw_reviews` posts by accepted friends. These types describe the
+// derived activity tile rather than a Firestore document.
 export type FriendActivityKind =
   | "achievement-unlocked"
   | "added-to-library"
@@ -1117,6 +1169,27 @@ export interface FriendActivity {
   gameId: GameId;
   payload: string;
   at: ISODate;
+}
+
+// ── Chat ────────────────────────────────────────────────────────────────────
+/**
+ * 1:1 chat between two users. `chatId` is the sorted pair `[A, B].join("_")`
+ * so each pair always resolves to a single deterministic doc id.
+ */
+export interface Chat {
+  id: string;
+  participants: [string, string];
+  lastMessage: { text: string; at: ISODate; senderUid: string } | null;
+  updatedAt: ISODate;
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  senderUid: string;
+  text: string;
+  at: ISODate;
+  readBy: string[];
 }
 
 // ── DB charts ───────────────────────────────────────────────────────────────
@@ -3464,6 +3537,77 @@ export interface ConsoleTrustSummary {
   fraud: FraudReport;
   moderation: ModerationQueueReport;
   auth: AuthAnomalyReport;
+}
+
+// ── Access control: invites + applications (server-managed) ────────────────
+//
+// Token rule of thumb: clients only ever see the plain token (in the magic
+// link). Firestore stores SHA-256 hashes as document IDs. Tokens cannot be
+// listed; lookup is by exact hash supplied by the claimant.
+
+export type InviteStatus = "pending" | "claimed" | "expired" | "revoked";
+export type CreatorInviteKind = "developer" | "publisher";
+
+/** Brand details captured by the admin during invite, replayed on claim. */
+export interface CreatorInviteBrand {
+  name: string;
+  brandColor: string;
+  logoUrl: string;
+  bannerUrl?: string;
+  tagline: string;
+  about?: string;
+  websiteUrl?: string;
+  socialLinks?: CreatorSocialLinks;
+}
+
+export interface CreatorInvite {
+  /** Doc ID is the SHA-256 hex of the plain token. */
+  id: string;
+  kind: CreatorInviteKind;
+  /** Recipient's email — must match `auth.token.email` at claim. */
+  email: string;
+  brand: CreatorInviteBrand;
+  createdByUid: string;
+  createdAt: ISODate;
+  expiresAt: ISODate;
+  status: InviteStatus;
+  claimedByUid?: string;
+  claimedAt?: ISODate;
+}
+
+export interface AdminInvite {
+  /** SHA-256 hex of plain token. */
+  id: string;
+  email: string;
+  /** Initial permission preset (a key into PRESET_BUNDLES). */
+  preset: string;
+  /** Additional explicit permissions on top of the preset. */
+  extraPermissions: string[];
+  createdByUid: string;
+  createdAt: ISODate;
+  expiresAt: ISODate;
+  status: InviteStatus;
+  claimedByUid?: string;
+  claimedAt?: ISODate;
+}
+
+/** Public application a user submits to become a developer or publisher. */
+export interface CreatorApplication {
+  id: string;
+  kind: CreatorInviteKind;
+  submitterUserId: string;
+  submitterEmail: string;
+  /** Aspirational brand info — admin can edit during approval. */
+  brand: CreatorInviteBrand;
+  /** Free-form pitch: prior work, why they want to ship on Dreamworks. */
+  pitch: string;
+  /** Optional URL list (portfolio, prior releases, press). */
+  links: string[];
+  status: "pending" | "in_review" | "approved" | "rejected";
+  submittedAt: ISODate;
+  decidedAt?: ISODate;
+  decidedByUid?: string;
+  decisionNote?: string;
 }
 
 // ── Global augmentations ─────────────────────────────────────────────────────

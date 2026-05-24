@@ -22,7 +22,21 @@ export type AuditAction =
   | "user.permissions_set"
   | "publisher.review"
   | "studio.review"
-  | "moderation.decide";
+  | "moderation.decide"
+  | "owner.granted_admin"
+  | "owner.revoked_admin"
+  | "owner.permissions_changed"
+  | "owner.invited_admin"
+  | "owner.bootstrap"
+  | "creator.application_submitted"
+  | "creator.application_approved"
+  | "creator.application_rejected"
+  | "creator.invited_direct"
+  | "creator.invite_sent"
+  | "creator.invite_claimed"
+  | "creator.invite_expired"
+  | "auth.reauth_required"
+  | "auth.mfa_enrolled";
 
 export type AuditTargetType =
   | "app"
@@ -30,7 +44,10 @@ export type AuditTargetType =
   | "user"
   | "publisher"
   | "developer"
-  | "moderationRecord";
+  | "moderationRecord"
+  | "creatorApplication"
+  | "creatorInvite"
+  | "adminInvite";
 
 export interface AuditEntry {
   actorUid: string;

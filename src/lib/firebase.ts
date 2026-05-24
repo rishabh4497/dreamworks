@@ -102,10 +102,14 @@ export const COLLECTIONS = {
   tags: "dw_tags",
   news: "dw_news",
   postImagePresets: "dw_post_image_presets",
-  // Social graph (still seeded — Phase 4 will compute these from real follow data)
+  // Legacy fake-friend collections — retained only so seed cleanup can purge
+  // them. Runtime code reads the real friend graph at users/{uid}/friends/*
+  // (see src/lib/api/friend-graph.ts) and real chat under `dw_chats`.
   friends: "dw_friends",
   friendActivity: "dw_friend_activity",
   friendOwned: "dw_friend_owned",
+  // Real 1:1 chat docs. chatId = sorted([uidA,uidB]).join("_").
+  chats: "dw_chats",
   // Mock-only collections promoted to Firestore (Phase 4)
   charts: "dw_charts",
   gameDbMetrics: "dw_game_db_metrics",
@@ -166,14 +170,28 @@ export const COLLECTIONS = {
   emailEvents: "dw_email_events",
   // Referral invites
   referrals: "dw_referrals",
+  // ── Access control (Owner / team permissions / creator onboarding) ────────
+  // Tokens are stored hashed at the document ID; only Cloud Functions read/write.
+  creatorInvites: "dw_creator_invites",
+  adminInvites: "dw_admin_invites",
+  creatorApplications: "dw_creator_applications",
 } as const;
 
-// Per-user subcollection paths under `dw_users/{uid}/...`.
+// Per-user subcollection paths under `users/{uid}/...`.
+// (Most user docs live in COLLECTIONS.users which currently resolves to
+// "users" — see CLAUDE.md for the prefix-rename caveat.)
 export const USER_SUBCOLLECTIONS = {
   saveHistory: "save_history",
   preferences: "preferences",
   recentlyViewed: "recently_viewed",
   scanHistory: "scan_history",
+  /** Friend-graph edges: users/{uid}/friends/{friendUid}. Mirrored on both sides. */
+  friends: "friends",
+} as const;
+
+// Subcollection under each chat document — dw_chats/{chatId}/messages/{msgId}.
+export const CHAT_SUBCOLLECTIONS = {
+  messages: "messages",
 } as const;
 
 // Subcollection name fragments (used as second-level path segments under apps/{appId}/...)
