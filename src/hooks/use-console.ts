@@ -12,7 +12,23 @@ import {
   getUserKpis,
   subscribeActiveSessions,
 } from "@/lib/api/telemetry";
-import type { ConsoleActiveSession, ConsoleRange } from "@/lib/types";
+import {
+  compareRange,
+  getLiveSnapshot,
+  getMoneyKpis,
+  getQualityReport,
+  listAnnotations,
+  listSavedViews,
+  subscribeInsights,
+} from "@/lib/api/telemetry-extra";
+import {
+  getDreamworksWrapped,
+  getPublisherReport,
+  getStudioReport,
+  getUserPersonalReport,
+  getUserReport,
+} from "@/lib/api/telemetry-reports";
+import type { ConsoleActiveSession, ConsoleInsight, ConsoleRange } from "@/lib/types";
 
 const RANGES: ConsoleRange[] = ["24h", "7d", "30d", "90d"];
 
@@ -26,6 +42,17 @@ export const consoleKeys = {
   performance: (r: ConsoleRange) => [...consoleKeys.all, "performance", r] as const,
   features: (r: ConsoleRange) => [...consoleKeys.all, "features", r] as const,
   errors: (r: ConsoleRange) => [...consoleKeys.all, "errors", r] as const,
+  money: (r: ConsoleRange) => [...consoleKeys.all, "money", r] as const,
+  quality: (r: ConsoleRange) => [...consoleKeys.all, "quality", r] as const,
+  live: () => [...consoleKeys.all, "live"] as const,
+  compare: (r: ConsoleRange) => [...consoleKeys.all, "compare", r] as const,
+  annotations: () => [...consoleKeys.all, "annotations"] as const,
+  savedViews: () => [...consoleKeys.all, "savedViews"] as const,
+  userReport: (uid: string) => [...consoleKeys.all, "userReport", uid] as const,
+  studioReport: (id: string) => [...consoleKeys.all, "studioReport", id] as const,
+  publisherReport: (id: string) => [...consoleKeys.all, "publisherReport", id] as const,
+  wrapped: (uid: string) => [...consoleKeys.all, "wrapped", uid] as const,
+  personal: (uid: string) => [...consoleKeys.all, "personal", uid] as const,
 };
 
 const COMMON_OPTS = {
@@ -130,4 +157,109 @@ export function useLiveSessions(): ConsoleActiveSession[] {
     return () => unsub();
   }, []);
   return sessions;
+}
+
+// ── New tab hooks ───────────────────────────────────────────────────────────
+
+export function useConsoleMoney(range: ConsoleRange) {
+  return useQuery({
+    queryKey: consoleKeys.money(range),
+    queryFn: () => getMoneyKpis(range),
+    ...COMMON_OPTS,
+  });
+}
+
+export function useConsoleQuality(range: ConsoleRange) {
+  return useQuery({
+    queryKey: consoleKeys.quality(range),
+    queryFn: () => getQualityReport(range),
+    ...COMMON_OPTS,
+  });
+}
+
+export function useConsoleLive() {
+  return useQuery({
+    queryKey: consoleKeys.live(),
+    queryFn: () => getLiveSnapshot(),
+    refetchInterval: 5_000,
+    staleTime: 0,
+  });
+}
+
+export function useConsoleCompare(range: ConsoleRange) {
+  return useQuery({
+    queryKey: consoleKeys.compare(range),
+    queryFn: () => compareRange(range),
+    ...COMMON_OPTS,
+  });
+}
+
+export function useAnnotations() {
+  return useQuery({
+    queryKey: consoleKeys.annotations(),
+    queryFn: () => listAnnotations(),
+    ...COMMON_OPTS,
+  });
+}
+
+export function useSavedViews() {
+  return useQuery({
+    queryKey: consoleKeys.savedViews(),
+    queryFn: () => listSavedViews(),
+    ...COMMON_OPTS,
+  });
+}
+
+export function useInsights() {
+  const [rows, setRows] = useState<ConsoleInsight[]>([]);
+  useEffect(() => subscribeInsights(setRows), []);
+  return rows;
+}
+
+// ── Per-actor report hooks ──────────────────────────────────────────────────
+
+export function useUserReport(uid: string | undefined) {
+  return useQuery({
+    queryKey: uid ? consoleKeys.userReport(uid) : ["disabled"],
+    queryFn: () => getUserReport(uid!),
+    enabled: !!uid,
+    ...COMMON_OPTS,
+  });
+}
+
+export function useStudioReport(id: string | undefined) {
+  return useQuery({
+    queryKey: id ? consoleKeys.studioReport(id) : ["disabled"],
+    queryFn: () => getStudioReport(id!),
+    enabled: !!id,
+    ...COMMON_OPTS,
+  });
+}
+
+export function usePublisherReport(id: string | undefined) {
+  return useQuery({
+    queryKey: id ? consoleKeys.publisherReport(id) : ["disabled"],
+    queryFn: () => getPublisherReport(id!),
+    enabled: !!id,
+    ...COMMON_OPTS,
+  });
+}
+
+export function useDreamworksWrapped(uid: string | undefined) {
+  return useQuery({
+    queryKey: uid ? consoleKeys.wrapped(uid) : ["disabled"],
+    queryFn: () => getDreamworksWrapped(uid!),
+    enabled: !!uid,
+    staleTime: 60 * 60_000,
+    gcTime: 24 * 60 * 60_000,
+  });
+}
+
+export function useUserPersonalReport(uid: string | undefined) {
+  return useQuery({
+    queryKey: uid ? consoleKeys.personal(uid) : ["disabled"],
+    queryFn: () => getUserPersonalReport(uid!),
+    enabled: !!uid,
+    ...COMMON_OPTS,
+  });
 }

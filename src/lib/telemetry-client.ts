@@ -3,7 +3,7 @@
 // toggles internally (usageDiagnosticsEnabled / crashReportsEnabled), so
 // callers can fire-and-forget without checking flags.
 
-import { track, trackError } from "@/lib/telemetry";
+import { track, trackError, trackPerf } from "@/lib/telemetry";
 
 /**
  * Tag a user action for diagnostic-feedback purposes. Silently dropped when
@@ -25,4 +25,24 @@ export function reportCrash(
   context?: Record<string, unknown>,
 ): void {
   trackError(err, { source: "manual", context });
+}
+
+/**
+ * Wrap an async function with API latency telemetry. Records as a `perf.api`
+ * sample with `meta.endpoint`. Errors do not throw out of the wrapper — they
+ * are re-thrown after recording so callers see normal failure semantics.
+ */
+export async function withApiTimer<T>(
+  endpoint: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const t0 = performance.now();
+  try {
+    const result = await fn();
+    trackPerf("api", performance.now() - t0, { endpoint, status: "ok" });
+    return result;
+  } catch (err) {
+    trackPerf("api", performance.now() - t0, { endpoint, status: "error" });
+    throw err;
+  }
 }

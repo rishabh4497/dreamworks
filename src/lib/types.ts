@@ -2079,6 +2079,7 @@ export type TelemetryEventType =
   | "session_start"
   | "session_end"
   | "search_query"
+  | "search_click"
   | "game_view"
   | "wishlist_add"
   | "wishlist_remove"
@@ -2088,14 +2089,35 @@ export type TelemetryEventType =
   | "checkout_complete"
   | "checkout_abandon"
   | "library_install"
+  | "library_uninstall"
   | "library_launch"
   | "studio_submit"
   | "build_upload"
   | "publish_action"
   | "review_submit"
   | "voice_join"
+  | "voice_leave"
   | "community_join"
-  | "feature_click";
+  | "community_post"
+  | "feature_click"
+  | "rage_click"
+  | "dead_click"
+  | "scroll_depth"
+  | "time_on_page"
+  | "discovery_source"
+  | "purchase_intent"
+  | "friend_request_sent"
+  | "friend_request_accepted"
+  | "notification_seen"
+  | "notification_clicked"
+  | "settings_change"
+  | "consent_change"
+  | "feature_flag_exposure"
+  | "ai_prompt"
+  | "download_started"
+  | "download_completed"
+  | "download_failed"
+  | "crash_recovered";
 
 export interface TelemetryEvent {
   id: string;
@@ -2131,9 +2153,13 @@ export type TelemetryPerfName =
   | "lcp"
   | "fcp"
   | "cls"
+  | "inp"
+  | "ttfb"
   | "longtask"
   | "route_render"
-  | "api";
+  | "api"
+  | "memory"
+  | "bundle";
 
 export interface TelemetryPerf {
   id: string;
@@ -2337,6 +2363,382 @@ export interface ConsoleActiveSession {
   startedAt: ISODate;
   lastRoute: string;
   device: Pick<DeviceSnapshot, "os" | "isDesktop">;
+}
+
+// ── Console: annotations, anomalies, error issues, insights ─────────────────
+
+export type AnnotationScope = "global" | "route" | "app" | "publisher";
+
+export interface ConsoleAnnotation {
+  id: string;
+  /** ISO date the annotation marks. */
+  at: ISODate;
+  text: string;
+  scope: AnnotationScope;
+  /** Slug/route/uid the annotation is bound to when scope !== "global". */
+  scopeRef?: string;
+  /** Who created it. */
+  authorUid: string;
+  authorName?: string;
+  /** UI tint hint. */
+  kind?: "release" | "marketing" | "incident" | "note";
+  createdAt: ISODate;
+}
+
+export type ErrorIssueStatus = "open" | "acknowledged" | "resolved" | "ignored";
+
+/** Admin-owned status doc for a clustered error (keyed by fingerprint). */
+export interface ConsoleErrorIssue {
+  /** Same id as the cluster fingerprint. */
+  fingerprint: string;
+  status: ErrorIssueStatus;
+  assigneeUid?: string;
+  assigneeName?: string;
+  note?: string;
+  firstSeen: ISODate;
+  lastSeen: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface ConsoleAnomaly {
+  /** Stable metric key, e.g. "dau", "errors", "p95Lcp". */
+  metric: string;
+  current: number;
+  previous: number;
+  /** Signed delta, percent. */
+  deltaPct: number;
+  /** Direction we consider "bad". */
+  worseDirection: "up" | "down";
+  severity: "info" | "warn" | "critical";
+  /** Human-readable explanation. */
+  message: string;
+}
+
+export interface ConsoleInsight {
+  id: string;
+  kind: "anomaly" | "opportunity" | "regression" | "celebration";
+  text: string;
+  /** Linked route inside the console. */
+  href?: string;
+  ts: ISODate;
+}
+
+// ── Console: Money tab ─────────────────────────────────────────────────────
+
+export interface ConsoleMoneyKpis {
+  mrrCents: number;
+  arrCents: number;
+  arpuCents: number;
+  arpdauCents: number;
+  arppuCents: number;
+  ltvCents: number;
+  refundRatePct: number;
+  payingUsers: number;
+  newPayingInRange: number;
+  trialConversionPct: number;
+  revenueSeries: ConsoleTimePoint[];
+  revenueWaterfall: {
+    bucket: ISODate;
+    new: number;
+    expansion: number;
+    reactivation: number;
+    churn: number;
+  }[];
+  revenueByRegion: ConsoleNamedCount[];
+  revenueByCurrency: ConsoleNamedCount[];
+  topPromos: { id: string; name: string; revenueCents: number; redemptions: number }[];
+  priceBandRevenue: ConsoleNamedCount[];
+}
+
+// ── Console: Quality tab ───────────────────────────────────────────────────
+
+export interface ConsoleQualityIssue {
+  id: string;
+  kind: "error" | "perf" | "friction" | "search";
+  title: string;
+  details: string;
+  /** Rough impact score 0–100. */
+  impact: number;
+  affectedSessions: number;
+  affectedUsers: number;
+  suggestedFix?: string;
+  href?: string;
+}
+
+export interface ConsoleQualityReport {
+  topIssues: ConsoleQualityIssue[];
+  frustrationByRoute: { route: string; rageClicks: number; deadClicks: number; errors: number; score: number }[];
+  browserOsErrorRate: { browser: string; os: string; ratePer1k: number; sessions: number }[];
+  apiErrorCorrelations: { endpoint: string; ms: number; errors: number }[];
+}
+
+// ── Console: Live Ops tab ──────────────────────────────────────────────────
+
+export interface ConsoleLiveSnapshot {
+  liveSessions: ConsoleActiveSession[];
+  topActiveRoutes: ConsoleNamedCount[];
+  activeDownloads: number;
+  activeVoiceChannels: number;
+  recentErrors: TelemetryError[];
+  cloudFunctionMetrics?: {
+    name: string;
+    invocations5m: number;
+    p95Ms: number;
+    errorRatePct: number;
+  }[];
+}
+
+// ── Per-actor reports ──────────────────────────────────────────────────────
+
+export type UserPersonality =
+  | "Achievement Hunter"
+  | "Completionist"
+  | "Speedrunner"
+  | "Social Player"
+  | "Browser"
+  | "Whale"
+  | "Hibernator"
+  | "Balanced";
+
+export type UserHealthSegment = "Champion" | "Loyal" | "At-risk" | "Hibernating" | "New";
+
+export interface ConsoleUserReport {
+  uid: string;
+  displayName: string;
+  email?: string;
+  country?: string;
+  memberSince?: ISODate;
+  role: UserRole;
+  segment: UserHealthSegment;
+  personality: UserPersonality;
+  oneLineSummary: string;
+  // Engagement
+  sessions: number;
+  totalMinutes: number;
+  avgSessionMinutes: number;
+  stickinessPct: number;
+  lastSeenAt: ISODate | null;
+  daySparkline: number[];
+  hourHeatmap: { dow: number; hour: number; count: number }[];
+  topEvents: ConsoleNamedCount[];
+  // Library & taste
+  ownedCount: number;
+  installedCount: number;
+  topGames: { gameId: string; title: string; minutes: number }[];
+  genreAffinity: ConsoleNamedCount[];
+  achievementsUnlocked: number;
+  averageCompletionPct: number;
+  perfectGames: number;
+  dustPile: number;
+  backlogYears: number;
+  // Money
+  lifetimeSpendCents: number;
+  giftsGivenCents: number;
+  giftsReceivedCents: number;
+  avgTicketCents: number;
+  subscriptionStatus: string;
+  refundCount: number;
+  // Social
+  friendsCount: number;
+  communitiesCount: number;
+  voiceMinutes: number;
+  reviewsPosted: number;
+  reviewHelpfulTotal: number;
+  forumPosts: number;
+  // Wishlist
+  wishlistSize: number;
+  wishlistOldestAgeDays: number;
+  wishlistConversionPct: number;
+  // Rig
+  device: DeviceSnapshot | null;
+  rigPercentile: number;
+  // Quality
+  errorsObserved: number;
+  topErrorMessages: string[];
+  p95LcpMsExperienced: number;
+  // Suggestions
+  suggestions: string[];
+}
+
+export interface ConsoleStudioReport {
+  id: string;
+  name: string;
+  ownerUid: string;
+  verificationStatus: CreatorVerificationStatus;
+  oneLineSummary: string;
+  apps: {
+    id: string;
+    title: string;
+    stage: AppStage;
+    wishlists: number;
+    currentPlayers: number;
+    revenueCents: number;
+    p95LcpMs: number;
+    errorsPer1k: number;
+  }[];
+  funnelByApp: {
+    appId: string;
+    title: string;
+    pageView: number;
+    wishlist: number;
+    purchase: number;
+    install: number;
+    launch: number;
+    secondSession: number;
+  }[];
+  submissions: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    medianTtpDays: number | null;
+    p95TtpDays: number | null;
+    rejectionReasons: ConsoleNamedCount[];
+  };
+  buildsPerMonth: ConsoleTimePoint[];
+  daysSinceLastBuild: number | null;
+  validationPassPct: number;
+  audience: {
+    byRegion: ConsoleNamedCount[];
+    byOs: ConsoleNamedCount[];
+    byBrowser: ConsoleNamedCount[];
+  };
+  reviews: {
+    total: number;
+    label: ReviewLabel | null;
+    facetAverages: FacetAverages | null;
+    recentNegativeKeywords: ConsoleNamedCount[];
+    responseRatePct: number;
+  };
+  marketing: {
+    activeCampaigns: number;
+    redemptions: number;
+    announcementsRead: number;
+  };
+  crashes: {
+    topClusters: { fingerprint: string; message: string; count: number }[];
+    sdkSuccessPct: number;
+    crashFreeSessionsPct: number;
+  };
+  whatToFix: string[];
+}
+
+export interface ConsolePublisherReport {
+  id: string;
+  name: string;
+  ownerUid: string;
+  verificationStatus: CreatorVerificationStatus;
+  oneLineSummary: string;
+  money: {
+    arpuCents: number;
+    arpdauCents: number;
+    arppuCents: number;
+    ltvCents: number;
+    refundRatePct: number;
+    revenueSeries: ConsoleTimePoint[];
+    revenueByRegion: ConsoleNamedCount[];
+  };
+  catalog: {
+    totalApps: number;
+    byGenre: ConsoleNamedCount[];
+    byTag: ConsoleNamedCount[];
+    byPriceBand: ConsoleNamedCount[];
+    medianAgeDays: number;
+    updatedLast12moPct: number;
+  };
+  audience: {
+    byRegion: ConsoleNamedCount[];
+    byOs: ConsoleNamedCount[];
+    affinityVsPlatform: ConsoleNamedCount[];
+  };
+  pipeline: {
+    medianTtpDays: number | null;
+    submissionRejectRatePct: number;
+  };
+  reputation: {
+    avgScore: number;
+    topThemes: ConsoleNamedCount[];
+    refundDrivers: ConsoleNamedCount[];
+  };
+  marketing: {
+    activeCampaigns: number;
+    promoRedemptionsPct: number;
+  };
+  suggestions: string[];
+}
+
+// ── User-facing "Dreamworks Wrapped" annual recap ──────────────────────────
+
+export interface DreamworksWrappedReport {
+  uid: string;
+  displayName: string;
+  yearStart: ISODate;
+  yearEnd: ISODate;
+  totalMinutes: number;
+  totalHours: number;
+  sessionsCount: number;
+  topGames: { gameId: string; title: string; minutes: number; coverUrl?: string }[];
+  topGenres: ConsoleNamedCount[];
+  achievementsUnlocked: number;
+  perfectGames: number;
+  friendsMade: number;
+  communitiesJoined: number;
+  reviewsPosted: number;
+  totalSpendCents: number;
+  giftsGiven: number;
+  giftsReceived: number;
+  personality: UserPersonality;
+  longestStreakDays: number;
+  topInputMethod: "keyboard-mouse" | "controller" | "touch" | "unknown";
+  topPlayHour: number;
+  oneLineSummary: string;
+}
+
+// ── User self-service personal report ──────────────────────────────────────
+
+export interface UserPersonalReport {
+  totalMinutes: number;
+  avgSessionMinutes: number;
+  sessions: number;
+  topGames: { gameId: string; title: string; minutes: number }[];
+  genreAffinity: ConsoleNamedCount[];
+  wishlistConversionPct: number;
+  achievementsUnlocked: number;
+  spendCents: number;
+  device: DeviceSnapshot | null;
+  pageViewsLast30d: number;
+  errorsObserved: number;
+  personality: UserPersonality;
+  segment: UserHealthSegment;
+  suggestions: string[];
+}
+
+// ── Saved console views ────────────────────────────────────────────────────
+
+export interface ConsoleSavedView {
+  id: string;
+  ownerUid: string;
+  name: string;
+  /** Captured URL search-params (everything after the ? on /console). */
+  query: string;
+  createdAt: ISODate;
+}
+
+// ── Telemetry rollups (computed by scheduled jobs; today: on-demand on read) ─
+
+export interface TelemetryUserRollup {
+  uid: string;
+  lifetimeSessions: number;
+  lifetimeMinutes: number;
+  lifetimeEvents: number;
+  lifetimeErrors: number;
+  lifetimeSpendCents: number;
+  lastSeenAt: ISODate | null;
+  segment: UserHealthSegment;
+  personality: UserPersonality;
+  /** Last 30 days, oldest → newest. */
+  daySparkline: number[];
+  updatedAt: ISODate;
 }
 
 // ── Global augmentations ─────────────────────────────────────────────────────

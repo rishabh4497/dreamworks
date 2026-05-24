@@ -42,3 +42,4 @@ docs/
 # and mock-user credentials respectively — never commit).
 serviceAccountKey.json
 MOCK_USERS.md
+CONSOLE_EXPANSION_PLAN.md

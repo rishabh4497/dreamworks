@@ -134,6 +134,15 @@ export const COLLECTIONS = {
   telemetryErrors: "dw_telemetry_errors",
   telemetryPerf: "dw_telemetry_perf",
   telemetryDevices: "dw_telemetry_devices",
+  // Console operator surface
+  consoleAnnotations: "dw_console_annotations",
+  consoleErrorIssues: "dw_console_error_issues",
+  consoleSavedViews: "dw_console_saved_views",
+  consoleInsights: "dw_console_insights",
+  // Per-actor rollups (nightly job or on-demand)
+  telemetryUserRollups: "dw_telemetry_user_rollups",
+  telemetryAppRollups: "dw_telemetry_app_rollups",
+  telemetryPublisherRollups: "dw_telemetry_publisher_rollups",
   // Privacy: scheduled deletion queue. Cloud Function picks up + processes.
   deletionRequests: "dw_deletion_requests",
 } as const;
