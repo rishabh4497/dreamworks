@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Briefcase, Building, Mail, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { inviteCreator, lookupUserByEmail } from "@/lib/api/admin";
 import { toast } from "@/stores/toast-store";
 import { cn } from "@/lib/utils";

@@ -11,6 +11,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConsoleTab } from "@/hooks/use-console";
+import { useAuthStore } from "@/stores/auth-store";
+import { hasPermission, type PermissionKey } from "@/lib/permissions";
 import { ConsoleRangeSelector } from "@/components/console/ConsoleRangeSelector";
 import { ConsoleCompareToggle } from "@/components/console/ConsoleCompareToggle";
 import { ConsoleOverviewTab } from "./ConsoleOverviewTab";
@@ -24,19 +26,28 @@ interface TabDef {
   id: string;
   label: string;
   icon: LucideIcon;
+  /** Permission required to see the tab. Owner always passes. */
+  requires: PermissionKey;
 }
 
 const TABS: TabDef[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "people", label: "People", icon: Users },
-  { id: "creators", label: "Creators", icon: Building },
-  { id: "money", label: "Money", icon: DollarSign },
-  { id: "health", label: "Health", icon: ShieldAlert },
-  { id: "reports", label: "Reports", icon: FileBarChart2 },
+  { id: "overview", label: "Overview", icon: LayoutDashboard, requires: "console.overview.read" },
+  { id: "people", label: "People", icon: Users, requires: "console.people.users.read" },
+  { id: "creators", label: "Creators", icon: Building, requires: "console.creators.studios.read" },
+  { id: "money", label: "Money", icon: DollarSign, requires: "console.money.read" },
+  { id: "health", label: "Health", icon: ShieldAlert, requires: "console.health.performance.read" },
+  { id: "reports", label: "Reports", icon: FileBarChart2, requires: "console.reports.read" },
 ];
 
 export function ConsolePage() {
   const [tab, setTab] = useConsoleTab();
+  const profile = useAuthStore((s) => s.profile);
+  const visibleTabs = TABS.filter((t) => hasPermission(profile, t.requires));
+  // Auto-redirect off forbidden tab into first allowed.
+  const allowedIds = visibleTabs.map((t) => t.id);
+  if (!allowedIds.includes(tab) && visibleTabs.length > 0) {
+    setTab(visibleTabs[0].id);
+  }
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -65,7 +76,7 @@ export function ConsolePage() {
       </header>
 
       <nav className="flex flex-wrap items-center gap-1.5 rounded-xl bg-input p-1.5">
-        {TABS.map((t) => {
+        {visibleTabs.map((t) => {
           const active = tab === t.id;
           return (
             <button

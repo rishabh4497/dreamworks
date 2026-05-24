@@ -56,6 +56,11 @@ const PublisherReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewP
 const StudioReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage"), "StudioReviewPage");
 const AuditLogPage = lazyNamed(() => import("@/pages/admin/AuditLogPage"), "AuditLogPage");
 const CdnAdminPage = lazyNamed(() => import("@/pages/admin/CdnAdminPage"), "CdnAdminPage");
+const TeamAccessPage = lazyNamed(() => import("@/pages/admin/TeamAccessPage"), "TeamAccessPage");
+const InviteCreatorPage = lazyNamed(() => import("@/pages/admin/InviteCreatorPage"), "InviteCreatorPage");
+const ApplicationsQueuePage = lazyNamed(() => import("@/pages/admin/ApplicationsQueuePage"), "ApplicationsQueuePage");
+const CreatorApplyPage = lazyNamed(() => import("@/pages/CreatorApplyPage"), "CreatorApplyPage");
+const ClaimInvitePage = lazyNamed(() => import("@/pages/ClaimInvitePage"), "ClaimInvitePage");
 const ConsolePage = lazyNamed(() => import("@/pages/console/ConsolePage"), "ConsolePage");
 const ConsoleUserReportPage = lazyNamed(
   () => import("@/pages/console/ConsoleUserReportPage"),
@@ -149,7 +154,17 @@ export default function App() {
             <Route path="store/game/:gameId" element={<GameDetailPage />} />
             <Route path="developer/:slug" element={<DeveloperPage />} />
             <Route path="publisher/:slug" element={<PublisherPage />} />
-            <Route path="developer-portal" element={<DeveloperPortalPage />}>
+            <Route
+              path="developer-portal"
+              element={
+                <RoleGuard
+                  roles={["developer", "publisher", "admin", "owner"]}
+                  fallbackPath="/become-a-creator"
+                >
+                  <DeveloperPortalPage />
+                </RoleGuard>
+              }
+            >
               <Route index element={<Navigate to="/developer-portal/apps" replace />} />
               <Route path="apps" element={<AppListPage />} />
               <Route path="apps/new" element={<AppNewPage />} />
@@ -174,7 +189,7 @@ export default function App() {
             <Route
               path="admin"
               element={
-                <RoleGuard roles={["admin"]}>
+                <RoleGuard permission="admin.access">
                   <AdminPortalPage />
                 </RoleGuard>
               }
@@ -182,9 +197,12 @@ export default function App() {
               <Route index element={<AdminDashboardPage />} />
               <Route path="submissions" element={<AppSubmissionsQueuePage />} />
               <Route path="submissions/:submissionId" element={<AppSubmissionDetailPage />} />
+              <Route path="applications" element={<ApplicationsQueuePage />} />
               <Route path="apps" element={<AppsAdminPage />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="users/:uid" element={<UserDetailPage />} />
+              <Route path="team" element={<TeamAccessPage />} />
+              <Route path="invite-creator" element={<InviteCreatorPage />} />
               <Route path="content-moderation" element={<ModerationQueuePage />} />
               <Route path="publishers" element={<PublisherReviewPage />} />
               <Route path="publishers/:id" element={<PublisherReviewPage />} />
@@ -197,7 +215,7 @@ export default function App() {
             <Route
               path="console"
               element={
-                <RoleGuard roles={["admin"]}>
+                <RoleGuard permission="console.access">
                   <ConsolePage />
                 </RoleGuard>
               }
@@ -205,7 +223,7 @@ export default function App() {
             <Route
               path="console/report/user/:uid"
               element={
-                <RoleGuard roles={["admin"]}>
+                <RoleGuard permission="console.people.users.read">
                   <ConsoleUserReportPage />
                 </RoleGuard>
               }
@@ -213,7 +231,7 @@ export default function App() {
             <Route
               path="console/report/studio/:id"
               element={
-                <RoleGuard roles={["admin"]}>
+                <RoleGuard permission="console.creators.studios.read">
                   <ConsoleStudioReportPage />
                 </RoleGuard>
               }
@@ -221,11 +239,14 @@ export default function App() {
             <Route
               path="console/report/publisher/:id"
               element={
-                <RoleGuard roles={["admin"]}>
+                <RoleGuard permission="console.creators.publishers.read">
                   <ConsolePublisherReportPage />
                 </RoleGuard>
               }
             />
+
+            <Route path="become-a-creator" element={<CreatorApplyPage />} />
+            <Route path="claim-invite" element={<ClaimInvitePage />} />
 
             <Route path="wrapped" element={<DreamworksWrappedPage />} />
 

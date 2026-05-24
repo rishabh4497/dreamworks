@@ -347,7 +347,7 @@ export function buildClaimDigest(role: UserRole | string, permissions: string[])
     owner: isOwner,
     admin: isOwner || role === "admin",
   };
-  const claimKeys: PermissionKey[] = [
+  const claimKeys: Array<keyof ClaimDigest> = [
     "admin.access",
     "console.access",
     "admin.creators.review",
@@ -363,7 +363,8 @@ export function buildClaimDigest(role: UserRole | string, permissions: string[])
     "admin.moderation.access",
   ];
   for (const k of claimKeys) {
-    if (hasPermission(profile, k)) digest[k] = true;
+    if (k === "owner" || k === "admin") continue;
+    if (hasPermission(profile, k as PermissionKey)) digest[k] = true;
   }
   return digest;
 }

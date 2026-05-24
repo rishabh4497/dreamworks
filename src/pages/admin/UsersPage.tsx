@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Search, Users as UsersIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/common/EmptyState";
+import { PermissionGate } from "@/components/common/PermissionGate";
 import { RoleSelect } from "@/components/admin/RoleSelect";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -122,11 +123,18 @@ export function UsersPage() {
               </Link>
               <span className="truncate text-muted/75">{user.email}</span>
               <div>
-                <RoleSelect
-                  value={user.role}
-                  onChange={(next) => setPending({ user, next })}
-                  disabled={setUserRoleMutation.isPending}
-                />
+                <PermissionGate
+                  require="admin.users.role_change"
+                  fallback={
+                    <span className="text-[11px] text-muted/55 italic">{user.role}</span>
+                  }
+                >
+                  <RoleSelect
+                    value={user.role}
+                    onChange={(next) => setPending({ user, next })}
+                    disabled={setUserRoleMutation.isPending}
+                  />
+                </PermissionGate>
               </div>
               <span className="truncate text-[11px] text-muted/65">
                 {user.permissions.length === 0 ? "—" : user.permissions.join(", ")}

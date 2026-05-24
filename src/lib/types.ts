@@ -726,7 +726,20 @@ export interface AuditEntry {
 // ── User & ownership ───────────────────────────────────────────────────────
 import type { AvatarOptions } from "./avatar";
 
-export type UserRole = "user" | "developer" | "publisher" | "admin" | "owner";
+/**
+ * Role hierarchy:
+ * - `admin`             — platform owner / boss (top role)
+ * - `developer`         — internal team / employee
+ * - `creator-developer` — external game studio (third-party creator)
+ * - `creator-publisher` — external game publisher (third-party creator)
+ * - `user`              — regular customer
+ */
+export type UserRole =
+  | "user"
+  | "developer"
+  | "creator-developer"
+  | "creator-publisher"
+  | "admin";
 
 export interface UserProfile {
   uid: string;
@@ -3546,7 +3559,8 @@ export interface ConsoleTrustSummary {
 // listed; lookup is by exact hash supplied by the claimant.
 
 export type InviteStatus = "pending" | "claimed" | "expired" | "revoked";
-export type CreatorInviteKind = "developer" | "publisher";
+/** Kind of creator being invited / applying. Maps 1:1 to the target role. */
+export type CreatorInviteKind = "creator-developer" | "creator-publisher";
 
 /** Brand details captured by the admin during invite, replayed on claim. */
 export interface CreatorInviteBrand {
