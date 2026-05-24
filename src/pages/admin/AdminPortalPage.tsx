@@ -4,38 +4,53 @@ import {
   Boxes,
   Briefcase,
   Building,
+  Inbox,
+  Mail,
   Package,
   Radio,
   ScrollText,
   ShieldAlert,
   ShieldCheck,
   User,
+  Users,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
+import { hasPermission, type PermissionKey } from "@/lib/permissions";
 
 interface AdminNavItem {
   to: string;
   label: string;
-  icon: typeof ShieldCheck;
+  icon: LucideIcon;
   matchPrefix: string;
   exact?: boolean;
+  /** Optional permission key — item hidden unless the user holds it. */
+  requires?: PermissionKey;
 }
 
 const NAV_ITEMS: AdminNavItem[] = [
-  { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck, matchPrefix: ROUTES.admin, exact: true },
-  { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package, matchPrefix: ROUTES.adminSubmissions },
-  { to: ROUTES.adminApps, label: "Apps", icon: Boxes, matchPrefix: ROUTES.adminApps },
-  { to: ROUTES.adminUsers, label: "Users", icon: User, matchPrefix: ROUTES.adminUsers },
-  { to: ROUTES.adminContentModeration, label: "Content", icon: ShieldAlert, matchPrefix: ROUTES.adminContentModeration },
-  { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase, matchPrefix: ROUTES.adminPublishers },
-  { to: ROUTES.adminStudios, label: "Studios", icon: Building, matchPrefix: ROUTES.adminStudios },
-  { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText, matchPrefix: ROUTES.adminAuditLog },
-  { to: ROUTES.adminCdn, label: "CDN", icon: Radio, matchPrefix: ROUTES.adminCdn },
+  { to: ROUTES.admin, label: "Dashboard", icon: ShieldCheck, matchPrefix: ROUTES.admin, exact: true, requires: "admin.dashboard.read" },
+  { to: ROUTES.adminSubmissions, label: "Submissions", icon: Package, matchPrefix: ROUTES.adminSubmissions, requires: "admin.submissions.read" },
+  { to: ROUTES.adminApplications, label: "Applications", icon: Inbox, matchPrefix: ROUTES.adminApplications, requires: "admin.creators.review" },
+  { to: ROUTES.adminApps, label: "Apps", icon: Boxes, matchPrefix: ROUTES.adminApps, requires: "admin.apps.read" },
+  { to: ROUTES.adminUsers, label: "Users", icon: User, matchPrefix: ROUTES.adminUsers, requires: "admin.users.read" },
+  { to: ROUTES.adminTeam, label: "Team & Access", icon: Users, matchPrefix: ROUTES.adminTeam, requires: "admin.team.manage" },
+  { to: ROUTES.adminInviteCreator, label: "Invite creator", icon: Mail, matchPrefix: ROUTES.adminInviteCreator, requires: "admin.creators.invite" },
+  { to: ROUTES.adminContentModeration, label: "Content", icon: ShieldAlert, matchPrefix: ROUTES.adminContentModeration, requires: "admin.moderation.access" },
+  { to: ROUTES.adminPublishers, label: "Publishers", icon: Briefcase, matchPrefix: ROUTES.adminPublishers, requires: "admin.creators.write" },
+  { to: ROUTES.adminStudios, label: "Studios", icon: Building, matchPrefix: ROUTES.adminStudios, requires: "admin.creators.write" },
+  { to: ROUTES.adminAuditLog, label: "Audit Log", icon: ScrollText, matchPrefix: ROUTES.adminAuditLog, requires: "admin.audit.read" },
+  { to: ROUTES.adminCdn, label: "CDN", icon: Radio, matchPrefix: ROUTES.adminCdn, requires: "admin.cdn.manage" },
 ];
 
 export function AdminPortalPage() {
   const { pathname } = useLocation();
+  const profile = useAuthStore((s) => s.profile);
+  const visible = NAV_ITEMS.filter((item) =>
+    !item.requires || hasPermission(profile, item.requires),
+  );
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -54,7 +69,7 @@ export function AdminPortalPage() {
       </header>
 
       <nav className="flex flex-wrap items-center gap-1.5 rounded-xl bg-input p-1.5">
-        {NAV_ITEMS.map((item) => {
+        {visible.map((item) => {
           const active = item.exact
             ? pathname === item.matchPrefix
             : pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`);
