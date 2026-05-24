@@ -1,4 +1,4 @@
-import { AlertOctagon, Gauge, Timer, Zap } from "lucide-react";
+import { AlertOctagon, Activity, Cpu, Gauge, MousePointerClick, Timer, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
@@ -27,20 +27,28 @@ export function ConsolePerformanceTab() {
 
   return (
     <div className="space-y-8">
-      <ConsoleSection title="Core web vitals" description="Computed from PerformanceObserver entries">
+      <ConsoleSection title="Core web vitals" description="Computed from PerformanceObserver entries — INP joined LCP and CLS as a Core Web Vital in 2024">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <ConsoleKpiTile
             icon={Gauge}
             label="LCP p50 / p95"
             value={`${data.lcpMs.p50} / ${data.lcpMs.p95} ms`}
-            hint={`p99: ${data.lcpMs.p99} ms`}
+            hint={`Good ≤ 2500 ms`}
             tone={lcpTone(data.lcpMs.p95)}
           />
           <ConsoleKpiTile
+            icon={MousePointerClick}
+            label="INP p75"
+            value={`${data.inpMs.p75} ms`}
+            hint={`Good ≤ 200 ms · p95 ${data.inpMs.p95} ms`}
+            tone={data.inpMs.p75 > 500 ? "negative" : data.inpMs.p75 > 200 ? "warn" : "positive"}
+          />
+          <ConsoleKpiTile
             icon={Timer}
-            label="FCP p50 / p95"
-            value={`${data.fcpMs.p50} / ${data.fcpMs.p95} ms`}
-            hint={`p99: ${data.fcpMs.p99} ms`}
+            label="TTFB p75"
+            value={`${data.ttfbMs.p75} ms`}
+            hint={`Good ≤ 200 ms · p95 ${data.ttfbMs.p95} ms`}
+            tone={data.ttfbMs.p75 > 500 ? "warn" : "positive"}
           />
           <ConsoleKpiTile
             icon={Zap}
@@ -48,26 +56,58 @@ export function ConsolePerformanceTab() {
             value={`${data.cls.p95}`}
             hint="lower is better"
           />
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <ConsoleKpiTile
+            icon={Timer}
+            label="FCP p75"
+            value={`${data.fcpMs.p75} ms`}
+            hint={`Good ≤ 1800 ms`}
+          />
+          <ConsoleKpiTile
+            icon={Cpu}
+            label="JS heap p95"
+            value={`${data.memoryUsedMb.p95} MB`}
+            hint={`p50: ${data.memoryUsedMb.p50} MB`}
+          />
           <ConsoleKpiTile
             icon={AlertOctagon}
             label="Errors / session"
             value={data.errorsPerSession.toFixed(2)}
             tone={data.errorsPerSession > 0.5 ? "negative" : "default"}
           />
+          <ConsoleKpiTile
+            icon={Activity}
+            label="Avg API latency"
+            value={`${data.avgApiLatencyMs} ms`}
+          />
         </div>
       </ConsoleSection>
 
-      <ConsoleSection title="LCP percentiles over time">
-        <Card className="p-4">
-          <ConsoleMultiSeriesChart
-            data={data.lcpSeries}
-            series={[
-              { key: "p50", label: "p50", colorVar: "--green" },
-              { key: "p95", label: "p95", colorVar: "--orange" },
-            ]}
-          />
-        </Card>
-      </ConsoleSection>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <ConsoleSection title="LCP percentiles over time">
+          <Card className="p-4">
+            <ConsoleMultiSeriesChart
+              data={data.lcpSeries}
+              series={[
+                { key: "p50", label: "p50", colorVar: "--green" },
+                { key: "p95", label: "p95", colorVar: "--orange" },
+              ]}
+            />
+          </Card>
+        </ConsoleSection>
+        <ConsoleSection title="INP percentiles over time">
+          <Card className="p-4">
+            <ConsoleMultiSeriesChart
+              data={data.inpSeries}
+              series={[
+                { key: "p50", label: "p50", colorVar: "--cyan" },
+                { key: "p75", label: "p75", colorVar: "--acid" },
+              ]}
+            />
+          </Card>
+        </ConsoleSection>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ConsoleSection title="Slowest routes" description="By p95 LCP">

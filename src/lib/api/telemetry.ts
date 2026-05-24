@@ -1029,6 +1029,9 @@ export async function getPerformanceBreakdown(
   const lcpAll = ms("lcp");
   const fcpAll = ms("fcp");
   const clsAll = ms("cls");
+  const inpAll = ms("inp");
+  const ttfbAll = ms("ttfb");
+  const memAll = ms("memory");
 
   const summary = (arr: number[]) => ({
     p50: Math.round(quantile(arr, 0.5)),
@@ -1115,13 +1118,38 @@ export async function getPerformanceBreakdown(
     .slice(0, 10)
     .map((a) => ({ endpoint: a.endpoint, p95Ms: a.p95, samples: a.samples }));
 
+  // INP series — p50/p75 over time.
+  const inpByBucket = new Map<string, number[]>();
+  for (const p of perf.filter((p) => p.name === "inp")) {
+    const t = new Date(p.ts).getTime();
+    const k = bucketKey(t, bucket);
+    const arr = inpByBucket.get(k) ?? [];
+    arr.push(p.ms);
+    inpByBucket.set(k, arr);
+  }
+  const inpSeries: ConsoleMultiSeriesPoint[] = emptyBuckets(range).map((b) => {
+    const arr = (inpByBucket.get(b.bucket) ?? []).sort((a, b) => a - b);
+    return {
+      bucket: b.bucket,
+      p50: Math.round(quantile(arr, 0.5)),
+      p75: Math.round(quantile(arr, 0.75)),
+    };
+  });
+
   return {
     lcpMs: summary(lcpAll),
     fcpMs: summary(fcpAll),
     cls: summary(clsAll.map((v) => v * 1000)),
+    inpMs: summary(inpAll),
+    ttfbMs: summary(ttfbAll),
     errorsPerSession: Math.round(errorsPerSession * 100) / 100,
     avgApiLatencyMs,
+    memoryUsedMb: {
+      p50: Math.round(quantile(memAll, 0.5)),
+      p95: Math.round(quantile(memAll, 0.95)),
+    },
     lcpSeries,
+    inpSeries,
     apiByEndpoint,
     longTasksByRoute,
     slowestRoutes,

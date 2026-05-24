@@ -1,6 +1,8 @@
-import { TrendingDown, UserCheck, UserPlus, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ExternalLink, TrendingDown, UserCheck, UserPlus, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { ROUTES } from "@/lib/routes";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
 import { ConsoleTimeChart } from "@/components/console/ConsoleTimeChart";
 import { ConsoleHeatmap } from "@/components/console/ConsoleHeatmap";
@@ -103,7 +105,13 @@ export function ConsoleUsersTab() {
                   key: "uid",
                   label: "User",
                   render: (r) => (
-                    <span className="font-mono text-[12px] text-foreground/80">{r.uid.slice(0, 12)}</span>
+                    <Link
+                      to={ROUTES.consoleUserReport(r.uid)}
+                      className="inline-flex items-center gap-1 font-mono text-[12px] text-acid hover:underline"
+                    >
+                      {r.uid.slice(0, 12)}
+                      <ExternalLink className="h-3 w-3 opacity-60" />
+                    </Link>
                   ),
                 },
                 {
@@ -141,7 +149,13 @@ export function ConsoleUsersTab() {
                 key: "uid",
                 label: "User",
                 render: (r) => (
-                  <span className="font-mono text-[12px] text-foreground/80">{r.uid.slice(0, 12)}</span>
+                  <Link
+                    to={ROUTES.consoleUserReport(r.uid)}
+                    className="inline-flex items-center gap-1 font-mono text-[12px] text-acid hover:underline"
+                  >
+                    {r.uid.slice(0, 12)}
+                    <ExternalLink className="h-3 w-3 opacity-60" />
+                  </Link>
                 ),
               },
               {

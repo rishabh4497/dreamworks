@@ -57,6 +57,30 @@ const StudioReviewPage = lazyNamed(() => import("@/pages/admin/CreatorReviewPage
 const AuditLogPage = lazyNamed(() => import("@/pages/admin/AuditLogPage"), "AuditLogPage");
 const CdnAdminPage = lazyNamed(() => import("@/pages/admin/CdnAdminPage"), "CdnAdminPage");
 const ConsolePage = lazyNamed(() => import("@/pages/console/ConsolePage"), "ConsolePage");
+const ConsoleUserReportPage = lazyNamed(
+  () => import("@/pages/console/ConsoleUserReportPage"),
+  "ConsoleUserReportPage",
+);
+const ConsoleStudioReportPage = lazyNamed(
+  () => import("@/pages/console/ConsoleStudioReportPage"),
+  "ConsoleStudioReportPage",
+);
+const ConsolePublisherReportPage = lazyNamed(
+  () => import("@/pages/console/ConsolePublisherReportPage"),
+  "ConsolePublisherReportPage",
+);
+const DreamworksWrappedPage = lazyNamed(
+  () => import("@/pages/DreamworksWrappedPage"),
+  "DreamworksWrappedPage",
+);
+const StudioInsightsPage = lazyNamed(
+  () => import("@/pages/developer-portal/StudioInsightsPage"),
+  "StudioInsightsPage",
+);
+const PublisherInsightsPage = lazyNamed(
+  () => import("@/pages/developer-portal/PublisherInsightsPage"),
+  "PublisherInsightsPage",
+);
 const LibraryPage = lazyNamed(() => import("@/pages/LibraryPage"), "LibraryPage");
 const LibraryGamePage = lazyNamed(() => import("@/pages/LibraryGamePage"), "LibraryGamePage");
 const LibraryCollectionPage = lazyNamed(() => import("@/pages/LibraryCollectionPage"), "LibraryCollectionPage");
@@ -143,6 +167,8 @@ export default function App() {
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="marketing" element={<MarketingPage />} />
               <Route path="ops" element={<LiveOpsPage />} />
+              <Route path="studio-insights" element={<StudioInsightsPage />} />
+              <Route path="publisher-insights" element={<PublisherInsightsPage />} />
             </Route>
 
             <Route
@@ -176,6 +202,32 @@ export default function App() {
                 </RoleGuard>
               }
             />
+            <Route
+              path="console/report/user/:uid"
+              element={
+                <RoleGuard roles={["admin"]}>
+                  <ConsoleUserReportPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="console/report/studio/:id"
+              element={
+                <RoleGuard roles={["admin"]}>
+                  <ConsoleStudioReportPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="console/report/publisher/:id"
+              element={
+                <RoleGuard roles={["admin"]}>
+                  <ConsolePublisherReportPage />
+                </RoleGuard>
+              }
+            />
+
+            <Route path="wrapped" element={<DreamworksWrappedPage />} />
 
             <Route path="db" element={<DbHomePage />} />
             <Route path="db/game/:gameId" element={<GameDbPage />} />

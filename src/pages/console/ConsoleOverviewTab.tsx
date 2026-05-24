@@ -6,11 +6,14 @@ import { ConsoleTimeChart } from "@/components/console/ConsoleTimeChart";
 import { ConsoleHorizontalBar } from "@/components/console/ConsoleHorizontalBar";
 import { ConsoleLiveSessions } from "@/components/console/ConsoleLiveSessions";
 import { ConsoleSection } from "@/components/console/ConsoleSection";
-import { useConsoleOverview, useConsoleRange } from "@/hooks/use-console";
+import { ConsoleAnomalyBadge } from "@/components/console/ConsoleAnomalyBadge";
+import { ConsoleInsightsFeed } from "@/components/console/ConsoleInsightsFeed";
+import { useConsoleCompare, useConsoleOverview, useConsoleRange } from "@/hooks/use-console";
 
 export function ConsoleOverviewTab() {
   const [range] = useConsoleRange();
   const { data, isLoading, error } = useConsoleOverview(range);
+  const { data: compare } = useConsoleCompare(range);
 
   if (isLoading) return <LoadingSpinner label="Crunching overview…" />;
   if (error) return <ErrorCard error={error as Error} />;
@@ -41,6 +44,24 @@ export function ConsoleOverviewTab() {
           tone={data.p95LcpMs > 2500 ? "warn" : "positive"}
         />
       </div>
+
+      {compare && (
+        <Card className="flex flex-wrap items-center gap-3 p-3 text-[11.5px]">
+          <span className="text-muted/55 uppercase tracking-widest text-[10px]">vs previous {range}</span>
+          <span className="inline-flex items-center gap-1 text-muted/65">
+            Events
+            <ConsoleAnomalyBadge deltaPct={compare.events.deltaPct} worseDirection="down" />
+          </span>
+          <span className="inline-flex items-center gap-1 text-muted/65">
+            Sessions
+            <ConsoleAnomalyBadge deltaPct={compare.sessions.deltaPct} worseDirection="down" />
+          </span>
+          <span className="inline-flex items-center gap-1 text-muted/65">
+            Errors
+            <ConsoleAnomalyBadge deltaPct={compare.errors.deltaPct} worseDirection="up" />
+          </span>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <ConsoleSection
@@ -89,6 +110,10 @@ export function ConsoleOverviewTab() {
           </Card>
         </ConsoleSection>
       </div>
+
+      <ConsoleSection title="Insights" description="Auto-flagged anomalies and opportunities">
+        <ConsoleInsightsFeed />
+      </ConsoleSection>
 
       <Card className="flex items-center gap-3 border-acid/20 bg-acid/5 p-3 text-[12px] text-muted/70">
         <Activity className="h-4 w-4 text-acid" />

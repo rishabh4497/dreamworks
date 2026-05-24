@@ -2314,9 +2314,13 @@ export interface ConsolePerformanceBreakdown {
   lcpMs: { p50: number; p75: number; p95: number; p99: number };
   fcpMs: { p50: number; p75: number; p95: number; p99: number };
   cls: { p50: number; p75: number; p95: number; p99: number };
+  inpMs: { p50: number; p75: number; p95: number; p99: number };
+  ttfbMs: { p50: number; p75: number; p95: number; p99: number };
   errorsPerSession: number;
   avgApiLatencyMs: number;
+  memoryUsedMb: { p50: number; p95: number };
   lcpSeries: ConsoleMultiSeriesPoint[];
+  inpSeries: ConsoleMultiSeriesPoint[];
   apiByEndpoint: { endpoint: string; p50: number; p95: number; samples: number }[];
   longTasksByRoute: ConsoleNamedCount[];
   slowestRoutes: { route: string; p95Ms: number; samples: number }[];

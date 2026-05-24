@@ -1,6 +1,8 @@
-import { Building, Clock, FileEdit, Hammer, Inbox, Package } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Building, Clock, ExternalLink, FileEdit, Hammer, Inbox, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { ROUTES } from "@/lib/routes";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
 import { ConsoleTimeChart } from "@/components/console/ConsoleTimeChart";
 import { ConsoleDonut } from "@/components/console/ConsoleDonut";
@@ -89,7 +91,19 @@ export function ConsoleStudiosTab() {
           <Card className="p-4">
             <ConsoleTable
               columns={[
-                { key: "name", label: "Studio", render: (r) => r.name },
+                {
+                  key: "name",
+                  label: "Studio",
+                  render: (r) => (
+                    <Link
+                      to={ROUTES.consoleStudioReport(r.id)}
+                      className="inline-flex items-center gap-1 text-acid hover:underline"
+                    >
+                      {r.name}
+                      <ExternalLink className="h-3 w-3 opacity-60" />
+                    </Link>
+                  ),
+                },
                 {
                   key: "apps",
                   label: "Apps",

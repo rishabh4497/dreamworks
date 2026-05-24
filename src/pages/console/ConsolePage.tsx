@@ -4,16 +4,21 @@ import {
   AlertOctagon,
   Briefcase,
   Building,
+  DollarSign,
+  FileBarChart2,
   Gauge,
   LayoutDashboard,
   Monitor,
   MousePointerClick,
+  Radio,
+  ShieldAlert,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useConsoleTab } from "@/hooks/use-console";
 import { ConsoleRangeSelector } from "@/components/console/ConsoleRangeSelector";
+import { ConsoleCompareToggle } from "@/components/console/ConsoleCompareToggle";
 import { ConsoleOverviewTab } from "./ConsoleOverviewTab";
 import { ConsoleUsersTab } from "./ConsoleUsersTab";
 import { ConsoleStudiosTab } from "./ConsoleStudiosTab";
@@ -22,6 +27,10 @@ import { ConsoleDevicesTab } from "./ConsoleDevicesTab";
 import { ConsolePerformanceTab } from "./ConsolePerformanceTab";
 import { ConsoleFeaturesTab } from "./ConsoleFeaturesTab";
 import { ConsoleErrorsTab } from "./ConsoleErrorsTab";
+import { ConsoleMoneyTab } from "./ConsoleMoneyTab";
+import { ConsoleQualityTab } from "./ConsoleQualityTab";
+import { ConsoleLiveOpsTab } from "./ConsoleLiveOpsTab";
+import { ConsoleReportsTab } from "./ConsoleReportsTab";
 
 interface TabDef {
   id: string;
@@ -34,10 +43,14 @@ const TABS: TabDef[] = [
   { id: "users", label: "Users", icon: Users },
   { id: "studios", label: "Studios", icon: Building },
   { id: "publishers", label: "Publishers", icon: Briefcase },
+  { id: "money", label: "Money", icon: DollarSign },
   { id: "devices", label: "Devices & rigs", icon: Monitor },
   { id: "performance", label: "Performance", icon: Gauge },
   { id: "features", label: "Features", icon: MousePointerClick },
+  { id: "quality", label: "Quality", icon: ShieldAlert },
   { id: "errors", label: "Errors", icon: AlertOctagon },
+  { id: "liveops", label: "Live ops", icon: Radio },
+  { id: "reports", label: "Reports", icon: FileBarChart2 },
 ];
 
 export function ConsolePage() {
@@ -63,7 +76,10 @@ export function ConsolePage() {
             developer portal, and admin tools — captured in-house from every signed-in client.
           </p>
         </div>
-        <ConsoleRangeSelector />
+        <div className="flex items-center gap-2">
+          <ConsoleCompareToggle />
+          <ConsoleRangeSelector />
+        </div>
       </header>
 
       <nav className="flex flex-wrap items-center gap-1.5 rounded-xl bg-input p-1.5">
@@ -98,10 +114,14 @@ export function ConsolePage() {
         {tab === "users" && <ConsoleUsersTab />}
         {tab === "studios" && <ConsoleStudiosTab />}
         {tab === "publishers" && <ConsolePublishersTab />}
+        {tab === "money" && <ConsoleMoneyTab />}
         {tab === "devices" && <ConsoleDevicesTab />}
         {tab === "performance" && <ConsolePerformanceTab />}
         {tab === "features" && <ConsoleFeaturesTab />}
+        {tab === "quality" && <ConsoleQualityTab />}
         {tab === "errors" && <ConsoleErrorsTab />}
+        {tab === "liveops" && <ConsoleLiveOpsTab />}
+        {tab === "reports" && <ConsoleReportsTab />}
       </motion.div>
     </motion.div>
   );

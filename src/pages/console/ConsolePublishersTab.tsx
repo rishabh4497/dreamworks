@@ -1,4 +1,6 @@
-import { Briefcase, DollarSign, Receipt, Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Briefcase, DollarSign, ExternalLink, Receipt, Wallet } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 import { Card } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsoleKpiTile } from "@/components/console/ConsoleKpiTile";
@@ -103,7 +105,19 @@ export function ConsolePublishersTab() {
           <Card className="p-4">
             <ConsoleTable
               columns={[
-                { key: "name", label: "Publisher", render: (r) => r.name },
+                {
+                  key: "name",
+                  label: "Publisher",
+                  render: (r) => (
+                    <Link
+                      to={ROUTES.consolePublisherReport(r.id)}
+                      className="inline-flex items-center gap-1 text-acid hover:underline"
+                    >
+                      {r.name}
+                      <ExternalLink className="h-3 w-3 opacity-60" />
+                    </Link>
+                  ),
+                },
                 {
                   key: "revenue",
                   label: "Revenue",
@@ -122,7 +136,19 @@ export function ConsolePublishersTab() {
         <Card className="p-4">
           <ConsoleTable
             columns={[
-              { key: "name", label: "Publisher", render: (r) => r.name },
+              {
+                key: "name",
+                label: "Publisher",
+                render: (r) => (
+                  <Link
+                    to={ROUTES.consolePublisherReport(r.id)}
+                    className="inline-flex items-center gap-1 text-acid hover:underline"
+                  >
+                    {r.name}
+                    <ExternalLink className="h-3 w-3 opacity-60" />
+                  </Link>
+                ),
+              },
               {
                 key: "apps",
                 label: "Apps",

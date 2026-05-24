@@ -50,6 +50,19 @@ export const ROUTES = {
   consolePerformance: "/console?tab=performance",
   consoleFeatures: "/console?tab=features",
   consoleErrors: "/console?tab=errors",
+  consoleMoney: "/console?tab=money",
+  consoleQuality: "/console?tab=quality",
+  consoleLiveOps: "/console?tab=liveops",
+  consoleReports: "/console?tab=reports",
+  // Per-actor deep-dive reports.
+  consoleUserReport: (uid: string) => `/console/report/user/${uid}`,
+  consoleStudioReport: (id: string) => `/console/report/studio/${id}`,
+  consolePublisherReport: (id: string) => `/console/report/publisher/${id}`,
+  // User-facing Wrapped recap.
+  wrapped: "/wrapped",
+  // Developer/Publisher self-service insights inside the developer portal.
+  devStudioInsights: "/developer-portal/studio-insights",
+  devPublisherInsights: "/developer-portal/publisher-insights",
 
   db: "/db",
   gameDb: (id: GameId) => `/db/game/${id}`,
