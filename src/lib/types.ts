@@ -2745,6 +2745,727 @@ export interface TelemetryUserRollup {
   updatedAt: ISODate;
 }
 
+// ── Session Replay (Tier 1) ────────────────────────────────────────────────
+//
+// In-house replay: we store a compact stream of click / scroll / route /
+// input-blur events. Not full DOM mutation — privacy-respecting and bandwidth-
+// cheap. The replay player reconstructs a timeline with route markers + an
+// interactive thumbnail strip.
+
+export type ReplayEventKind =
+  | "click"
+  | "input"
+  | "scroll"
+  | "route"
+  | "viewport"
+  | "rage"
+  | "dead"
+  | "error";
+
+export interface ReplayFrame {
+  /** Ms since session start. */
+  t: number;
+  kind: ReplayEventKind;
+  /** CSS-selector-ish path (capped). */
+  target?: string;
+  /** Optional sanitized text label of the target. */
+  label?: string;
+  /** For scroll: { x, y }. For viewport: { w, h }. */
+  meta?: Record<string, unknown>;
+}
+
+export interface ReplaySession {
+  id: string;
+  sessionId: string;
+  uid: string | null;
+  startedAt: ISODate;
+  endedAt?: ISODate;
+  durationMs: number;
+  entryRoute: string;
+  lastRoute: string;
+  frames: ReplayFrame[];
+  /** Trim to ~500 frames so the doc stays well under 1 MB. */
+  frameCount: number;
+  /** Set true if any rage / dead / error frame is present. */
+  hasFrustration: boolean;
+}
+
+// ── Funnel builder (Tier 1) ────────────────────────────────────────────────
+
+export interface FunnelStep {
+  /** Event type to match. */
+  event: string;
+  /** Optional route prefix filter. */
+  routePrefix?: string;
+  /** Optional payload key/value to match. */
+  payloadMatch?: { key: string; value: string };
+  /** Display name for the step. */
+  label: string;
+}
+
+export interface FunnelDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  steps: FunnelStep[];
+  /** Window in hours within which all steps must complete. */
+  windowHours: number;
+  /** Optional cohort filter (segment, device class, region). */
+  cohort?: {
+    device?: "desktop" | "web";
+    region?: string;
+    segment?: UserHealthSegment;
+  };
+  ownerUid: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface FunnelResult {
+  funnelId: string;
+  totalUsers: number;
+  stages: { label: string; count: number; pct: number; dropoffPct: number }[];
+  /** Median time-to-complete in seconds (overall). */
+  medianCompletionSec: number;
+}
+
+// ── Sankey / Path analysis (Tier 1) ────────────────────────────────────────
+
+export interface PathLink {
+  source: string;
+  target: string;
+  value: number;
+}
+
+export interface PathSankey {
+  startNode: string;
+  /** All discovered nodes — first hop in the prefix. */
+  nodes: { id: string }[];
+  links: PathLink[];
+}
+
+// ── Retention cohorts (Tier 1) ─────────────────────────────────────────────
+
+export interface RetentionCohortRow {
+  /** ISO date for the cohort week start. */
+  cohortWeek: ISODate;
+  /** Total users in the cohort. */
+  cohortSize: number;
+  /** Week-N retention %. Index 0 = week 0 (always 100). */
+  weekly: number[];
+}
+
+export interface RetentionCohortGrid {
+  weeks: ISODate[];
+  rows: RetentionCohortRow[];
+}
+
+// ── A/B tests + Feature flags (Tier 1) ─────────────────────────────────────
+
+export type ExperimentStatus = "draft" | "running" | "paused" | "concluded";
+
+export interface ExperimentVariant {
+  id: string;
+  name: string;
+  /** 0–100 allocation; the sum across variants is the total experiment exposure. */
+  allocationPct: number;
+}
+
+export interface Experiment {
+  id: string;
+  /** Flag key callers reference via `useFeatureFlag(...)`. */
+  flagKey: string;
+  name: string;
+  hypothesis?: string;
+  status: ExperimentStatus;
+  variants: ExperimentVariant[];
+  /** Primary metric event the experiment optimizes. */
+  primaryMetric: string;
+  /** Secondary metrics tracked for guardrails. */
+  guardrailMetrics?: string[];
+  /** Conversion is "primaryMetric within X hours of exposure". */
+  conversionWindowHours: number;
+  ownerUid: string;
+  startedAt?: ISODate;
+  endedAt?: ISODate;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface ExperimentVariantResult {
+  variantId: string;
+  variantName: string;
+  exposures: number;
+  conversions: number;
+  conversionPct: number;
+  /** Lift vs. control as fraction (e.g. 0.12 = +12%). */
+  liftVsControl: number;
+  /** Bayesian "probability variant beats control" 0–1. */
+  probabilityBest: number;
+}
+
+export interface ExperimentResult {
+  experimentId: string;
+  variants: ExperimentVariantResult[];
+  /** Two-tailed binomial test against control. */
+  pValue: number;
+  /** Days needed at current traffic to reach 95% power. */
+  daysToSignificance: number;
+  /** Total unique users exposed. */
+  uniqueExposures: number;
+}
+
+// ── Alerts engine (Tier 1) ─────────────────────────────────────────────────
+
+export type AlertMetric =
+  | "dau"
+  | "errors"
+  | "errorRate"
+  | "p95Lcp"
+  | "p95Inp"
+  | "p95Ttfb"
+  | "checkoutCompletes"
+  | "revenueCents"
+  | "refundRatePct"
+  | "crashFreePct"
+  | "apdex"
+  | "rageClicks"
+  | "deadClicks"
+  | "activeSessions"
+  | (string & {});
+
+export type AlertOp = "gt" | "lt" | "gte" | "lte" | "spike" | "drop";
+export type AlertSeverity = "info" | "warn" | "critical";
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  metric: AlertMetric;
+  op: AlertOp;
+  /** Threshold or % delta depending on op. */
+  threshold: number;
+  /** Rolling window in minutes. */
+  windowMinutes: number;
+  severity: AlertSeverity;
+  /** Optional route filter. */
+  routePrefix?: string;
+  /** Notification channels. */
+  channels: Array<"in_app" | "email" | "slack">;
+  enabled: boolean;
+  ownerUid: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export type AlertEventStatus = "firing" | "acknowledged" | "resolved";
+
+export interface AlertEvent {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  metric: AlertMetric;
+  observedValue: number;
+  threshold: number;
+  severity: AlertSeverity;
+  status: AlertEventStatus;
+  firedAt: ISODate;
+  ackedAt?: ISODate;
+  ackedByUid?: string;
+  resolvedAt?: ISODate;
+  /** Snapshot of relevant context (top route, top error msg, etc.). */
+  context?: Record<string, unknown>;
+}
+
+// ── Tier 2: Apdex + Crash-free + Deploys + Resources + Memory ─────────────
+
+export interface ApdexByRoute {
+  route: string;
+  samples: number;
+  /** Apdex score 0–1. T = 1500ms, F = 6000ms by default. */
+  apdex: number;
+  satisfied: number;
+  tolerating: number;
+  frustrating: number;
+}
+
+export interface CrashFreeSnapshot {
+  /** Crash-free session rate as a percentage. */
+  crashFreePct: number;
+  totalSessions: number;
+  sessionsWithError: number;
+  /** Same series bucketed over the range. */
+  series: ConsoleTimePoint[];
+}
+
+export interface ResourceTimingRow {
+  url: string;
+  initiatorType: string;
+  count: number;
+  p50Ms: number;
+  p95Ms: number;
+  sizeKb: number;
+  /** Number of failed (status 4xx/5xx) hits. */
+  failures: number;
+}
+
+export interface MemoryLeakSuspicion {
+  uid: string | null;
+  displayName?: string;
+  /** Heap delta in MB over the observation window. */
+  growthMb: number;
+  windowMinutes: number;
+  topRoute: string;
+  observedSamples: number;
+}
+
+export interface DeployMarker {
+  id: string;
+  ts: ISODate;
+  version: string;
+  notes?: string;
+  /** Optional commit short SHA. */
+  commitSha?: string;
+  /** Who created the marker. */
+  authorUid: string;
+  authorName?: string;
+  createdAt: ISODate;
+}
+
+export interface LongTaskAttribution {
+  scriptUrl: string;
+  count: number;
+  totalMs: number;
+  avgMs: number;
+  topRoute: string;
+}
+
+// ── Tier 3: Install / Launch / Voice QoS / CDN / DRM / Wishlist decay ─────
+
+export type InstallStage =
+  | "install_start"
+  | "install_download"
+  | "install_verify"
+  | "install_extract"
+  | "install_launch_ready"
+  | "install_failed";
+
+export interface InstallStageRow {
+  stage: InstallStage;
+  count: number;
+  pctOfStart: number;
+  medianMs: number;
+}
+
+export interface InstallPipelineReport {
+  totalStarted: number;
+  totalReady: number;
+  successPct: number;
+  byOs: { os: TelemetryOS; started: number; ready: number; successPct: number }[];
+  byRegion: { region: string; started: number; ready: number; successPct: number }[];
+  stages: InstallStageRow[];
+  topFailures: { reason: string; count: number }[];
+  medianTotalSec: number;
+}
+
+export type LaunchOutcome =
+  | "launch_attempt"
+  | "launch_success"
+  | "launch_crash"
+  | "launch_quit_early";
+
+export interface GameLaunchReport {
+  totalAttempts: number;
+  totalSuccess: number;
+  successPct: number;
+  /** Median time from launch_attempt to launch_success in seconds. */
+  medianTimeToPlayableSec: number;
+  /** Percent of launches that crashed in first 5 min. */
+  crash5MinPct: number;
+  byGame: {
+    gameId: GameId;
+    title: string;
+    attempts: number;
+    successPct: number;
+    crash5MinPct: number;
+    medianTimeToPlayableSec: number;
+  }[];
+  byOs: { os: TelemetryOS; attempts: number; successPct: number; crash5MinPct: number }[];
+}
+
+export interface VoiceQosSample {
+  ts: ISODate;
+  channelId: string;
+  uid: string | null;
+  packetLossPct: number;
+  jitterMs: number;
+  rttMs: number;
+  /** MOS 1–5 (Mean Opinion Score). */
+  mos: number;
+  bitrateKbps: number;
+}
+
+export interface VoiceQosReport {
+  totalSessions: number;
+  totalMinutes: number;
+  avgMos: number;
+  p95JitterMs: number;
+  p95RttMs: number;
+  packetLossPct: number;
+  muteRatePct: number;
+  pushToTalkRatioPct: number;
+  channelHopsPerSession: number;
+  peakConcurrent: number;
+  series: ConsoleMultiSeriesPoint[];
+  /** Top channels by occupancy time. */
+  topChannels: { channelId: string; name: string; minutes: number; users: number }[];
+  /** Worst MOS channels — likely incidents. */
+  worstChannels: { channelId: string; name: string; mos: number; lossPct: number }[];
+}
+
+export interface CdnEdgeReport {
+  nodeId: string;
+  region: CdnRegion;
+  hostname: string;
+  cacheHitPct: number;
+  p95LatencyMs: number;
+  errorRatePct: number;
+  bytesServed24h: number;
+  saturationPct: number;
+  status: CdnNodeStatus;
+}
+
+export interface CdnRegionReport {
+  region: CdnRegion;
+  totalBytes24h: number;
+  avgCacheHitPct: number;
+  p95LatencyMs: number;
+  activeNodes: number;
+  /** Edges sorted worst first. */
+  edges: CdnEdgeReport[];
+}
+
+export interface DrmHealthReport {
+  totalChecks: number;
+  successPct: number;
+  failureBreakdown: ConsoleNamedCount[];
+  p95CheckLatencyMs: number;
+  offlinePlayAttempts: number;
+  offlinePlaySuccessPct: number;
+  byGame: {
+    gameId: GameId;
+    title: string;
+    checks: number;
+    successPct: number;
+  }[];
+}
+
+export interface WishlistDecayPoint {
+  daysSinceAdd: number;
+  convertedPct: number;
+  removedPct: number;
+  /** Cumulative still-on-wishlist. */
+  stillOnWishlistPct: number;
+}
+
+export interface WishlistDecayReport {
+  cohortSize: number;
+  medianTimeToConvertDays: number | null;
+  /** Survival curve. */
+  decay: WishlistDecayPoint[];
+  /** Top triggers (event before conversion). */
+  conversionTriggers: ConsoleNamedCount[];
+}
+
+// ── Tier 4: Onboarding / Referral / Email / Search / Recs ─────────────────
+
+export type OnboardingStep =
+  | "signup_started"
+  | "signup_complete"
+  | "profile_created"
+  | "first_friend_added"
+  | "first_game_view"
+  | "first_session"
+  | "first_purchase";
+
+export interface OnboardingFunnelReport {
+  totalSignups: number;
+  stages: { step: OnboardingStep; label: string; count: number; pct: number }[];
+  /** Median days from signup to first_purchase. */
+  medianDaysToFirstPurchase: number | null;
+  /** Step where the most users drop off. */
+  biggestDropStep: OnboardingStep | null;
+}
+
+export interface ReferralReport {
+  totalInvitesSent: number;
+  totalInvitesAccepted: number;
+  acceptedPct: number;
+  invitesPerInviter: number;
+  /** k-factor = invitesSentPerUser × acceptedPct. */
+  kFactor: number;
+  /** Conversion to first purchase among invitees. */
+  conversionPct: number;
+  topInviters: { uid: string; displayName: string; invitesSent: number; invitesAccepted: number }[];
+  trend: ConsoleMultiSeriesPoint[];
+}
+
+export type EmailTemplate =
+  | "welcome"
+  | "wishlist_alert"
+  | "abandoned_cart"
+  | "purchase_receipt"
+  | "weekly_digest"
+  | "win_back"
+  | (string & {});
+
+export interface EmailFunnelRow {
+  template: EmailTemplate;
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  converted: number;
+  deliveryPct: number;
+  openPct: number;
+  clickPct: number;
+  conversionPct: number;
+}
+
+export interface EmailFunnelReport {
+  totalSent: number;
+  avgOpenPct: number;
+  avgClickPct: number;
+  templates: EmailFunnelRow[];
+  trend: ConsoleMultiSeriesPoint[];
+}
+
+export interface SearchAnalyticsReport {
+  totalQueries: number;
+  uniqueQueries: number;
+  zeroResultPct: number;
+  refinementRatePct: number;
+  searchToViewPct: number;
+  viewToPurchasePct: number;
+  topQueries: { term: string; count: number; ctrPct: number; zeroResultsPct: number }[];
+  topZeroResultQueries: ConsoleNamedCount[];
+  topRefinements: { from: string; to: string; count: number }[];
+}
+
+export interface RecommendationSlotReport {
+  slot: string;
+  impressions: number;
+  clicks: number;
+  ctrPct: number;
+  purchases: number;
+  purchasePct: number;
+  /** Avg position the clicked item sat at. */
+  avgPosition: number;
+}
+
+export interface RecommendationCtrReport {
+  totalImpressions: number;
+  totalClicks: number;
+  ctrPct: number;
+  slots: RecommendationSlotReport[];
+  coldStartCtrPct: number;
+  warmCtrPct: number;
+}
+
+// ── Tier 5: Fraud / Moderation / Auth anomalies ───────────────────────────
+
+export type FraudSignalKind =
+  | "geo_velocity"
+  | "multi_account"
+  | "refund_abuse"
+  | "card_test"
+  | "bot_traffic"
+  | "rapid_purchase"
+  | "suspicious_login";
+
+export interface FraudSignal {
+  id: string;
+  uid: string | null;
+  displayName?: string;
+  kind: FraudSignalKind;
+  severity: AlertSeverity;
+  detail: string;
+  /** Raw evidence (sanitized). */
+  evidence?: Record<string, unknown>;
+  ts: ISODate;
+}
+
+export interface FraudReport {
+  totalSignals: number;
+  byKind: ConsoleNamedCount[];
+  bySeverity: ConsoleNamedCount[];
+  recent: FraudSignal[];
+  /** Users with multiple signals — investigation priority list. */
+  topRiskUsers: {
+    uid: string;
+    displayName: string;
+    signalCount: number;
+    topKind: FraudSignalKind;
+    severityScore: number;
+  }[];
+}
+
+export interface ModerationQueueReport {
+  totalOpen: number;
+  totalActioned24h: number;
+  medianTimeToDecisionMin: number | null;
+  p95TimeToDecisionMin: number | null;
+  byReason: ConsoleNamedCount[];
+  byAction: ConsoleNamedCount[];
+  oldestOpenAgeHours: number;
+  reviewerThroughput: {
+    uid: string;
+    displayName: string;
+    decided24h: number;
+    avgDecisionMin: number;
+  }[];
+}
+
+export type AuthAnomalyKind =
+  | "failed_burst"
+  | "new_device_no_2fa"
+  | "geo_jump"
+  | "password_spray"
+  | "credential_stuffing";
+
+export interface AuthAnomalyEvent {
+  id: string;
+  uid: string | null;
+  displayName?: string;
+  kind: AuthAnomalyKind;
+  detail: string;
+  severity: AlertSeverity;
+  ts: ISODate;
+}
+
+export interface AuthAnomalyReport {
+  totalAnomalies: number;
+  byKind: ConsoleNamedCount[];
+  failedLoginsSeries: ConsoleTimePoint[];
+  /** Recent burst events. */
+  recent: AuthAnomalyEvent[];
+}
+
+// ── Tier 6: Ad-hoc query builder / Dashboards / Churn-LTV / Compare ───────
+
+export type QueryCollection =
+  | "telemetryEvents"
+  | "telemetryErrors"
+  | "telemetryPerf"
+  | "telemetrySessions";
+
+export interface AdHocFilter {
+  field: string;
+  op: "==" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "not-in";
+  value: unknown;
+}
+
+export interface AdHocQuerySpec {
+  id: string;
+  name: string;
+  collection: QueryCollection;
+  filters: AdHocFilter[];
+  /** Optional grouping field. */
+  groupBy?: string;
+  /** Aggregation function. */
+  aggregate: "count" | "sum" | "avg" | "min" | "max";
+  /** Field aggregated when not "count". */
+  aggregateField?: string;
+  /** Output series field (typically `ts` bucketed). */
+  bucketBy?: "hour" | "day" | "week";
+  /** Visualization type. */
+  chartType: "kpi" | "line" | "bar" | "donut" | "table";
+  limit?: number;
+  ownerUid: string;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface AdHocQueryResult {
+  rows: Array<Record<string, unknown>>;
+  /** Best-effort wall-time the query took. */
+  ms: number;
+}
+
+export interface DashboardTile {
+  id: string;
+  /** Reference to a saved query OR a built-in tile. */
+  queryId?: string;
+  builtin?: string;
+  title: string;
+  /** Width in 12-col grid units. */
+  width: 3 | 4 | 6 | 8 | 12;
+  height: 1 | 2 | 3;
+}
+
+export interface ConsoleDashboard {
+  id: string;
+  name: string;
+  description?: string;
+  tiles: DashboardTile[];
+  ownerUid: string;
+  shared: boolean;
+  createdAt: ISODate;
+  updatedAt: ISODate;
+}
+
+export interface ChurnPredictionRow {
+  uid: string;
+  displayName: string;
+  /** Predicted probability of churning in next 30 days. */
+  churnProbability: number;
+  /** Most-influential signal. */
+  topFactor: string;
+  lastSeenAt: ISODate;
+  lifetimeSpendCents: number;
+}
+
+export interface LtvForecastRow {
+  uid: string;
+  displayName: string;
+  /** Predicted 90-day spend in cents. */
+  predicted90dCents: number;
+  actual7dCents: number;
+  /** Confidence 0–1. */
+  confidence: number;
+  segment: UserHealthSegment;
+}
+
+export interface CohortCompareResult {
+  cohortAName: string;
+  cohortBName: string;
+  metrics: {
+    label: string;
+    a: number;
+    b: number;
+    deltaPct: number;
+  }[];
+  /** Optional overlay series for charts. */
+  series?: ConsoleMultiSeriesPoint[];
+}
+
+// ── Console: Growth tab umbrella (Tier 4 hub) ──────────────────────────────
+
+export interface ConsoleGrowthSummary {
+  onboarding: OnboardingFunnelReport;
+  referral: ReferralReport;
+  email: EmailFunnelReport;
+  search: SearchAnalyticsReport;
+  recs: RecommendationCtrReport;
+}
+
+// ── Console: Trust tab umbrella (Tier 5 hub) ───────────────────────────────
+
+export interface ConsoleTrustSummary {
+  fraud: FraudReport;
+  moderation: ModerationQueueReport;
+  auth: AuthAnomalyReport;
+}
+
 // ── Global augmentations ─────────────────────────────────────────────────────
 // Non-standard browser extensions used for capability detection. `window`-side
 // Tauri internals are already typed by `@tauri-apps/plugin-os` and don't need

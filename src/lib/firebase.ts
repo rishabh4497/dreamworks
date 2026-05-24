@@ -145,6 +145,27 @@ export const COLLECTIONS = {
   telemetryPublisherRollups: "dw_telemetry_publisher_rollups",
   // Privacy: scheduled deletion queue. Cloud Function picks up + processes.
   deletionRequests: "dw_deletion_requests",
+  // ── Tier 1–6 expansion ────────────────────────────────────────────────────
+  // Tier 1: Replay, funnels, experiments, alerts
+  telemetryReplays: "dw_telemetry_replays",
+  consoleFunnels: "dw_console_funnels",
+  consoleExperiments: "dw_console_experiments",
+  consoleAlertRules: "dw_console_alert_rules",
+  consoleAlertEvents: "dw_console_alert_events",
+  // Tier 2: Deploys, resource timings (sampled)
+  consoleDeploys: "dw_console_deploys",
+  // Tier 3: Voice QoS samples
+  voiceQosSamples: "dw_voice_qos_samples",
+  // Tier 5: Fraud / Auth anomalies
+  fraudSignals: "dw_fraud_signals",
+  authAnomalies: "dw_auth_anomalies",
+  // Tier 6: Ad-hoc queries + dashboards
+  consoleQueries: "dw_console_queries",
+  consoleDashboards: "dw_console_dashboards",
+  // Email pipeline (server-issued events; client logs opens)
+  emailEvents: "dw_email_events",
+  // Referral invites
+  referrals: "dw_referrals",
 } as const;
 
 // Per-user subcollection paths under `dw_users/{uid}/...`.

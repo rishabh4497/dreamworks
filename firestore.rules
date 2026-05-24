@@ -305,5 +305,85 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // ── Session replay (admin-only reads, self-write) ──────────────────
+    match /dw_telemetry_replays/{id} {
+      allow read, list: if isAdmin();
+      allow create, update: if isSignedIn()
+                            && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // ── Funnels (admin-managed configuration) ───────────────────────────
+    match /dw_console_funnels/{id} {
+      allow read, list, write: if isAdmin();
+    }
+
+    // ── A/B Experiments (admin-managed) ─────────────────────────────────
+    match /dw_console_experiments/{id} {
+      // Public read so feature-flag clients can resolve variants without
+      // an admin token. Writes are admin-only.
+      allow read, list: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Alerts: rules + events (admin-managed) ──────────────────────────
+    match /dw_console_alert_rules/{id} {
+      allow read, list, write: if isAdmin();
+    }
+    match /dw_console_alert_events/{id} {
+      allow read, list, write: if isAdmin();
+    }
+
+    // ── Deploy markers (admin-managed) ──────────────────────────────────
+    match /dw_console_deploys/{id} {
+      allow read, list, write: if isAdmin();
+    }
+
+    // ── Voice QoS samples (self-write, admin-read) ──────────────────────
+    match /dw_voice_qos_samples/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ── Fraud signals (admin-only reads + writes) ───────────────────────
+    match /dw_fraud_signals/{id} {
+      allow read, list, write: if isAdmin();
+    }
+
+    // ── Auth anomalies (admin-only) ─────────────────────────────────────
+    match /dw_auth_anomalies/{id} {
+      allow read, list, write: if isAdmin();
+    }
+
+    // ── Console queries + dashboards (admin-managed) ────────────────────
+    match /dw_console_queries/{id} {
+      allow read, list: if isAdmin();
+      allow create, update, delete: if isAdmin()
+                                    && request.resource.data.ownerUid == request.auth.uid;
+    }
+    match /dw_console_dashboards/{id} {
+      allow read, list: if isAdmin();
+      allow create, update, delete: if isAdmin()
+                                    && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ── Email pipeline events (admin-read; usually server-written) ──────
+    match /dw_email_events/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Referral invites (self-write) ───────────────────────────────────
+    match /dw_referrals/{id} {
+      allow read, list: if isAdmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.inviterUid == request.auth.uid;
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
   }
 }

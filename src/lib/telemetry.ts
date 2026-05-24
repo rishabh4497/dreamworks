@@ -19,6 +19,8 @@ import type {
   TelemetryEventType,
   TelemetryError,
   TelemetryOS,
+  ReplayFrame,
+  ReplayEventKind,
 } from "@/lib/types";
 
 // ── Internal state ─────────────────────────────────────────────────────────
@@ -48,11 +50,16 @@ const QUEUE_CAP = 200;
 const FLUSH_INTERVAL_MS = 5000;
 const FLUSH_THRESHOLD = 20;
 const SESSION_HEARTBEAT_MS = 30_000;
+const REPLAY_FRAME_CAP = 500;
+const REPLAY_FLUSH_INTERVAL_MS = 10_000;
 
 let queue: QueuedEvent[] = [];
 let session: SessionState | null = null;
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+let replayTimer: ReturnType<typeof setInterval> | null = null;
+let replayFrames: ReplayFrame[] = [];
+let replayHasFrustration = false;
 let flushing = false;
 let initialized = false;
 
@@ -330,6 +337,9 @@ export async function startSession(): Promise<void> {
       SESSION_HEARTBEAT_MS,
     );
   }
+  if (!replayTimer) {
+    replayTimer = setInterval(() => void flushReplay(), REPLAY_FLUSH_INTERVAL_MS);
+  }
 }
 
 /** Finalize the session and force-flush the remaining queue. */
@@ -364,6 +374,38 @@ export function endSession(): void {
     clearInterval(heartbeatTimer);
     heartbeatTimer = null;
   }
+  if (replayTimer) {
+    clearInterval(replayTimer);
+    replayTimer = null;
+  }
+  // Final replay flush with endedAt set.
+  void (async () => {
+    if (replayFrames.length === 0) return;
+    try {
+      const db = getDb();
+      await setDoc(
+        doc(db, COLLECTIONS.telemetryReplays, finalSession.id),
+        {
+          id: finalSession.id,
+          sessionId: finalSession.id,
+          uid: currentUid(),
+          startedAt: finalSession.startedAt,
+          endedAt: safeNow(),
+          durationMs: Date.now() - new Date(finalSession.startedAt).getTime(),
+          entryRoute: finalSession.entryRoute,
+          lastRoute: finalSession.lastRoute,
+          frames: replayFrames,
+          frameCount: replayFrames.length,
+          hasFrustration: replayHasFrustration,
+        },
+        { merge: true },
+      );
+    } catch {
+      // Fail-soft.
+    }
+    replayFrames = [];
+    replayHasFrustration = false;
+  })();
   session = null;
 }
 
@@ -498,6 +540,69 @@ export function trackPerf(
       meta: sanitizePayload(meta),
     },
   });
+}
+
+// ── Session replay ──────────────────────────────────────────────────────────
+//
+// Lightweight in-memory ring buffer of click/scroll/route/input frames. Flushed
+// periodically to `dw_telemetry_replays/{sessionId}` as a single document with
+// up to REPLAY_FRAME_CAP frames. Frame payload is sanitized — no input values,
+// just selector path + target tag + sanitized text label.
+
+export function pushReplayFrame(
+  kind: ReplayEventKind,
+  meta?: {
+    target?: string;
+    label?: string;
+    extra?: Record<string, unknown>;
+  },
+): void {
+  if (!session) return;
+  if (!usageEnabled()) return;
+  const startMs = new Date(session.startedAt).getTime();
+  const t = Date.now() - startMs;
+  if (replayFrames.length >= REPLAY_FRAME_CAP) {
+    // Drop the oldest 10% to keep room for recent activity.
+    replayFrames.splice(0, Math.floor(REPLAY_FRAME_CAP * 0.1));
+  }
+  const label = meta?.label ? meta.label.slice(0, 80) : undefined;
+  replayFrames.push({
+    t,
+    kind,
+    target: meta?.target?.slice(0, 200),
+    label,
+    meta: meta?.extra ? sanitizePayload(meta.extra) : undefined,
+  });
+  if (kind === "rage" || kind === "dead" || kind === "error") {
+    replayHasFrustration = true;
+  }
+}
+
+async function flushReplay(): Promise<void> {
+  if (!session || replayFrames.length === 0) return;
+  const snapshot = replayFrames.slice();
+  try {
+    const db = getDb();
+    await setDoc(
+      doc(db, COLLECTIONS.telemetryReplays, session.id),
+      {
+        id: session.id,
+        sessionId: session.id,
+        uid: currentUid(),
+        startedAt: session.startedAt,
+        endedAt: undefined,
+        durationMs: Date.now() - new Date(session.startedAt).getTime(),
+        entryRoute: session.entryRoute,
+        lastRoute: session.lastRoute,
+        frames: snapshot,
+        frameCount: snapshot.length,
+        hasFrustration: replayHasFrustration,
+      },
+      { merge: true },
+    );
+  } catch {
+    // Fail-soft.
+  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
