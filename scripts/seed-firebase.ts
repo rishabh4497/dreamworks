@@ -51,11 +51,6 @@ import {
 } from "../src/lib/mock/lfg-board.js";
 import { LFG_GROUPS } from "../src/lib/mock/lfg-groups.js";
 import { FOLLOW_SUGGESTIONS } from "../src/lib/mock/follow-suggestions.js";
-import {
-  FRIENDS,
-  FRIEND_ACTIVITY,
-  FRIEND_OWNED,
-} from "../src/lib/mock/friends.js";
 import { SPEEDRUN_RUNS } from "../src/lib/mock/speedrun-runs.js";
 import { buildReviewsForGame } from "../src/lib/mock/reviews.js";
 import { slugify } from "../src/lib/utils.js";
@@ -1380,23 +1375,14 @@ async function seedCatalogAndCommunity(
   const allReviews = GAME_SEEDS.flatMap((seed) => buildReviewsForGame(seed.id));
   await seedById(db, "dw_reviews", allReviews, (r) => r.id);
 
-  // dw_friends — social graph (per-user keyed by uid).
-  await seedById(db, "dw_friends", FRIENDS, (f) => f.uid);
-
-  // dw_friend_activity — keyed by `${uid}_${timestamp}` so the same friend
-  // can have multiple activity entries without doc collisions.
-  await seedById(
-    db,
-    "dw_friend_activity",
-    FRIEND_ACTIVITY,
-    (a) => `${a.uid}_${a.at}`,
-  );
-
-  // dw_friend_owned — one doc per friend listing the games they own.
-  const friendOwnedEntries = Object.entries(FRIEND_OWNED).map(
-    ([uid, gameIds]) => ({ uid, gameIds }),
-  );
-  await seedById(db, "dw_friend_owned", friendOwnedEntries, (e) => e.uid);
+  // dw_friends / dw_friend_activity / dw_friend_owned were historically
+  // populated with 10 fake-user docs from src/lib/mock/friends.ts. The runtime
+  // now reads from a real friend graph at users/{uid}/friends/{friendUid}
+  // (see src/lib/api/friend-graph.ts) and real chat at dw_chats/*. Purge any
+  // leftover fake docs so the UI never resurrects ghost friends.
+  await purgeCollection(db, "dw_friends");
+  await purgeCollection(db, "dw_friend_activity");
+  await purgeCollection(db, "dw_friend_owned");
 
   // dw_speedrun_runs — leaderboard entries. Synthetic id from rank+player.
   await seedById(
@@ -1535,6 +1521,29 @@ async function seedCatalogAndCommunity(
  * Generic fill-missing seeder. Accepts an array of source items, a key
  * extractor, and an optional doc-shape transform. Emits one tally line.
  */
+/**
+ * Delete every document in a collection. Used to nuke the legacy fake-friend
+ * collections (`dw_friends`, `dw_friend_activity`, `dw_friend_owned`) after
+ * the runtime moved to the real friend graph at users/{uid}/friends/*.
+ */
+async function purgeCollection(
+  db: FirebaseFirestore.Firestore,
+  collectionName: string,
+): Promise<void> {
+  const snap = await db.collection(collectionName).get();
+  if (snap.empty) {
+    console.log(`✓ ${collectionName}: already empty (nothing to purge)`);
+    return;
+  }
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    for (const d of docs.slice(i, i + 400)) batch.delete(d.ref);
+    await batch.commit();
+  }
+  console.log(`✓ ${collectionName}: purged ${docs.length} legacy docs`);
+}
+
 async function seedById<T>(
   db: FirebaseFirestore.Firestore,
   collectionName: string,

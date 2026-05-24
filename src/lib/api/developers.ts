@@ -51,21 +51,43 @@ export type DeveloperInput = Omit<Developer, "id" | "updatedAt" | "ownerUserId" 
   appIds?: string[];
 };
 
+/**
+ * Update an EXISTING developer entity. Creation is admin-onboarded only —
+ * new developers are minted by Cloud Functions (`approveCreatorApplication`,
+ * `inviteCreator`, `claimCreatorInvite`). This client function will throw if
+ * the doc doesn't exist, matching the tightened Firestore rule
+ * (`allow create: if false`).
+ */
 export async function saveDeveloper(input: DeveloperInput): Promise<Developer> {
   const userId = requireUserId();
   const id = input.id ?? slugify(input.name);
   if (!id) throw new Error("Developer name is required.");
   const ref = doc(getDb(), COLLECTIONS.developers, id);
   const existing = await getDoc(ref);
+  if (!existing.exists()) {
+    throw new Error(
+      "You don't own a developer profile yet. Apply at /become-a-creator or wait for an admin invite.",
+    );
+  }
+  const current = existing.data() as Developer;
+  if (current.ownerUserId !== userId) {
+    throw new Error("You don't have permission to edit this developer.");
+  }
   const next: Developer = stripUndefined({
-    ...(existing.exists() ? (existing.data() as Developer) : {}),
+    ...current,
     ...input,
     id,
-    ownerUserId: existing.exists() ? (existing.data() as Developer).ownerUserId ?? userId : userId,
-    appIds: input.appIds ?? (existing.exists() ? (existing.data() as Developer).appIds ?? [] : []),
+    // Owner + appIds + verificationStatus are preserved server-side.
+    ownerUserId: current.ownerUserId,
+    appIds: input.appIds ?? current.appIds ?? [],
     updatedAt: now(),
   }) as Developer;
-  await setDoc(ref, next, { merge: true });
+  // Strip verificationStatus from the client write — rules forbid changing it.
+  const { verificationStatus: _vs, ...safeNext } = next as Developer & {
+    verificationStatus?: string;
+  };
+  void _vs;
+  await setDoc(ref, safeNext as Developer, { merge: true });
   return next;
 }
 

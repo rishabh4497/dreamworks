@@ -20,6 +20,22 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
+    function isOwnerClaim() {
+      return isSignedIn() && request.auth.token.owner == true;
+    }
+    // Fine-grained permission gate via the custom-claim digest. Mirrors
+    // `src/lib/permissions.ts` `buildClaimDigest`. Owner always passes.
+    function hasClaim(perm) {
+      return isOwnerClaim() || (isSignedIn() && request.auth.token[perm] == true);
+    }
+    // Update touched only the given field set — no other diff.
+    function affectsOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+    // Update did NOT touch any of the given protected fields.
+    function preservesFields(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().intersection(fields.toSet()).size() == 0;
+    }
 
     // ── AI (server-only) ────────────────────────────────────────────────
     // Only Cloud Functions running with the Admin SDK can touch these.
@@ -28,23 +44,26 @@ service cloud.firestore {
     match /dw_ai_usage/{eventId}    { allow read, write: if false; }
 
     // ── User profiles ───────────────────────────────────────────────────
-    // Public read for profile cards (friend list, reviews, etc.). Self-write
-    // is allowed but role/permissions/suspended must be unchanged client-side
-    // — those are only ever set by setUserRole / claimAdminIfAllowlisted
-    // Cloud Functions (or by an admin from the admin console).
+    // Public read for profile cards (friend list, reviews, etc.).
+    // role / permissions / suspended are SERVER-WRITE-ONLY (Cloud Functions
+    // run with Admin SDK and bypass rules). No client path — not even admins
+    // can flip role/permissions client-side. This forces all privilege
+    // changes to go through audited callables (setUserRole, setUserPermissions,
+    // claimOwnerIfEligible, inviteCreator, claimCreatorInvite, etc.).
     match /users/{uid} {
       allow read: if true;
       allow create: if isOwner(uid)
         && (!("role" in request.resource.data)
-            || request.resource.data.role == "user");
-      allow update: if isAdmin()
-        || (isOwner(uid)
-            && (!("role" in request.resource.data)
-                || request.resource.data.role == resource.data.get("role", "user"))
-            && (!("permissions" in request.resource.data)
-                || request.resource.data.permissions == resource.data.get("permissions", []))
-            && (!("suspended" in request.resource.data)
-                || request.resource.data.suspended == resource.data.get("suspended", false)));
+            || request.resource.data.role == "user")
+        && !("permissions" in request.resource.data)
+        && !("suspended" in request.resource.data);
+      allow update: if isOwner(uid)
+        && (!("role" in request.resource.data)
+            || request.resource.data.role == resource.data.get("role", "user"))
+        && (!("permissions" in request.resource.data)
+            || request.resource.data.permissions == resource.data.get("permissions", []))
+        && (!("suspended" in request.resource.data)
+            || request.resource.data.suspended == resource.data.get("suspended", false));
       allow delete: if false;
     }
 
@@ -214,21 +233,32 @@ service cloud.firestore {
       allow write: if isAdmin()
         || (isSignedIn() && get(/databases/$(database)/documents/dw_apps/$(appId)).data.ownerUserId == request.auth.uid);
     }
+    // Developer / Publisher entities — creation is admin-onboarded only.
+    // Client `create` is forbidden; entities are minted server-side by
+    // `inviteCreator`, `claimCreatorInvite`, and `approveCreatorApplication`.
+    // Owners may still edit their own brand details after creation, but cannot
+    // mutate ownership or verificationStatus from the client.
     match /dw_developers/{devId} {
       allow read: if true;
-      allow write: if isAdmin()
-        || (isSignedIn()
-            && resource.data.ownerUserId == request.auth.uid
-            && (!("verificationStatus" in request.resource.data)
-                || request.resource.data.verificationStatus == resource.data.get("verificationStatus", "unverified")));
+      allow create: if false;
+      allow update: if isSignedIn()
+        && resource.data.ownerUserId == request.auth.uid
+        && (!("ownerUserId" in request.resource.data)
+            || request.resource.data.ownerUserId == resource.data.ownerUserId)
+        && (!("verificationStatus" in request.resource.data)
+            || request.resource.data.verificationStatus == resource.data.get("verificationStatus", "unverified"));
+      allow delete: if false;
     }
     match /dw_publishers/{pubId} {
       allow read: if true;
-      allow write: if isAdmin()
-        || (isSignedIn()
-            && resource.data.ownerUserId == request.auth.uid
-            && (!("verificationStatus" in request.resource.data)
-                || request.resource.data.verificationStatus == resource.data.get("verificationStatus", "unverified")));
+      allow create: if false;
+      allow update: if isSignedIn()
+        && resource.data.ownerUserId == request.auth.uid
+        && (!("ownerUserId" in request.resource.data)
+            || request.resource.data.ownerUserId == resource.data.ownerUserId)
+        && (!("verificationStatus" in request.resource.data)
+            || request.resource.data.verificationStatus == resource.data.get("verificationStatus", "unverified"));
+      allow delete: if false;
     }
     match /dw_developer_drafts/{draftId} {
       allow read, write: if isSignedIn();
@@ -424,6 +454,27 @@ service cloud.firestore {
                     && request.resource.data.inviterUid == request.auth.uid;
       allow update: if isSignedIn();
       allow delete: if isAdmin();
+    }
+
+    // ── Access control: invites + applications ──────────────────────────
+    // Invite tokens are SHA-256 hashed and used as the document ID. Only
+    // Cloud Functions ever read/write them — clients claim via the
+    // claimCreatorInvite / claimAdminInvite callables.
+    match /dw_creator_invites/{tokenHash} {
+      allow read, write: if false;
+    }
+    match /dw_admin_invites/{tokenHash} {
+      allow read, write: if false;
+    }
+    // Creator applications — self-apply (user creates), admin reads/decides
+    // via Cloud Function. Status field is server-managed.
+    match /dw_creator_applications/{id} {
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.submitterUserId == request.auth.uid);
+      allow create: if isSignedIn()
+                    && request.resource.data.submitterUserId == request.auth.uid
+                    && request.resource.data.status == "pending";
+      allow update, delete: if false;
     }
   }
 }

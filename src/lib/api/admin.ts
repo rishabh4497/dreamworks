@@ -194,6 +194,128 @@ export async function setUserRole(input: {
   return res.data;
 }
 
+// ── Access control redo ─────────────────────────────────────────────────────
+
+export async function setUserPermissions(input: {
+  targetUid: string;
+  permissions: string[];
+}): Promise<{ ok: true }> {
+  const fn = httpsCallable<typeof input, { ok: true }>(
+    getFirebaseFunctions(),
+    "setUserPermissions",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function migrateAdminsToPermissions(): Promise<{ migrated: number; skipped: number }> {
+  const fn = httpsCallable<unknown, { migrated: number; skipped: number }>(
+    getFirebaseFunctions(),
+    "migrateAdminsToPermissions",
+  );
+  const res = await fn({});
+  return res.data;
+}
+
+export async function refreshUserClaims(targetUid: string): Promise<{ ok: true }> {
+  const fn = httpsCallable<{ targetUid: string }, { ok: true }>(
+    getFirebaseFunctions(),
+    "refreshUserClaims",
+  );
+  const res = await fn({ targetUid });
+  return res.data;
+}
+
+export async function lookupUserByEmail(email: string): Promise<{
+  uid: string | null;
+  email: string;
+  displayName?: string;
+  emailVerified?: boolean;
+  hasMfa?: boolean;
+  lastSignInAt?: string | null;
+  createdAt?: string | null;
+}> {
+  const fn = httpsCallable<{ email: string }, {
+    uid: string | null;
+    email: string;
+    displayName?: string;
+    emailVerified?: boolean;
+    hasMfa?: boolean;
+    lastSignInAt?: string | null;
+    createdAt?: string | null;
+  }>(getFirebaseFunctions(), "lookupUserByEmail");
+  const res = await fn({ email });
+  return res.data;
+}
+
+export async function inviteCreator(input: {
+  email: string;
+  kind: "developer" | "publisher";
+  brand: {
+    name: string;
+    brandColor: string;
+    logoUrl: string;
+    bannerUrl?: string;
+    tagline: string;
+    about?: string;
+    websiteUrl?: string;
+    socialLinks?: Record<string, string>;
+  };
+}): Promise<
+  | { mode: "direct"; entityId: string; recipientUid: string }
+  | { mode: "invite"; tokenHash: string; magicLink: string; expiresAt: string }
+> {
+  const fn = httpsCallable<typeof input, never>(getFirebaseFunctions(), "inviteCreator");
+  const res = await fn(input);
+  return res.data as never;
+}
+
+export async function inviteAdmin(input: {
+  email: string;
+  preset: string;
+  extraPermissions?: string[];
+}): Promise<
+  | { mode: "direct"; recipientUid: string }
+  | { mode: "invite"; tokenHash: string; magicLink: string; expiresAt: string }
+> {
+  const fn = httpsCallable<typeof input, never>(getFirebaseFunctions(), "inviteAdmin");
+  const res = await fn(input);
+  return res.data as never;
+}
+
+export async function approveCreatorApplication(input: {
+  applicationId: string;
+  brandOverrides?: Record<string, unknown>;
+}): Promise<{ entityId: string }> {
+  const fn = httpsCallable<typeof input, { entityId: string }>(
+    getFirebaseFunctions(),
+    "approveCreatorApplication",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function rejectCreatorApplication(input: {
+  applicationId: string;
+  reason: string;
+}): Promise<{ ok: true }> {
+  const fn = httpsCallable<typeof input, { ok: true }>(
+    getFirebaseFunctions(),
+    "rejectCreatorApplication",
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+export async function listAdminCandidates(): Promise<{ candidates: string[] }> {
+  const fn = httpsCallable<unknown, { candidates: string[] }>(
+    getFirebaseFunctions(),
+    "listAdminCandidates",
+  );
+  const res = await fn({});
+  return res.data;
+}
+
 export async function listAdminUsers(opts: { search?: string; role?: UserRole | "all" } = {}): Promise<AdminUserSummary[]> {
   const ref = collection(getDb(), COLLECTIONS.users);
   // Without server-side full-text search, fetch the most recent N users and

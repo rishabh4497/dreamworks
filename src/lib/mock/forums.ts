@@ -1,7 +1,34 @@
 import type { ForumReply, ForumThread, GameId } from "../types";
 import { randomFromSeed } from "./_seed";
-import { FRIENDS } from "./friends";
+import { avatarUrl } from "./images";
 import { GAMES } from "./games";
+
+/**
+ * Synthetic author handles for seeded forum threads and replies. These are
+ * intentionally NOT real users and NOT part of the friend graph — they only
+ * exist to give static forum content plausible-looking attribution. The real
+ * friend graph lives at users/{uid}/friends/{friendUid} (see
+ * src/lib/api/friend-graph.ts).
+ */
+const FORUM_AUTHOR_HANDLES = [
+  "kira_w",
+  "low.tide",
+  "bytecount",
+  "ferris",
+  "annika.io",
+  "porter",
+  "magna",
+  "h.ward",
+  "obsidian",
+  "saoirse",
+] as const;
+
+const FORUM_AUTHORS = FORUM_AUTHOR_HANDLES.map((name, i) => ({
+  uid: `forum-author-${i + 1}`,
+  displayName: name,
+  avatarUrl: avatarUrl(name),
+}));
+const FRIENDS = FORUM_AUTHORS;
 
 /**
  * Seeded forum content. Deterministic per game so reloads are stable.
