@@ -149,6 +149,11 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
     if (!entry) return;
     const docRef = doc(getDb(), COLLECTIONS.library, `${profile.uid}_${id}`);
     await updateDoc(docRef, { installed: !entry.installed });
+    void import("@/lib/telemetry").then((m) =>
+      m.track(entry.installed ? "library_uninstall" : "library_install", {
+        gameId: id,
+      }),
+    );
   },
   moveInstallPath: async (id, installPath) => {
     const profile = useAuthStore.getState().profile;

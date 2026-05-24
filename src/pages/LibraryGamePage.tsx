@@ -151,6 +151,12 @@ export function LibraryGamePage() {
     if (result.ok) {
       setIsPlaying(true);
       toast.success(`Launching ${detail.name}...`);
+      void import("@/lib/telemetry").then((m) =>
+        m.track("library_launch", {
+          gameId: entry.gameId,
+          sourceLauncher: entry.sourceLauncher,
+        }),
+      );
       return;
     }
     toast.info(result.error.message);

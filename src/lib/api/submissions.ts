@@ -53,6 +53,9 @@ export async function submitAppForReviewCallable(appId: string): Promise<{ submi
     "submitAppForReview",
   );
   const res = await fn({ appId });
+  void import("@/lib/telemetry").then((m) =>
+    m.track("studio_submit", { appId, submissionId: res.data.submissionId }),
+  );
   return res.data;
 }
 
@@ -81,6 +84,9 @@ export async function publishApprovedAppCallable(appId: string): Promise<{ gameI
     "publishApprovedApp",
   );
   const res = await fn({ appId });
+  void import("@/lib/telemetry").then((m) =>
+    m.track("publish_action", { appId, gameId: res.data.gameId }),
+  );
   return res.data;
 }
 

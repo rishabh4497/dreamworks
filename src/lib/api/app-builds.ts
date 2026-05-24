@@ -66,6 +66,15 @@ export async function createBuild(input: CreateBuildInput): Promise<AppBuild> {
   const ref = doc(getDb(), COLLECTIONS.apps, input.appId, SUBCOLLECTIONS.appBuilds, id);
   await setDoc(ref, build);
   await saveApp(input.appId, { latestBuildId: id });
+  void import("@/lib/telemetry").then((m) =>
+    m.track("build_upload", {
+      appId: input.appId,
+      buildId: id,
+      buildLabel: input.buildLabel,
+      sizeBytes,
+      platforms: input.platforms,
+    }),
+  );
   return build;
 }
 

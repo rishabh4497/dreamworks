@@ -4,6 +4,7 @@ import { useAuthStore } from "./auth-store";
 import { getDb, COLLECTIONS } from "@/lib/firebase";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { attachUserQuerySync } from "@/lib/store-factory";
+import { track } from "@/lib/telemetry";
 
 interface UserReviewPayload {
   recommended: boolean;
@@ -47,6 +48,12 @@ export const useUserReviewsStore = create<UserReviewsStore>((_set, get) => ({
     } as any; // Cast as any because of possible extra userId field in type definitions
 
     await setDoc(docRef, review);
+    track("review_submit", {
+      gameId,
+      recommended: payload.recommended,
+      hasFacets: Boolean(payload.facets),
+      isEdit: Boolean(existing),
+    });
     return review;
   },
 
