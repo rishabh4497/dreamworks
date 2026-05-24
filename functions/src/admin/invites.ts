@@ -25,7 +25,9 @@ import { logger } from "firebase-functions";
 import * as crypto from "node:crypto";
 
 import { COLLECTIONS, requireAuth, writeAudit, nowIso, stripUndefined } from "./shared.js";
-import { assertPermission, assertOwner, loadActor } from "../lib/assert-permission.js";
+import { assertPermission, loadActor } from "../lib/assert-permission.js";
+
+type CreatorRole = "creator-developer" | "creator-publisher";
 import { assertFreshAuth } from "../lib/recent-auth.js";
 
 const INVITE_TTL_DAYS = 7;
@@ -117,11 +119,12 @@ function validateBrand(b: BrandInput): void {
 }
 
 async function createCreatorEntity(args: {
-  kind: "developer" | "publisher";
+  kind: CreatorRole;
   ownerUserId: string;
   brand: BrandInput;
 }): Promise<{ id: string }> {
-  const collection = args.kind === "developer" ? COLLECTIONS.developers : COLLECTIONS.publishers;
+  const collection =
+    args.kind === "creator-developer" ? COLLECTIONS.developers : COLLECTIONS.publishers;
   const baseId = slugify(args.brand.name);
   if (!baseId) throw new HttpsError("invalid-argument", "Brand name produces empty slug.");
   const db = getFirestore();
@@ -154,7 +157,7 @@ async function createCreatorEntity(args: {
 
 async function setRoleAndMirrorClaims(
   targetUid: string,
-  role: "developer" | "publisher" | "admin",
+  role: CreatorRole | "admin",
   permissions?: string[],
 ): Promise<void> {
   const db = getFirestore();
@@ -232,7 +235,7 @@ async function generateMagicLink(email: string, claimToken: string): Promise<str
 // ── 1) Submit application ───────────────────────────────────────────────────
 
 interface SubmitAppRequest {
-  kind: "developer" | "publisher";
+  kind: CreatorRole;
   brand: BrandInput;
   pitch: string;
   links?: string[];
@@ -243,8 +246,8 @@ export const submitCreatorApplication = onCall(
   async (request: CallableRequest<SubmitAppRequest>): Promise<{ id: string }> => {
     const { uid, email } = requireAuth(request);
     const { kind, brand, pitch, links } = request.data ?? ({} as SubmitAppRequest);
-    if (kind !== "developer" && kind !== "publisher") {
-      throw new HttpsError("invalid-argument", "kind must be developer or publisher.");
+    if (kind !== "creator-developer" && kind !== "creator-publisher") {
+      throw new HttpsError("invalid-argument", "kind must be creator-developer or creator-publisher.");
     }
     validateBrand(brand);
     if (!pitch || pitch.length < 20) {
@@ -297,7 +300,7 @@ export const approveCreatorApplication = onCall(
     const appRef = db.collection(CREATOR_APPS).doc(applicationId);
     const appSnap = await appRef.get();
     if (!appSnap.exists) throw new HttpsError("not-found", "Application not found.");
-    const appData = appSnap.data() as { kind: "developer" | "publisher"; brand: BrandInput; submitterUserId: string; status: string };
+    const appData = appSnap.data() as { kind: CreatorRole; brand: BrandInput; submitterUserId: string; status: string };
     if (appData.status !== "pending" && appData.status !== "in_review") {
       throw new HttpsError("failed-precondition", `Application is already ${appData.status}.`);
     }
@@ -391,7 +394,7 @@ export const rejectCreatorApplication = onCall(
 
 interface InviteCreatorRequest {
   email: string;
-  kind: "developer" | "publisher";
+  kind: CreatorRole;
   brand: BrandInput;
 }
 
@@ -406,8 +409,8 @@ export const inviteCreator = onCall(
     const actor = await assertPermission(request, "admin.creators.invite");
     const { email, kind, brand } = request.data ?? ({} as InviteCreatorRequest);
     if (!email || !email.includes("@")) throw new HttpsError("invalid-argument", "Valid email required.");
-    if (kind !== "developer" && kind !== "publisher") {
-      throw new HttpsError("invalid-argument", "kind must be developer or publisher.");
+    if (kind !== "creator-developer" && kind !== "creator-publisher") {
+      throw new HttpsError("invalid-argument", "kind must be creator-developer or creator-publisher.");
     }
     validateBrand(brand);
     const lcEmail = email.toLowerCase().trim();
@@ -468,7 +471,7 @@ export const inviteCreator = onCall(
     await enqueueInviteEmail({
       to: lcEmail,
       kind: "creator_invite",
-      subject: `You're invited to sell ${kind === "developer" ? "as a studio" : "as a publisher"} on Dreamworks`,
+      subject: `You're invited to sell ${kind === "creator-developer" ? "as a studio" : "as a publisher"} on Dreamworks`,
       body: `Open this link to claim your invitation: ${magicLink}`,
       link: magicLink,
     });
@@ -493,7 +496,7 @@ interface ClaimCreatorRequest {
 
 export const claimCreatorInvite = onCall(
   { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
-  async (request: CallableRequest<ClaimCreatorRequest>): Promise<{ entityId: string; kind: "developer" | "publisher" }> => {
+  async (request: CallableRequest<ClaimCreatorRequest>): Promise<{ entityId: string; kind: CreatorRole }> => {
     const { uid, email } = requireAuth(request);
     const token = (request.data?.token ?? "").trim();
     if (!token) throw new HttpsError("invalid-argument", "token required.");
@@ -502,7 +505,7 @@ export const claimCreatorInvite = onCall(
     const ref = db.collection(CREATOR_INVITES).doc(hash);
     const snap = await ref.get();
     if (!snap.exists) throw new HttpsError("not-found", "Invite not found.");
-    const data = snap.data() as { email: string; kind: "developer" | "publisher"; brand: BrandInput; status: string; expiresAt: string };
+    const data = snap.data() as { email: string; kind: CreatorRole; brand: BrandInput; status: string; expiresAt: string };
     if (data.status !== "pending") {
       throw new HttpsError("failed-precondition", `Invite is ${data.status}.`);
     }
@@ -559,8 +562,11 @@ export const inviteAdmin = onCall(
     | { mode: "direct"; recipientUid: string }
     | { mode: "invite"; tokenHash: string; magicLink: string; expiresAt: string }
   > => {
-    const actor = await assertOwner(request);
+    // Inviting an admin teammate is sensitive: requires fresh reauth + the
+    // explicit admin.team.manage permission (top admin has it by default
+    // via the "*" preset).
     assertFreshAuth(request, 300);
+    const actor = await assertPermission(request, "admin.team.manage");
     const { email, preset, extraPermissions } = request.data ?? ({} as InviteAdminRequest);
     if (!email || !email.includes("@")) throw new HttpsError("invalid-argument", "Valid email required.");
     if (!PRESETS[preset]) throw new HttpsError("invalid-argument", `Unknown preset: ${preset}`);

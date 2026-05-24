@@ -20,13 +20,12 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
-    function isOwnerClaim() {
-      return isSignedIn() && request.auth.token.owner == true;
-    }
     // Fine-grained permission gate via the custom-claim digest. Mirrors
-    // `src/lib/permissions.ts` `buildClaimDigest`. Owner always passes.
+    // `src/lib/permissions.ts` `buildClaimDigest`. Top admins (role=admin
+    // with the "*" preset) get every digest flag at sign-in, so this passes
+    // for them on any perm.
     function hasClaim(perm) {
-      return isOwnerClaim() || (isSignedIn() && request.auth.token[perm] == true);
+      return isSignedIn() && request.auth.token[perm] == true;
     }
     // Update touched only the given field set — no other diff.
     function affectsOnly(fields) {

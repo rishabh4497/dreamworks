@@ -1,16 +1,16 @@
-// Owner identity Cloud Function — the only path that mints owner custom claims.
+// Bootstrap admin Cloud Function.
+//
+// Mints the `admin` custom claim for the single account whose UID matches
+// the `OWNER_UID` secret. This is the only auto-promotion path in the
+// system — every other admin teammate must be invited by an existing admin.
 //
 // Security model:
 // - OWNER_UID is stored in GCP Secret Manager (defineSecret), not in code or env.
-// - Owner can only be claimed by the account whose `auth.uid === OWNER_UID`.
-// - We additionally require the caller's JWT to show a second factor was used
-//   (`sign_in_second_factor === "totp"`). The owner cannot skip MFA.
-// - On success: sets custom claim `{ owner: true, admin: true, ...digest }` and
-//   writes `dw_users/{uid}` with `role: "owner"`, `permissions: ["*"]`.
+// - Only the matching uid can be promoted; silent refusal otherwise.
+// - Idempotent — subsequent calls return early if the claim is already set.
 //
-// Reset path: if the owner account is locked out, only re-issuing the
-// OWNER_UID secret (manual GCP Secret Manager edit by anyone with project
-// IAM owner) can restore access. Deliberate hard fence.
+// Reset path: editing the OWNER_UID secret in GCP Secret Manager restores
+// the bootstrap account. Deliberate hard fence.
 
 import { onCall, HttpsError, type CallableRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
@@ -22,10 +22,10 @@ import { COLLECTIONS, requireAuth, writeAudit } from "./shared.js";
 
 const OWNER_UID = defineSecret("OWNER_UID");
 
-interface ClaimOwnerResult {
-  owner: boolean;
-  /** Reason for refusal when owner=false. */
-  reason?: "uid_mismatch" | "mfa_required" | "secret_unset";
+interface BootstrapResult {
+  admin: boolean;
+  /** Reason for refusal when admin=false. */
+  reason?: "uid_mismatch" | "secret_unset";
 }
 
 export const claimOwnerIfEligible = onCall(
@@ -35,43 +35,31 @@ export const claimOwnerIfEligible = onCall(
     timeoutSeconds: 30,
     secrets: [OWNER_UID],
   },
-  async (request: CallableRequest<unknown>): Promise<ClaimOwnerResult> => {
+  async (request: CallableRequest<unknown>): Promise<BootstrapResult> => {
     const { uid, email } = requireAuth(request);
 
     const ownerUid = OWNER_UID.value();
     if (!ownerUid) {
       logger.warn("claimOwnerIfEligible: OWNER_UID secret not set");
-      return { owner: false, reason: "secret_unset" };
+      return { admin: false, reason: "secret_unset" };
     }
     if (uid !== ownerUid) {
-      // Silent refusal — return false. Don't reveal who the owner is.
-      return { owner: false, reason: "uid_mismatch" };
-    }
-
-    // Enforce MFA: the JWT must show a second-factor sign-in (TOTP).
-    const firebase = request.auth!.token.firebase as
-      | { sign_in_second_factor?: string }
-      | undefined;
-    const secondFactor = firebase?.sign_in_second_factor;
-    if (!secondFactor) {
-      logger.warn("claimOwnerIfEligible: owner attempted to claim without MFA", { uid });
-      return { owner: false, reason: "mfa_required" };
+      return { admin: false, reason: "uid_mismatch" };
     }
 
     try {
       const userRecord = await getAuth().getUser(uid);
       const existingClaims = (userRecord.customClaims as Record<string, unknown> | undefined) ?? {};
-      if (existingClaims.owner === true) {
-        // Already an owner — idempotent.
-        return { owner: true };
+      if (existingClaims.admin === true) {
+        // Already promoted — idempotent.
+        return { admin: true };
       }
 
-      // Mint the owner claim + a complete admin/access digest.
+      // Mint admin claim + full access digest.
       await getAuth().setCustomUserClaims(uid, {
         ...existingClaims,
-        owner: true,
         admin: true,
-        role: "owner",
+        role: "admin",
         "admin.access": true,
         "console.access": true,
       });
@@ -90,7 +78,7 @@ export const claimOwnerIfEligible = onCall(
           {
             uid,
             email,
-            role: "owner",
+            role: "admin",
             permissions: ["*"],
           },
           { merge: true },
@@ -102,16 +90,16 @@ export const claimOwnerIfEligible = onCall(
           targetType: "user",
           targetId: uid,
           beforeState: before,
-          afterState: { role: "owner", permissions: ["*"] },
-          metadata: { source: "OWNER_UID secret", secondFactor },
+          afterState: { role: "admin", permissions: ["*"] },
+          metadata: { source: "OWNER_UID secret" },
         });
       });
 
-      logger.info("Owner claim minted", { uid, email });
-      return { owner: true };
+      logger.info("Bootstrap admin claim minted", { uid, email });
+      return { admin: true };
     } catch (err) {
       logger.error("claimOwnerIfEligible failed", { uid, err: String(err) });
-      throw new HttpsError("internal", "Failed to claim owner.");
+      throw new HttpsError("internal", "Failed to bootstrap admin.");
     }
   },
 );

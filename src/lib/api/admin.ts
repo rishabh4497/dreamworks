@@ -217,6 +217,19 @@ export async function migrateAdminsToPermissions(): Promise<{ migrated: number; 
   return res.data;
 }
 
+export async function renameLegacyRoles(opts: { keepDeveloperAsStaff?: boolean } = {}): Promise<{
+  migrated: number;
+  skipped: number;
+  renames: Record<string, string>;
+}> {
+  const fn = httpsCallable<
+    { keepDeveloperAsStaff?: boolean },
+    { migrated: number; skipped: number; renames: Record<string, string> }
+  >(getFirebaseFunctions(), "renameLegacyRoles");
+  const res = await fn({ keepDeveloperAsStaff: opts.keepDeveloperAsStaff ?? false });
+  return res.data;
+}
+
 export async function refreshUserClaims(targetUid: string): Promise<{ ok: true }> {
   const fn = httpsCallable<{ targetUid: string }, { ok: true }>(
     getFirebaseFunctions(),
@@ -250,7 +263,7 @@ export async function lookupUserByEmail(email: string): Promise<{
 
 export async function inviteCreator(input: {
   email: string;
-  kind: "developer" | "publisher";
+  kind: "creator-developer" | "creator-publisher";
   brand: {
     name: string;
     brandColor: string;

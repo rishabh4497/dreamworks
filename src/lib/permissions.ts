@@ -83,12 +83,20 @@ export type PermissionKey = AdminPermissionKey | ConsolePermissionKey;
 // Keys flagged as "owner_default" can only be granted by the owner.
 // Keys flagged as "sensitive" deserve a confirmation modal in the team UI.
 
-export const OWNER_ONLY_DEFAULTS: ReadonlySet<PermissionKey> = new Set<PermissionKey>([
+/**
+ * Keys reserved for the top admin account by default. Other admin teammates
+ * need them granted explicitly. Surfaced in the Team & Access UI with a
+ * "top-admin only" indicator.
+ */
+export const ADMIN_ONLY_DEFAULTS: ReadonlySet<PermissionKey> = new Set<PermissionKey>([
   "admin.users.role_change",
   "admin.team.manage",
   "admin.config.write",
   "console.reports.deploys.write",
 ]);
+
+/** Back-compat alias — same semantics, kept so older imports still resolve. */
+export const OWNER_ONLY_DEFAULTS = ADMIN_ONLY_DEFAULTS;
 
 export const SENSITIVE_PERMISSIONS: ReadonlySet<PermissionKey> = new Set<PermissionKey>([
   "admin.users.role_change",
@@ -283,13 +291,16 @@ interface ProfileLike {
   permissions?: string[];
 }
 
-/** True if the profile holds the given key — direct, wildcard prefix, or `*`. */
+/**
+ * True if the profile holds the given key — direct, wildcard prefix, or `*`.
+ * Admins (the top role) implicitly hold every permission via the `*` they
+ * receive at sign-up / migration, so the wildcard branch covers them.
+ */
 export function hasPermission(
   profile: ProfileLike | null | undefined,
   key: PermissionKey,
 ): boolean {
   if (!profile) return false;
-  if (profile.role === "owner") return true;
   const perms = profile.permissions ?? [];
   if (perms.includes("*")) return true;
   if (perms.includes(key)) return true;
@@ -322,7 +333,6 @@ export function presetKeys(presetId: string): PermissionKey[] {
 // client code via `useAuthStore`.
 
 export interface ClaimDigest {
-  owner?: boolean;
   admin?: boolean;
   "admin.access"?: boolean;
   "console.access"?: boolean;
@@ -342,10 +352,8 @@ export interface ClaimDigest {
 /** Build the claim digest from a full permission list + role. */
 export function buildClaimDigest(role: UserRole | string, permissions: string[]): ClaimDigest {
   const profile = { role, permissions };
-  const isOwner = role === "owner";
   const digest: ClaimDigest = {
-    owner: isOwner,
-    admin: isOwner || role === "admin",
+    admin: role === "admin",
   };
   const claimKeys: Array<keyof ClaimDigest> = [
     "admin.access",
@@ -363,7 +371,7 @@ export function buildClaimDigest(role: UserRole | string, permissions: string[])
     "admin.moderation.access",
   ];
   for (const k of claimKeys) {
-    if (k === "owner" || k === "admin") continue;
+    if (k === "admin") continue;
     if (hasPermission(profile, k as PermissionKey)) digest[k] = true;
   }
   return digest;

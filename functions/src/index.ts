@@ -17,6 +17,7 @@ export {
   claimOwnerIfEligible,
   setUserPermissions,
   migrateAdminsToPermissions,
+  renameLegacyRoles,
   refreshUserClaims,
   lookupUserByEmail,
   submitCreatorApplication,

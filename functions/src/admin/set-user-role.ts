@@ -7,7 +7,12 @@ import { COLLECTIONS, writeAudit } from "./shared.js";
 import { assertPermission } from "../lib/assert-permission.js";
 import { assertFreshAuth } from "../lib/recent-auth.js";
 
-type Role = "user" | "developer" | "publisher" | "admin" | "owner";
+type Role =
+  | "user"
+  | "developer"
+  | "creator-developer"
+  | "creator-publisher"
+  | "admin";
 
 interface SetRoleRequest {
   targetUid: string;
@@ -15,9 +20,14 @@ interface SetRoleRequest {
   permissions?: string[];
 }
 
-// "owner" cannot be granted via this function — only mintable via
-// claimOwnerIfEligible with the OWNER_UID secret check + MFA gate.
-const ALLOWED_ROLES: ReadonlySet<Role> = new Set(["user", "developer", "publisher", "admin"]);
+// Any of the five roles may be granted via this function.
+const ALLOWED_ROLES: ReadonlySet<Role> = new Set([
+  "user",
+  "developer",
+  "creator-developer",
+  "creator-publisher",
+  "admin",
+]);
 
 export const setUserRole = onCall(
   { region: "us-central1", memory: "256MiB", timeoutSeconds: 30 },
@@ -38,12 +48,17 @@ export const setUserRole = onCall(
       const snap = await tx.get(userRef);
       if (!snap.exists) throw new HttpsError("not-found", "User not found.");
       const currentRole = snap.data()?.role ?? null;
-      if (currentRole === "owner") {
-        throw new HttpsError("permission-denied", "Cannot demote the owner.");
+      const currentPerms = Array.isArray(snap.data()?.permissions)
+        ? (snap.data()!.permissions as string[])
+        : [];
+      // Cannot demote the top admin (the boss — role=admin with "*" perms).
+      const targetIsTopAdmin = currentRole === "admin" && currentPerms.includes("*");
+      if (targetIsTopAdmin && role !== "admin") {
+        throw new HttpsError("permission-denied", "Cannot demote the top admin.");
       }
       const before = {
         role: currentRole,
-        permissions: snap.data()?.permissions ?? [],
+        permissions: currentPerms,
       };
       tx.update(userRef, {
         role,

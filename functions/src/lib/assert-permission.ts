@@ -36,9 +36,8 @@ export async function loadActor(req: CallableRequest<unknown>): Promise<AuthedAc
   };
 }
 
-/** True if the actor holds `key` directly, via wildcard prefix, via `*`, or is owner. */
+/** True if the actor holds `key` directly, via wildcard prefix, or via `*`. */
 export function hasPermission(actor: { role: string; permissions: string[] }, key: string): boolean {
-  if (actor.role === "owner") return true;
   if (actor.permissions.includes("*")) return true;
   if (actor.permissions.includes(key)) return true;
   const segments = key.split(".");
@@ -64,23 +63,14 @@ export async function assertPermission(
   return actor;
 }
 
-/** Assert caller is the owner (role === "owner" OR has owner custom claim). */
-export async function assertOwner(req: CallableRequest<unknown>): Promise<AuthedActor> {
-  const { uid, email } = requireAuth(req);
-  if (req.auth!.token.owner === true) {
-    // Trust the claim, but still load full profile so callers can audit.
-    const snap = await getFirestore().collection(USERS).doc(uid).get();
-    const data = snap.exists ? (snap.data() ?? {}) : {};
-    return {
-      uid,
-      email,
-      role: (data.role as string | undefined) ?? "user",
-      permissions: Array.isArray(data.permissions) ? (data.permissions as string[]) : [],
-    };
-  }
+/**
+ * Assert caller is an admin (top role). For most callsites prefer
+ * `assertPermission(req, "admin.team.manage")` or a more specific key.
+ */
+export async function assertAdminRole(req: CallableRequest<unknown>): Promise<AuthedActor> {
   const actor = await loadActor(req);
-  if (actor.role !== "owner") {
-    throw new HttpsError("permission-denied", "Owner role required.");
+  if (actor.role !== "admin") {
+    throw new HttpsError("permission-denied", "Admin role required.");
   }
   return actor;
 }

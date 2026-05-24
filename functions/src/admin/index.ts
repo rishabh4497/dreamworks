@@ -10,6 +10,7 @@ export { claimOwnerIfEligible } from "./owner.js";
 export {
   setUserPermissions,
   migrateAdminsToPermissions,
+  renameLegacyRoles,
   refreshUserClaims,
 } from "./permissions.js";
 export { lookupUserByEmail } from "./lookup.js";
