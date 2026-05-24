@@ -7,12 +7,23 @@ import { ConsoleHorizontalBar } from "@/components/console/ConsoleHorizontalBar"
 import { ConsoleGeoBar } from "@/components/console/ConsoleGeoBar";
 import { ConsoleSection } from "@/components/console/ConsoleSection";
 import { ConsoleExportCsv } from "@/components/console/ConsoleExportCsv";
+import { ConsoleWishlistDecayCurve } from "@/components/console/ConsoleWishlistDecayCurve";
+import { ConsoleReferralCard } from "@/components/console/ConsoleReferralCard";
+import { ConsoleEmailFunnelTable } from "@/components/console/ConsoleEmailFunnelTable";
 import { useConsoleMoney, useConsoleRange } from "@/hooks/use-console";
+import {
+  useEmailFunnel,
+  useReferralReport,
+  useWishlistDecay,
+} from "@/hooks/use-console-advanced";
 import { formatPrice } from "@/lib/utils";
 
 export function ConsoleMoneyTab() {
   const [range] = useConsoleRange();
   const { data, isLoading, error } = useConsoleMoney(range);
+  const wishlistDecay = useWishlistDecay();
+  const referral = useReferralReport(range);
+  const email = useEmailFunnel(range);
   if (isLoading) return <LoadingSpinner label="Counting cents…" />;
   if (error) {
     return (
@@ -95,6 +106,23 @@ export function ConsoleMoneyTab() {
             colorVar="--brand-plus"
             formatValue={(n) => formatPrice(n)}
           />
+        </Card>
+      </ConsoleSection>
+
+      <ConsoleSection
+        title="Wishlist → purchase decay"
+        description="Survival curve of wishlist entries until converted"
+      >
+        {wishlistDecay.data && <ConsoleWishlistDecayCurve report={wishlistDecay.data} />}
+      </ConsoleSection>
+
+      <ConsoleSection title="Referral / k-factor" description="Viral coefficient and top inviters">
+        {referral.data && <ConsoleReferralCard report={referral.data} />}
+      </ConsoleSection>
+
+      <ConsoleSection title="Email funnel" description="Send → deliver → open → click → conversion">
+        <Card className="p-4">
+          {email.data && <ConsoleEmailFunnelTable report={email.data} />}
         </Card>
       </ConsoleSection>
     </div>
